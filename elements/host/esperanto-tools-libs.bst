@@ -15,6 +15,20 @@ build-depends:
 - host/devicelayer.bst
 - host/common-sw.bst
 
+depends:
+- deps/boost.bst
+- deps/cereal.bst
+- deps/gflags.bst
+- deps/libcap-cmake.bst
+- deps/easy-profiler.bst
+- host/cmake-modules.bst
+- host/et-driver.bst
+- host/sw-sysemu-elfio.bst
+- host/sw-sysemu.bst
+- host/device-api.bst
+- host/devicelayer.bst
+- host/common-sw.bst
+
 variables:
   command-subdir: host/esperanto-tools-libs
   (@):

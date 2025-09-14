@@ -1,0 +1,93 @@
+diff --git a/neuralizer/CMakeLists.txt b/neuralizer/CMakeLists.txt
+index f9fa0a40..6649b7c2 100644
+--- a/neuralizer/CMakeLists.txt
++++ b/neuralizer/CMakeLists.txt
+@@ -65,9 +65,18 @@ set_property(CACHE NEURALIZER_ETSOC2_TENSOR_EXTENSION_VERSION PROPERTY STRINGS 0
+ find_package(nlohmann_json REQUIRED)
+ find_package(cereal REQUIRED)
+ find_package(LLVM REQUIRED)
++message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
++message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
++
++include_directories(${LLVM_INCLUDE_DIRS})
++separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
++add_definitions(${LLVM_DEFINITIONS_LIST})
++llvm_map_components_to_libnames(llvm_libs support)
++
+ find_package(Boost REQUIRED)
+ find_package(dnnLibraryApi REQUIRED)
+ 
++
+ if(ENABLE_ETSOC2)
+     find_package(dnnlib2_host REQUIRED)
+ endif()    
+@@ -165,7 +174,7 @@ target_link_libraries(neuralizer
+         $<$<BOOL:${ENABLE_ETSOC2}>:dnnlib2_host::dnnlib2_host>
+         nlohmann_json::nlohmann_json
+         $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0.0>>:stdc++fs>
+-        $<$<BOOL:${NEURALIZER_LINK_LLVM}>:LLVMSupport>
++	${llvm_libs}
+         Boost::boost
+ )
+ 
+diff --git a/neuralizer/include/neuralizer/neuralizer_profiler_format.h b/neuralizer/include/neuralizer/neuralizer_profiler_format.h
+index 82d773ab..a71a5f83 100644
+--- a/neuralizer/include/neuralizer/neuralizer_profiler_format.h
++++ b/neuralizer/include/neuralizer/neuralizer_profiler_format.h
+@@ -26,6 +26,7 @@
+ #include <cereal/types/vector.hpp>
+ 
+ #include <cassert>
++#include <algorithm>
+ 
+ namespace std {
+ 
+diff --git a/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp b/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp
+index cac45da5..f8bc74eb 100644
+--- a/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp
++++ b/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp
+@@ -18,6 +18,8 @@
+ #include <queue>
+ #include <vector>
+ 
++#include <unistd.h>
++
+ namespace neura {
+ 
+ YamlCreator* YamlCreator::YC_ = nullptr;
+diff --git a/neuralizer/src/EFile.h b/neuralizer/src/EFile.h
+index fa5eb235..5fbbf1a0 100644
+--- a/neuralizer/src/EFile.h
++++ b/neuralizer/src/EFile.h
+@@ -19,6 +19,7 @@
+ #define EFILE_H
+ 
+ #include <cstdio>
++#include <cstdint>
+ #include <string>
+ 
+ namespace neura {
+diff --git a/neuralizer/src/ETypes.h b/neuralizer/src/ETypes.h
+index 2a8d3cf1..137ca722 100644
+--- a/neuralizer/src/ETypes.h
++++ b/neuralizer/src/ETypes.h
+@@ -18,6 +18,7 @@
+ #define ETYPES_H
+ 
+ #include <string>
++#include <cstdint>
+ #include <unordered_map>
+ 
+ namespace neura {
+diff --git a/neuralizer/src/Partitioner/PartitionGraph.h b/neuralizer/src/Partitioner/PartitionGraph.h
+index a0a0f285..3e6e8d05 100644
+--- a/neuralizer/src/Partitioner/PartitionGraph.h
++++ b/neuralizer/src/Partitioner/PartitionGraph.h
+@@ -20,6 +20,7 @@
+ #include <memory>
+ #include <unordered_map>
+ #include <vector>
++#include <cstdint>
+ 
+ namespace neura {
+ 

@@ -20,8 +20,9 @@ mirrors:
     - https://gitlab.com/freedesktop-sdk/mirrors/gcc_gnu_org/
     ghostscript:
     - https://gitlab.com/freedesktop-sdk/mirrors/ghostscript/
-    github:
-    - https://gitlab.com/freedesktop-sdk/mirrors/github/
+    # todo we need to use ssh auth for private repos - so no mirrors
+    #github:
+    #- https://gitlab.com/freedesktop-sdk/mirrors/github/
     gitlab:
     - https://gitlab.com/freedesktop-sdk/mirrors/gitlab/
     gnome:

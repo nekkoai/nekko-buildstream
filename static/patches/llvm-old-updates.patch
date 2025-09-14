@@ -1,0 +1,25 @@
+diff --git a/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h b/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h
+index 6638cb8e721..a511e076a25 100644
+--- a/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h
++++ b/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h
+@@ -16,6 +16,8 @@
+ #include "llvm/Demangle/DemangleConfig.h"
+ #include "llvm/Demangle/StringView.h"
+ #include <array>
++#include <cstdint>
++#include <string>
+ 
+ namespace llvm {
+ namespace itanium_demangle {
+diff --git a/llvm/utils/benchmark/src/benchmark_register.h b/llvm/utils/benchmark/src/benchmark_register.h
+index 0705e219f2f..6001fb8e0e4 100644
+--- a/llvm/utils/benchmark/src/benchmark_register.h
++++ b/llvm/utils/benchmark/src/benchmark_register.h
+@@ -2,6 +2,7 @@
+ #define BENCHMARK_REGISTER_H
+ 
+ #include <vector>
++#include <limits>
+ 
+ #include "check.h"
+ 

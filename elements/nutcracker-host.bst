@@ -6,6 +6,7 @@ depends:
 - host/et-trace.bst
 - host/device-api.bst
 - host/et-driver.bst
+- host/sw-sysemu-elfio.bst
 - host/sw-sysemu.bst
 - host/common-sw.bst
 - host/devicelayer.bst

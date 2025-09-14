@@ -1,0 +1,589 @@
+diff --git a/onnx/onnxruntime/cmake/CMakeLists.txt b/onnx/onnxruntime/cmake/CMakeLists.txt
+index 1594fd83..738bf85e 100644
+--- a/onnx/onnxruntime/cmake/CMakeLists.txt
++++ b/onnx/onnxruntime/cmake/CMakeLists.txt
+@@ -4,6 +4,8 @@
+ # Minimum CMake required
+ cmake_minimum_required(VERSION 3.26)
+ 
++list(APPEND CMAKE_MODULE_PATH "/usr/local/esperanto/.builds/host")
++
+ cmake_policy(SET CMP0069 NEW)
+ set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+ 
+diff --git a/onnx/onnxruntime/cmake/deps.txt b/onnx/onnxruntime/cmake/deps.txt
+index d0edf963..ecf6ee16 100644
+--- a/onnx/onnxruntime/cmake/deps.txt
++++ b/onnx/onnxruntime/cmake/deps.txt
+@@ -22,7 +22,7 @@ dlpack;https://github.com/dmlc/dlpack/archive/refs/tags/v0.6.zip;4d565dd2e5b3132
+ # it contains changes on top of 3.4.0 which are required to fix build issues.
+ # Until the 3.4.1 release this is the best option we have.
+ # Issue link: https://gitlab.com/libeigen/eigen/-/issues/2744
+-eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;be8be39fdbc6e60e94fa7870b280707069b5b81a
++eigen;https://gitlab.com/libeigen/eigen/-/archive/e7248b26a1ed53fa030c5c459f7ea095dfd276ac/eigen-e7248b26a1ed53fa030c5c459f7ea095dfd276ac.zip;32b145f525a8308d7ab1c09388b2e288312d8eba
+ flatbuffers;https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip;59422c3b5e573dd192fead2834d25951f1c1670c
+ fp16;https://github.com/Maratyszcza/FP16/archive/0a92994d729ff76a58f692d3028ca1b64b145d91.zip;b985f6985a05a1c03ff1bb71190f66d8f98a1494
+ fxdiv;https://github.com/Maratyszcza/FXdiv/archive/63058eff77e11aa15bf531df5dd34395ec3017c8.zip;a5658f4036402dbca7cebee32be57fb8149811e1
+diff --git a/onnx/onnxruntime/cmake/external/eigen.cmake b/onnx/onnxruntime/cmake/external/eigen.cmake
+index 77e15c8b..b123adb6 100644
+--- a/onnx/onnxruntime/cmake/external/eigen.cmake
++++ b/onnx/onnxruntime/cmake/external/eigen.cmake
+@@ -7,10 +7,8 @@ else ()
+         eigen
+         URL ${DEP_URL_eigen}
+         URL_HASH SHA1=${DEP_SHA1_eigen}
+-        FIND_PACKAGE_ARGS NAMES Eigen3
+     )
+ 
+     FetchContent_Populate(eigen)
+-    onnxruntime_fetchcontent_makeavailable(eigen)
+-    get_target_property(eigen_INCLUDE_DIRS Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
++    set(eigen_INCLUDE_DIRS  "${eigen_SOURCE_DIR}")
+ endif()
+diff --git a/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake b/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake
+index bf671e56..cc185a18 100644
+--- a/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake
++++ b/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake
+@@ -398,6 +398,8 @@ FetchContent_Declare(
+ # use fetch content rather than makeavailable because safeint only includes unconditional test targets
+ FetchContent_Populate(safeint)
+ onnxruntime_fetchcontent_makeavailable(safeint) # FetchContent_Populate doesn't call find_package
++add_library(safeint_interface IMPORTED INTERFACE)
++target_include_directories(safeint_interface INTERFACE ${safeint_SOURCE_DIR})
+ 
+ # The next line will generate an error message "fatal: not a git repository", but it is ok. It is from flatbuffers
+ onnxruntime_fetchcontent_makeavailable(utf8_range)
+@@ -512,7 +514,12 @@ include(eigen)
+ include(wil)
+ 
+ if (NOT onnxruntime_MINIMAL_BUILD)
+-    onnxruntime_fetchcontent_makeavailable(onnx)
++   find_package(ONNX "1.16.1" REQUIRED CONFIG)
++   #add_definitions(${ONNX_DEFINITIONS})
++   #add_compile_definitions("-DONNX_ML=1")
++   #target_compile_definitions(ONNX::onnx INTERFACE "-DONNX_ML=1")
++   #include_directories(${ONNX_INCLUDE_DIR})
++   # onnxruntime_fetchcontent_makeavailable(onnx)
+ else()
+   include(onnx_minimal)
+ endif()
+@@ -531,8 +538,9 @@ if (onnxruntime_USE_XNNPACK)
+ endif()
+ 
+ if (onnxruntime_USE_ETGLOW)
+-  find_package(GLOW REQUIRED)
++	#find_package(jemalloc REQUIRED)
+   find_package(et-trace-utils REQUIRED)
++  find_package(glow REQUIRED)
+   set(onnxruntime_EXTERNAL_LIBRARIES_GLOW glow::Api)
+ endif ()
+ 
+@@ -546,13 +554,17 @@ if (onnxruntime_USE_MIMALLOC)
+   onnxruntime_fetchcontent_makeavailable(mimalloc)
+ endif()
+ 
++find_package(Boost REQUIRED)
++message(STATUS "Aliasing Boost::headers to Boost::mp11")
++add_library(Boost::mp11 ALIAS Boost::headers)
++
+ #onnxruntime_EXTERNAL_LIBRARIES could contain onnx, onnx_proto,libprotobuf, cuda/cudnn,
+ # dnnl/mklml, onnxruntime_codegen_tvm, tvm and pthread
+ # pthread is always at the last
+-set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} ${WIL_TARGET} ${onnxruntime_EXTERNAL_LIBRARIES_GLOW} nlohmann_json::nlohmann_json onnx onnx_proto ${PROTOBUF_LIB} re2::re2 Boost::mp11 safeint_interface flatbuffers::flatbuffers ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${ONNXRUNTIME_CLOG_TARGET_NAME})
++set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} ${WIL_TARGET} ${onnxruntime_EXTERNAL_LIBRARIES_GLOW} nlohmann_json::nlohmann_json ${PROTOBUF_LIB} re2::re2 Boost::mp11 safeint_interface flatbuffers::flatbuffers ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${ONNXRUNTIME_CLOG_TARGET_NAME})
+ # The source code of onnx_proto is generated, we must build this lib first before starting to compile the other source code that uses ONNX protobuf types.
+ # The other libs do not have the problem. All the sources are already there. We can compile them in any order.
+-set(onnxruntime_EXTERNAL_DEPENDENCIES onnx_proto flatbuffers::flatbuffers)
++set(onnxruntime_EXTERNAL_DEPENDENCIES ONNX::onnx ONNX::onnx_proto flatbuffers::flatbuffers)
+ 
+ # target_compile_definitions(onnx PUBLIC $<TARGET_PROPERTY:onnx_proto,INTERFACE_COMPILE_DEFINITIONS> PRIVATE "__ONNX_DISABLE_STATIC_REGISTRATION")
+ # if (NOT onnxruntime_USE_FULL_PROTOBUF)
+diff --git a/onnx/onnxruntime/cmake/onnxruntime.cmake b/onnx/onnxruntime/cmake/onnxruntime.cmake
+index 927b4ac8..dcb7d540 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime.cmake
+@@ -118,7 +118,7 @@ endif()
+ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+   add_dependencies(onnxruntime ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ else()
+-  add_dependencies(onnxruntime onnxruntime_generate_def ${onnxruntime_EXTERNAL_DEPENDENCIES})
++  list(APPEND onnxruntime_INTERNAL_LIBRARIES onnxruntime_generate_def)
+ endif()
+ target_include_directories(onnxruntime PRIVATE ${ONNXRUNTIME_ROOT} PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/onnxruntime>")
+ 
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_common.cmake b/onnx/onnxruntime/cmake/onnxruntime_common.cmake
+index 896379d7..9ec9a5e1 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_common.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_common.cmake
+@@ -135,9 +135,7 @@ target_include_directories(onnxruntime_common
+         ${OPTIONAL_LITE_INCLUDE_DIR})
+ 
+ 
+-target_link_libraries(onnxruntime_common PUBLIC safeint_interface ${GSL_TARGET} ${ABSEIL_LIBS} date::date)
+-
+-add_dependencies(onnxruntime_common ${onnxruntime_EXTERNAL_DEPENDENCIES})
++target_link_libraries(onnxruntime_common PUBLIC safeint_interface ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ 
+ set_target_properties(onnxruntime_common PROPERTIES LINKER_LANGUAGE CXX)
+ set_target_properties(onnxruntime_common PROPERTIES FOLDER "ONNXRuntime")
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake b/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake
+index 3ab4c191..58cc764e 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake
+@@ -9,12 +9,13 @@ file(GLOB onnxruntime_flatbuffers_srcs CONFIGURE_DEPENDS
+ source_group(TREE ${REPO_ROOT} FILES ${onnxruntime_flatbuffers_srcs})
+ 
+ onnxruntime_add_static_library(onnxruntime_flatbuffers ${onnxruntime_flatbuffers_srcs})
+-onnxruntime_add_include_to_target(onnxruntime_flatbuffers onnx flatbuffers::flatbuffers ${GSL_TARGET})
++onnxruntime_add_include_to_target(onnxruntime_flatbuffers flatbuffers::flatbuffers ${GSL_TARGET})
+ if(onnxruntime_ENABLE_INSTRUMENT)
+   target_compile_definitions(onnxruntime_flatbuffers PUBLIC ONNXRUNTIME_ENABLE_INSTRUMENT)
+ endif()
++message(STATUS "or_E_D ${onnxruntime_EXTERNAL_DEPENDENCIES}")
+ target_include_directories(onnxruntime_flatbuffers PRIVATE ${ONNXRUNTIME_ROOT})
+-add_dependencies(onnxruntime_flatbuffers ${onnxruntime_EXTERNAL_DEPENDENCIES})
++target_link_libraries(onnxruntime_flatbuffers ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ set_target_properties(onnxruntime_flatbuffers PROPERTIES FOLDER "ONNXRuntime")
+ 
+ # Add dependency so the flatbuffers compiler is built if enabled
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_framework.cmake b/onnx/onnxruntime/cmake/onnxruntime_framework.cmake
+index c87a5fdb..b1c989e9 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_framework.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_framework.cmake
+@@ -102,7 +102,8 @@ endif()
+ 
+ set_target_properties(onnxruntime_framework PROPERTIES FOLDER "ONNXRuntime")
+ # need onnx to build to create headers that this project includes
+-add_dependencies(onnxruntime_framework ${onnxruntime_EXTERNAL_DEPENDENCIES})
++#add_dependencies(onnxruntime_framework ${onnxruntime_EXTERNAL_DEPENDENCIES})
++target_link_libraries(onnxruntime_framework ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ 
+ # In order to find the shared provider libraries we need to add the origin to the rpath for all executables we build
+ # For the shared onnxruntime library, this is set in onnxruntime.cmake through CMAKE_SHARED_LINKER_FLAGS
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_graph.cmake b/onnx/onnxruntime/cmake/onnxruntime_graph.cmake
+index 4d51325b..8bee3c53 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_graph.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_graph.cmake
+@@ -95,7 +95,7 @@ if (onnxruntime_ENABLE_TRAINING_OPS)
+ endif()
+ 
+ onnxruntime_add_static_library(onnxruntime_graph ${onnxruntime_graph_src} ${orttraining_graph_src})
+-add_dependencies(onnxruntime_graph onnx_proto flatbuffers::flatbuffers)
++target_link_libraries(onnxruntime_graph ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ onnxruntime_add_include_to_target(onnxruntime_graph onnxruntime_common ${WIL_TARGET} onnx onnx_proto ${PROTOBUF_LIB} flatbuffers::flatbuffers safeint_interface Boost::mp11)
+ 
+ if (MSVC)
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake b/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake
+index bbcc709b..ac29e7b3 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake
+@@ -193,7 +193,7 @@ endif()
+ 
+ target_include_directories(onnxruntime_providers PRIVATE ${ONNXRUNTIME_ROOT} ${eigen_INCLUDE_DIRS})
+ onnxruntime_add_include_to_target(onnxruntime_providers re2::re2)
+-add_dependencies(onnxruntime_providers onnx ${onnxruntime_EXTERNAL_DEPENDENCIES})
++add_dependencies(onnxruntime_providers ONNX::onnx ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ 
+ if (onnxruntime_ENABLE_TRAINING_OPS)
+   target_include_directories(onnxruntime_providers PRIVATE ${ORTTRAINING_ROOT})
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake b/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake
+index 16b8d2fb..5232e233 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake
+@@ -1,5 +1,36 @@
+ add_definitions(-DUSE_ETGLOW=1)
+ 
++find_package(gflags REQUIRED)
++set_target_properties(gflags::gflags_shared PROPERTIES
++  MAP_IMPORTED_CONFIG_MINSIZEREL Release
++  MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
++  MAP_IMPORTED_CONFIG_DEBUG Release
++)
++#find_package(jemalloc REQUIRED)
++if(jemalloc_FOUND AND NOT TARGET jemalloc::jemalloc)
++  add_library(jemalloc::jemalloc UNKNOWN IMPORTED)
++  set_target_properties(jemalloc::jemalloc PROPERTIES
++    IMPORTED_LOCATION "${jemalloc_LIBRARIES}"
++    INTERFACE_COMPILE_OPTIONS "${jemalloc_CFLAGS_OTHER}"
++    INTERFACE_INCLUDE_DIRECTORIES "${jemalloc_INCLUDE_DIR}"
++  )
++endif()
++
++find_package(et-trace-utils REQUIRED)
++find_package(runtime REQUIRED)
++message(STATUS "Runtime: ${runtime_FOUND} ${runtime_INCLUDE_DIR}")
++
++find_package(LLVM REQUIRED CONFIG)
++message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
++message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
++
++include_directories(${LLVM_INCLUDE_DIRS})
++separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
++add_definitions(${LLVM_DEFINITIONS_LIST})
++
++llvm_map_components_to_libnames(llvm_libs support)
++# ${llvm_libs}
++
+ file(GLOB_RECURSE onnxruntime_providers_etglow_src CONFIGURE_DEPENDS
+         "${ONNXRUNTIME_ROOT}/core/providers/etglow/*.h"
+         "${ONNXRUNTIME_ROOT}/core/providers/etglow/*.cc"
+@@ -22,8 +53,8 @@ endif ()
+ 
+ function(config_etglow_provider_shared_module target)
+     onnxruntime_add_include_to_target(${target} onnxruntime_common onnxruntime_framework onnx onnx_proto ${PROTOBUF_LIB} flatbuffers::flatbuffers)
+-    add_dependencies(${target} onnxruntime_providers_shared ${onnxruntime_EXTERNAL_DEPENDENCIES})
+-    target_link_libraries(${target} PRIVATE glow::Api et-trace-utils::et-trace-utils ${ONNXRUNTIME_PROVIDERS_SHARED} Boost::mp11 ${ABSEIL_LIBS} ${GSL_TARGET} safeint_interface)
++    target_link_libraries(${target} PRIVATE onnxruntime_providers_shared ${onnxruntime_EXTERNAL_DEPENDENCIES}
++	    glow::Api gflags::gflags runtime::etrt et-trace-utils ${ONNXRUNTIME_PROVIDERS_SHARED} Boost::mp11 ${ABSEIL_LIBS} ${GSL_TARGET} safeint_interface)
+     set_target_properties(${target} PROPERTIES FOLDER "ONNXRuntime")
+     set_target_properties(${target} PROPERTIES LINKER_LANGUAGE CXX)
+     if(APPLE)
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_python.cmake b/onnx/onnxruntime/cmake/onnxruntime_python.cmake
+index 778453b6..118f25da 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_python.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_python.cmake
+@@ -170,6 +170,18 @@ if (onnxruntime_ENABLE_LAZY_TENSOR)
+   endif()
+ endif()
+ 
++find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
++
++# Get NumPy include directory
++execute_process(COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
++  OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
++  OUTPUT_STRIP_TRAILING_WHITESPACE)
++
++target_include_directories(onnxruntime_pybind11_state PRIVATE
++   ${Python3_INCLUDE_DIRS}
++   ${NUMPY_INCLUDE_DIR}
++)
++
+ target_link_libraries(onnxruntime_pybind11_state PRIVATE
+     onnxruntime_session
+     ${onnxruntime_libs}
+@@ -194,6 +206,7 @@ target_link_libraries(onnxruntime_pybind11_state PRIVATE
+     ${ONNXRUNTIME_MLAS_LIBS}
+     onnxruntime_common
+     onnxruntime_flatbuffers
++    ${Python3_LIBRARIES}
+     ${pybind11_lib}
+ )
+ 
+@@ -202,7 +215,7 @@ set(onnxruntime_pybind11_state_dependencies
+     ${pybind11_dep}
+ )
+ set_property(TARGET onnxruntime_pybind11_state APPEND_STRING PROPERTY LINK_FLAGS ${ONNXRUNTIME_SO_LINK_FLAG} ${onnxruntime_DELAYLOAD_FLAGS})
+-add_dependencies(onnxruntime_pybind11_state ${onnxruntime_pybind11_state_dependencies})
++#target_link_libraries(onnxruntime_pybind11_state ${onnxruntime_pybind11_state_dependencies})
+ 
+ if (MSVC)
+   set_target_properties(onnxruntime_pybind11_state PROPERTIES LINK_FLAGS "${ONNXRUNTIME_SO_LINK_FLAG}")
+@@ -531,161 +544,131 @@ set(build_output_target onnxruntime_common)
+ if(NOT onnxruntime_ENABLE_STATIC_ANALYSIS)
+ add_custom_command(
+   TARGET onnxruntime_pybind11_state POST_BUILD
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/backend
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/training
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/datasets
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/mobile_helpers
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/qdq_helpers
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/ort_format_model
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/ort_format_model/ort_flatbuffers_py
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/bart
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/bert
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/gpt2
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/llama
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/longformer
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/phi2
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/stable_diffusion
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/t5
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/whisper
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/operators
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/CalTableFlatBuffers
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/fusions
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/execution_providers
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/execution_providers/qnn
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/quantization
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/transformers
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/transformers/test_data/models
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/transformers/test_data/models/whisper
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/eager_test
+-  COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/transformers/test_data/models/conformer
++  WORKING_DIRECTORY $<TARGET_FILE_DIR:${build_output_target}>
++  COMMAND ${CMAKE_COMMAND} -E make_directory onnxruntime/backend onnxruntime/capi onnxruntime/capi/training onnxruntime/datasets onnxruntime/tools onnxruntime/tools/mobile_helpers onnxruntime/tools/qdq_helpers onnxruntime/tools/ort_format_model onnxruntime/tools/ort_format_model/ort_flatbuffers_py onnxruntime/transformers onnxruntime/transformers/models onnxruntime/transformers/models/bart onnxruntime/transformers/models/bert onnxruntime/transformers/models/gpt2 onnxruntime/transformers/models/llama onnxruntime/transformers/models/longformer onnxruntime/transformers/models/phi2 onnxruntime/transformers/models/stable_diffusion onnxruntime/transformers/models/t5 onnxruntime/transformers/models/whisper onnxruntime/quantization onnxruntime/quantization/operators onnxruntime/quantization/CalTableFlatBuffers onnxruntime/quantization/fusions onnxruntime/quantization/execution_providers onnxruntime/quantization/execution_providers/qnn quantization transformers transformers/test_data/models transformers/test_data/models/whisper eager_test transformers/test_data/models/conformer
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${ONNXRUNTIME_ROOT}/__init__.py
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/
++      onnxruntime/
+   COMMAND ${CMAKE_COMMAND} -E copy
+-      ${REPO_ROOT}/requirements.txt
+-      $<TARGET_FILE_DIR:${build_output_target}>
++      ${REPO_ROOT}/requirements.txt .
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${REPO_ROOT}/ThirdPartyNotices.txt
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/
++      onnxruntime/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${REPO_ROOT}/docs/Privacy.md
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/
++      onnxruntime/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${REPO_ROOT}/LICENSE
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/
++      onnxruntime/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_backend_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/backend/
++      onnxruntime/backend/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++      onnxruntime/capi/
+   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+       ${CMAKE_BINARY_DIR}/onnxruntime/capi/_pybind_state.py
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++      onnxruntime/capi/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       $<TARGET_FILE:onnxruntime_pybind11_state>
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++      onnxruntime/capi/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_datasets_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/datasets/
+-  COMMAND ${CMAKE_COMMAND} -E copy
+-      ${onnxruntime_python_datasets_data}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/datasets/
++      onnxruntime/datasets/
++      #COMMAND ${CMAKE_COMMAND} -E copy
++      #${onnxruntime_python_datasets_data}
++      #onnxruntime/datasets/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_tools_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/
++      onnxruntime/tools/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_mobile_util_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/
++      onnxruntime/tools/
+   # append the /tools/python/utils imports to the __init__.py that came from /onnxruntime/tools.
+   # we're aggregating scripts from two different locations, and only include selected functionality from
+   # /tools/python/util. due to that we take the full __init__.py from /onnxruntime/tools and append
+   # the required content from /tools/python/util/__init__append.py.
+   COMMAND ${CMAKE_COMMAND} -E cat
+       ${REPO_ROOT}/tools/python/util/__init__append.py >>
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/__init__.py
++      onnxruntime/tools/__init__.py
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_qdq_helper_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/qdq_helpers/
++      onnxruntime/tools/qdq_helpers/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_mobile_helpers_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/mobile_helpers/
++      onnxruntime/tools/mobile_helpers/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_ort_format_model_srcs}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/ort_format_model/
++      onnxruntime/tools/ort_format_model/
+   COMMAND ${CMAKE_COMMAND} -E copy_directory
+       ${ONNXRUNTIME_ROOT}/core/flatbuffers/ort_flatbuffers_py
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/ort_format_model/ort_flatbuffers_py
++      onnxruntime/tools/ort_format_model/ort_flatbuffers_py
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_quantization_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/
++      onnxruntime/quantization/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_quantization_operators_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/operators/
++      onnxruntime/quantization/operators/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_quantization_cal_table_flatbuffers_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/CalTableFlatBuffers/
++      onnxruntime/quantization/CalTableFlatBuffers/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_quantization_fusions_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/fusions/
++      onnxruntime/quantization/fusions/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_quantization_ep_qnn_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/quantization/execution_providers/qnn/
++      onnxruntime/quantization/execution_providers/qnn/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/
++      onnxruntime/transformers/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_bart_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/bart/
++      onnxruntime/transformers/models/bart/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_bert_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/bert/
++      onnxruntime/transformers/models/bert/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_gpt2_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/gpt2/
++      onnxruntime/transformers/models/gpt2/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_llama_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/llama/
++      onnxruntime/transformers/models/llama/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_longformer_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/longformer/
++      onnxruntime/transformers/models/longformer/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_phi2_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/phi2/
++      onnxruntime/transformers/models/phi2/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_stable_diffusion_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/stable_diffusion/
++      onnxruntime/transformers/models/stable_diffusion/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_t5_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/t5/
++      onnxruntime/transformers/models/t5/
+   COMMAND ${CMAKE_COMMAND} -E copy
+       ${onnxruntime_python_transformers_models_whisper_src}
+-      $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/transformers/models/whisper/
++      onnxruntime/transformers/models/whisper/
+   COMMAND ${CMAKE_COMMAND} -E copy
+-      ${REPO_ROOT}/VERSION_NUMBER
+-      $<TARGET_FILE_DIR:${build_output_target}>
++      ${REPO_ROOT}/VERSION_NUMBER .
+ )
+ 
+ if (onnxruntime_BUILD_SHARED_LIB)
+   add_custom_command(
+     TARGET onnxruntime_pybind11_state POST_BUILD
++    WORKING_DIRECTORY $<TARGET_FILE_DIR:${build_output_target}>
+     COMMAND ${CMAKE_COMMAND} -E copy
+         $<TARGET_FILE:onnxruntime>
+-        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++        onnxruntime/capi/
+   )
+ endif()
+ 
+ if (onnxruntime_USE_OPENVINO)
+   add_custom_command(
+     TARGET onnxruntime_pybind11_state POST_BUILD
++    WORKING_DIRECTORY $<TARGET_FILE_DIR:${build_output_target}>
+     COMMAND ${CMAKE_COMMAND} -E copy
+         ${onnxruntime_python_openvino_python_srcs}
+-        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/tools/
++        onnxruntime/tools/
+   )
+ endif()
+ 
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake b/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake
+index 8dc5da6e..02413c88 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake
+@@ -986,7 +986,7 @@ endif()
+ set(test_data_target onnxruntime_test_all)
+ 
+ onnxruntime_add_static_library(onnx_test_data_proto ${TEST_SRC_DIR}/proto/tml.proto)
+-add_dependencies(onnx_test_data_proto onnx_proto ${onnxruntime_EXTERNAL_DEPENDENCIES})
++add_dependencies(onnx_test_data_proto ONNX::onnx_proto ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ #onnx_proto target should mark this definition as public, instead of private
+ target_compile_definitions(onnx_test_data_proto PRIVATE "-DONNX_API=")
+ onnxruntime_add_include_to_target(onnx_test_data_proto onnx_proto)
+@@ -1784,9 +1784,9 @@ if (NOT onnxruntime_MINIMAL_BUILD AND NOT onnxruntime_EXTENDED_MINIMAL_BUILD
+   )
+ 
+   onnxruntime_add_shared_library_module(test_execution_provider ${test_execution_provider_srcs})
+-  add_dependencies(test_execution_provider onnxruntime_providers_shared onnx ${ABSEIL_LIBS})
++  add_dependencies(test_execution_provider onnxruntime_providers_shared ONNX::onnx ${ABSEIL_LIBS})
+   target_link_libraries(test_execution_provider PRIVATE onnxruntime_providers_shared ${ABSEIL_LIBS} Boost::mp11)
+-  target_include_directories(test_execution_provider PRIVATE $<TARGET_PROPERTY:onnx,INTERFACE_INCLUDE_DIRECTORIES>)
++  target_include_directories(test_execution_provider PRIVATE $<TARGET_PROPERTY:ONNX::onnx,INTERFACE_INCLUDE_DIRECTORIES>)
+   target_include_directories(test_execution_provider PRIVATE $<TARGET_PROPERTY:onnxruntime_common,INTERFACE_INCLUDE_DIRECTORIES>)
+   target_include_directories(test_execution_provider PRIVATE ${ONNXRUNTIME_ROOT} ${CMAKE_CURRENT_BINARY_DIR} ${ORTTRAINING_ROOT})
+   if (onnxruntime_ENABLE_TRAINING_TORCH_INTEROP)
+diff --git a/onnx/onnxruntime/cmake/onnxruntime_util.cmake b/onnx/onnxruntime/cmake/onnxruntime_util.cmake
+index ae7e842f..22a8b5b0 100644
+--- a/onnx/onnxruntime/cmake/onnxruntime_util.cmake
++++ b/onnx/onnxruntime/cmake/onnxruntime_util.cmake
+@@ -16,7 +16,7 @@ if(UNIX)
+ endif()
+ set_target_properties(onnxruntime_util PROPERTIES LINKER_LANGUAGE CXX)
+ set_target_properties(onnxruntime_util PROPERTIES FOLDER "ONNXRuntime")
+-add_dependencies(onnxruntime_util ${onnxruntime_EXTERNAL_DEPENDENCIES})
++target_link_libraries(onnxruntime_util ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ if (WIN32)
+     target_compile_definitions(onnxruntime_util PRIVATE _SCL_SECURE_NO_WARNINGS)
+ endif()
+diff --git a/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h b/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h
+index 85c55c89..5704bc9b 100644
+--- a/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h
++++ b/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h
+@@ -6,14 +6,18 @@
+ #include <memory>
+ 
+ #include "core/providers/providers.h"
++#include "core/framework/provider_options.h"
+ 
+ #include <unordered_map>
+ 
+ struct OrtEtGlowProviderOptions;
+ 
+ namespace onnxruntime {
+-
++struct SessionOptions;
++// defined in provider_bridge_ort.cc
+ struct EtGlowProviderFactoryCreator {
++  static std::shared_ptr<IExecutionProviderFactory> Create(ProviderOptions* provider_options_map,
++                                                           const SessionOptions* session_options);
+   static std::shared_ptr<IExecutionProviderFactory> Create(const OrtEtGlowProviderOptions* provider_options);
+ };
+ 
+diff --git a/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc b/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc
+index db8b97f6..f43e8c5f 100644
+--- a/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc
++++ b/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc
+@@ -147,11 +147,17 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
+     options->provider_factories.push_back(JsProviderFactoryCreator::Create(provider_options, &(options->value)));
+ #else
+     status = create_not_supported_status();
++#endif
++  } else if (strcmp(provider_name, "ETGLOW") == 0) {
++#if defined(USE_ETGLOW)
++    options->provider_factories.push_back(EtGlowProviderFactoryCreator::Create(&provider_options, &(options->value)));
++#else
++    status = create_not_supported_status();
+ #endif
+   } else {
+     ORT_UNUSED_PARAMETER(options);
+     status = OrtApis::CreateStatus(ORT_INVALID_ARGUMENT,
+-                                   "Unknown provider name. Currently supported values are 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
++                                   "Unknown provider name. Currently supported values are 'ETGLOW', 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
+   }
+ 
+   return status;
+diff --git a/onnx/onnxruntime/tools/ci_build/build.py b/onnx/onnxruntime/tools/ci_build/build.py
+index 587d0355..0a1805a5 100644
+--- a/onnx/onnxruntime/tools/ci_build/build.py
++++ b/onnx/onnxruntime/tools/ci_build/build.py
+@@ -756,6 +756,7 @@ def parse_arguments():
+ 
+     parser.add_argument("--use_xnnpack", action="store_true", help="Enable xnnpack EP.")
+     parser.add_argument("--use_azure", action="store_true", help="Enable azure EP.")
++    parser.add_argument("--use_etglow", action="store_true", help="Enable ETGLOW EP.")
+ 
+     parser.add_argument("--use_cache", action="store_true", help="Use compiler cache in CI")
+ 
+@@ -1092,6 +1093,7 @@ def generate_build_tree(
+         "-Donnxruntime_DISABLE_FLOAT8_TYPES=" + ("ON" if disable_float8_types else "OFF"),
+         "-Donnxruntime_DISABLE_SPARSE_TENSORS=" + ("ON" if disable_sparse_tensors else "OFF"),
+         "-Donnxruntime_DISABLE_OPTIONAL_TYPE=" + ("ON" if disable_optional_type else "OFF"),
++        "-Donnxruntime_USE_ETGLOW=" + ("ON" if args.use_etglow else "OFF"),
+     ]
+ 
+     if args.rv64:

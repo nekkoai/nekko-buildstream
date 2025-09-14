@@ -1,0 +1,305 @@
+diff --git a/glow/CMakeLists.txt b/glow/CMakeLists.txt
+index a1fc09ac..c85a8c26 100644
+--- a/glow/CMakeLists.txt
++++ b/glow/CMakeLists.txt
+@@ -181,6 +181,7 @@ endif()
+ 
+ # CPU backend, GlowAPI & apitest depend on nlohmann_json
+ find_package(nlohmann_json REQUIRED)
++find_package(fmt REQUIRED)
+ 
+ if(GLOW_WITH_LLVMIRCODEGEN)
+   add_definitions(-DGLOW_WITH_LLVMIRCODEGEN=1)
+@@ -253,7 +254,7 @@ endif ()
+ # Top level setup for external backends
+ ExternalBackendsInit()
+ 
+-find_package(LLVM CONFIG)
++find_package(LLVM REQUIRED)
+ if(NOT LLVM_FOUND OR LLVM_VERSION VERSION_LESS 7.0)
+   message(SEND_ERROR "LLVM >= 7.0 is required to build Glow")
+ endif()
+@@ -266,8 +267,8 @@ if (BUILD_SHARED_LIBS AND TARGET LLVM AND NOT TARGET LLVM::LLVM)
+   # LLVM does not define the LLVM::LLVM alias. Unfortunately Conan can only link through LLVM::LLVM
+   # Here we create a fake library to be able to use LLVM::LLVM outside of Conan through LLVM is an
+   # imported library and does not allow defining an alias
+-  add_library(LLVM::LLVM INTERFACE IMPORTED)
+-  set_target_properties(LLVM::LLVM PROPERTIES INTERFACE_LINK_LIBRARIES LLVM)
++  #add_library(LLVM::LLVM INTERFACE IMPORTED)
++  #set_target_properties(LLVM::LLVM PROPERTIES INTERFACE_LINK_LIBRARIES LLVM)
+ endif()
+ 
+ if (GLOW_BUILD_PYTORCH_INTEGRATION)
+@@ -421,7 +422,7 @@ endif()
+ 
+ if ("${folly_PROVIDER}" STREQUAL "find_package")
+   message(STATUS "Find folly with find_package")
+-  find_package(folly REQUIRED)
++  find_package(folly CONFIG REQUIRED)
+ else()
+   if(NOT EXISTS "${GLOW_THIRDPARTY_DIR}/folly/folly")
+     message(FATAL_ERROR "No folly git submodule. Run: git submodule update --init --recursive")
+@@ -480,10 +481,14 @@ target_include_directories(tflite INTERFACE $<BUILD_INTERFACE:${GLOW_THIRDPARTY_
+ 
+ # LLVM dependencies for single shared library and component static libraries
+ if(BUILD_SHARED_LIBS)
+-  list(APPEND LLVM_CORE_LIBS LLVM::LLVM)
+-  list(APPEND LLVM_IR_LIBS LLVM::LLVM)
+-  list(APPEND LLVM_JIT_LIBS LLVM::LLVM)
+-  list(APPEND LLVM_SUPPORT_LIBS LLVM::LLVM)
++  llvm_map_components_to_libnames(llvm_core_libs core)
++  llvm_map_components_to_libnames(llvm_ir_libs all)
++  llvm_map_components_to_libnames(llvm_jit_libs orcjit)
++  llvm_map_components_to_libnames(llvm_support_libs support)
++  list(APPEND LLVM_CORE_LIBS ${llvm_core_libs})
++  list(APPEND LLVM_IR_LIBS ${llvm_ir_libs})
++  list(APPEND LLVM_JIT_LIBS ${llvm_jit_libs})
++  list(APPEND LLVM_SUPPORT_LIBS ${llvm_support_libs})
+ else()
+   list(APPEND LLVM_CORE_LIBS LLVMCore)
+   list(APPEND LLVM_IR_LIBS
+diff --git a/glow/glowConfig.cmake.in b/glow/glowConfig.cmake.in
+index 5ff3bff8..89989379 100644
+--- a/glow/glowConfig.cmake.in
++++ b/glow/glowConfig.cmake.in
+@@ -24,8 +24,8 @@ if (GLOW_WITH_ETSOC)
+     find_dependency(cereal REQUIRED)
+     find_dependency(fmt REQUIRED)
+ 
+-    find_dependency(EsperantoDeviceMinionRuntime REQUIRED)
+-    find_dependency(EsperantoBootLoader REQUIRED)
++    #find_dependency(EsperantoDeviceMinionRuntime REQUIRED)
++    #find_dependency(EsperantoBootLoader REQUIRED)
+     find_dependency(deviceLayer REQUIRED)
+     @ETSOC2_SYSEMU_CMAKE_DEPENDENCY@
+ 
+diff --git a/glow/lib/Backends/ETSOC/ETSOC.cpp b/glow/lib/Backends/ETSOC/ETSOC.cpp
+index 64b2bde2..6b7d6d82 100644
+--- a/glow/lib/Backends/ETSOC/ETSOC.cpp
++++ b/glow/lib/Backends/ETSOC/ETSOC.cpp
+@@ -91,11 +91,11 @@ Error setETSOCBackendInternalParameters(
+   static constexpr auto debugGlowOnlyParamName = "debug-glow-only";
+   if (const auto it = parameters.find(debugGlowParamName);
+       it != parameters.end()) {
+-    RETURN_IF_ERR(replaceOption(it->getKey(), it->getValue()));
++    RETURN_IF_ERR(replaceOption(it->getKey().str(), it->getValue()));
+   }
+   if (const auto it = parameters.find(debugGlowOnlyParamName);
+       it != parameters.end()) {
+-    RETURN_IF_ERR(replaceOption(it->getKey(), it->getValue()));
++    RETURN_IF_ERR(replaceOption(it->getKey().str(), it->getValue()));
+   }
+   for (const auto &paramKeyValue : parameters) {
+     const auto &paramName = paramKeyValue.getKey();
+@@ -112,7 +112,7 @@ Error setETSOCBackendInternalParameters(
+         << "The parameter " << std::string(paramName) << " does not exists\n";
+ 
+     if (paramExists) {
+-      RETURN_IF_ERR(replaceOption(paramName, paramValue));
++      RETURN_IF_ERR(replaceOption(paramName.str(), paramValue));
+     }
+ 
+     if (paramName == "num-devices") {
+diff --git a/glow/lib/Backends/ETSOC/ETSOCFunction.cpp b/glow/lib/Backends/ETSOC/ETSOCFunction.cpp
+index a06151e0..9c17d948 100644
+--- a/glow/lib/Backends/ETSOC/ETSOCFunction.cpp
++++ b/glow/lib/Backends/ETSOC/ETSOCFunction.cpp
+@@ -694,7 +694,7 @@ bool ETSOCFunction::bundleConstants(neura::NetId netId) {
+         neura::HostPtr hostPtr{(char *)runtimeBundle_.getConstants() +
+                                symbolInfo.offset};
+         try {
+-          neuralizer_.setConstantHostPointer(netId, v->getName(), hostPtr);
++          neuralizer_.setConstantHostPointer(netId, v->getName().str(), hostPtr);
+         } catch (const neura::Exception &e) {
+           LOG(FATAL) << "[ETSOCFunction] setConstantHostPointer returned an "
+                         "error. Error: "
+diff --git a/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp b/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
+index 605fe683..95474af4 100644
+--- a/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
++++ b/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
+@@ -138,7 +138,7 @@ void ETSOCNetworkLoader::registerTensor(neura::NetId netId,
+   DEBUG_GLOW(LOG(INFO) << "registerTensor [" << toNumber(netId) << ","
+                        << name.str() << "] onDev: " << onDevice << "\n");
+   try {
+-    neuralizer_.registerTensor(netId, name, tDesc);
++    neuralizer_.registerTensor(netId, name.str(), tDesc);
+   } catch (const neura::Exception &e) {
+     DEBUG_GLOW(LOG(ERROR) << "Cannot register tensor. Error: " << e.what()
+                           << "\n");
+@@ -322,7 +322,7 @@ void ETSOCNetworkLoader::registerNetworkOperands(Instruction &I,
+     auto tDesc = createTensorDescriptor(type, neura::TensorClass::INTERNAL);
+     try {
+       neuralizer_.registerOperand(
+-          netId, instId, name,
++          netId, instId, name.str(),
+           (op.second == OperandKind::In)
+               ? neura::OperandType::INPUT
+               : (op.second == OperandKind::InOut) ? neura::OperandType::INOUT
+@@ -352,7 +352,7 @@ void ETSOCNetworkLoader::registerNetworkOperands(Instruction &I,
+   if ((I.getKind() == Kinded::Kind::TensorViewInstKind) or
+       (I.getKind() == Kinded::Kind::AllocActivationInstKind)) {
+     auto *tvI = static_cast<TensorViewInst *>(&I);
+-    std::string name = I.getName();
++    std::string name = I.getName().str();
+     auto tvType = tvI->getTy();
+     // need to register the tensor first
+     neura::TensorDescriptor tDesc =
+@@ -511,7 +511,7 @@ neura::InstId ETSOCNetworkLoader::createMemoryInst(Instruction &I,
+ 
+   const auto instId = getInstructionNumber(I);
+   try {
+-    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName(),
++    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName().str(),
+                                     instId);
+   } catch (const neura::Exception &e) {
+     DEBUG_GLOW(LOG(ERROR) << "Cannot register instruction. Error: " << e.what()
+@@ -589,7 +589,7 @@ neura::InstId ETSOCNetworkLoader::createConvolutionInst(Instruction &I,
+ 
+   const auto instId = getInstructionNumber(I);
+   try {
+-    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName(),
++    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName().str(),
+                                     instId);
+   } catch (const neura::Exception &e) {
+     DEBUG_GLOW(LOG(ERROR) << "Cannot register instruction. Error: " << e.what()
+@@ -639,7 +639,7 @@ neura::InstId ETSOCNetworkLoader::createPoolingInst(Instruction &I,
+ 
+   const auto instId = getInstructionNumber(I);
+   try {
+-    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName(),
++    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName().str(),
+                                     instId);
+   } catch (const neura::Exception &e) {
+     DEBUG_GLOW(LOG(ERROR) << "Cannot register instruction. Error: " << e.what()
+@@ -732,7 +732,7 @@ neura::InstId ETSOCNetworkLoader::createGenericInst(Instruction &I,
+ 
+   const auto instId = getInstructionNumber(I);
+   try {
+-    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName(),
++    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName().str(),
+                                     instId);
+   } catch (const neura::Exception &e) {
+     DEBUG_GLOW(LOG(ERROR) << "Cannot register instruction. Error: " << e.what()
+@@ -801,7 +801,7 @@ neura::InstId ETSOCNetworkLoader::createParallelInst(Instruction &I,
+ 
+   const auto instId = getInstructionNumber(I);
+   try {
+-    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName(),
++    neuralizer_.registerInstruction(netId, I.getKindName(), params, I.getName().str(),
+                                     instId);
+   } catch (const neura::Exception &e) {
+     DEBUG_GLOW(LOG(ERROR) << "Cannot register instruction. Error: " << e.what()
+diff --git a/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp b/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp
+index 9a2d089a..662a613a 100644
+--- a/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp
++++ b/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp
+@@ -702,7 +702,7 @@ void UnitTestGen::writeUTest(const Instruction &I, const std::string &bTest,
+   std::cout << "[dumpUnittest] " << iInfo << "\n";
+ 
+   // Info
+-  writeUnittestHeaderComment(I.getName(), I.getKindName(), iInfo);
++  writeUnittestHeaderComment(I.getName().str(), I.getKindName(), iInfo);
+ 
+   // Header of the test
+   addLine("TEST_P(Operator, " + std::string(I.getName()) + ") {");
+diff --git a/glow/lib/Backends/ETSOC/utils/tracedump.cpp b/glow/lib/Backends/ETSOC/utils/tracedump.cpp
+index 3ae7abf9..dae10a96 100644
+--- a/glow/lib/Backends/ETSOC/utils/tracedump.cpp
++++ b/glow/lib/Backends/ETSOC/utils/tracedump.cpp
+@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
+   std::istream &in = [&]() -> std::istream & {
+     if (input_filename.empty()) {
+       return std::cin;
+-    } else {
++    } else { 
+       fin.open(input_filename, std::ios::binary);
+       if (!fin.good()) {
+         std::cerr << "error: cannot open file: " << input_filename << std::endl;
+diff --git a/glow/lib/Base/Tensor.cpp b/glow/lib/Base/Tensor.cpp
+index 94ce8bc5..c6c0c3ea 100644
+--- a/glow/lib/Base/Tensor.cpp
++++ b/glow/lib/Base/Tensor.cpp
+@@ -192,7 +192,7 @@ template <class ElemTy>
+ static void dumpBinaryGenericImpl(Handle<ElemTy> handle,
+                                   llvm::StringRef fileName, float scale,
+                                   int32_t offset) {
+-  auto file = std::ofstream(fileName, std::ios::binary);
++  auto file = std::ofstream(fileName.str(), std::ios::binary);
+   for (size_t k = 0; k < handle.size(); ++k) {
+     double value = ((double)handle.raw(k) - offset) * scale;
+     file.write((char *)&value, sizeof(double));
+diff --git a/glow/lib/Flags/CMakeLists.txt b/glow/lib/Flags/CMakeLists.txt
+index 309e38cd..6983fbcd 100644
+--- a/glow/lib/Flags/CMakeLists.txt
++++ b/glow/lib/Flags/CMakeLists.txt
+@@ -3,7 +3,7 @@ add_library(Flags
+ add_library(glow::Flags ALIAS Flags)
+ target_link_libraries(Flags
+     PUBLIC
+-        gflags::gflags
++        gflags::gflags_shared
+         ${LLVM_SUPPORT_LIBS}
+     PRIVATE
+         glog::glog
+diff --git a/glow/lib/Importer/CMakeLists.txt b/glow/lib/Importer/CMakeLists.txt
+index 80e985c4..9fa71967 100644
+--- a/glow/lib/Importer/CMakeLists.txt
++++ b/glow/lib/Importer/CMakeLists.txt
+@@ -3,16 +3,16 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
+ 
+ add_definitions(-DGOOGLE_PROTOBUF_NO_RTTI)
+ 
+-if(NOT TARGET onnx_proto)
+-  # Note: This avoids libprotobuf.so complaining about name collisions at runtime
+-  if(NOT ONNX_NAMESPACE)
+-    set(ONNX_NAMESPACE "glow_onnx")
+-  endif()
+-  add_definitions("-DONNX_NAMESPACE=${ONNX_NAMESPACE}")
+-  add_subdirectory(${GLOW_THIRDPARTY_DIR}/onnx EXCLUDE_FROM_ALL build_onnx)
+-endif()
++#if(NOT TARGET onnx_proto)
++#  # Note: This avoids libprotobuf.so complaining about name collisions at runtime
++#  if(NOT ONNX_NAMESPACE)
++#    set(ONNX_NAMESPACE "glow_onnx")
++#  endif()
++#  add_definitions("-DONNX_NAMESPACE=${ONNX_NAMESPACE}")
++#  add_subdirectory(${GLOW_THIRDPARTY_DIR}/onnx EXCLUDE_FROM_ALL build_onnx)
++#endif()
+ 
+-find_package(Protobuf REQUIRED)
++find_package(protobuf REQUIRED)
+ PROTOBUF_GENERATE_CPP(CAFFE_SRCS CAFFE_HDRS caffe2.proto)
+ 
+ # NB: We need to copy the *.pb.h files to appropriately-prefixed paths to
+diff --git a/glow/lib/Runtime/CMakeLists.txt b/glow/lib/Runtime/CMakeLists.txt
+index edce56cd..4d80e4cc 100644
+--- a/glow/lib/Runtime/CMakeLists.txt
++++ b/glow/lib/Runtime/CMakeLists.txt
+@@ -13,6 +13,8 @@ target_link_libraries(Runtime
+         glow::Support
+         ${LLVM_SUPPORT_LIBS}
+         Folly::folly
++	ONNX::onnx
++	ONNX::onnx_proto
+     PRIVATE
+         glow::Flags
+         glow::Graph
+diff --git a/glow/lib/Runtime/Executor/CMakeLists.txt b/glow/lib/Runtime/Executor/CMakeLists.txt
+index 80eb69de..e37ea878 100644
+--- a/glow/lib/Runtime/Executor/CMakeLists.txt
++++ b/glow/lib/Runtime/Executor/CMakeLists.txt
+@@ -8,13 +8,13 @@ target_link_libraries(Executor
+         glow::Graph
+         glow::ExecutionContext
+         glow::Runtime
+-        Folly::folly
+     PRIVATE
+         glow::Base
+         glow::Backend
+         glow::Backends
+         glow::ExecutionContext
+         glog::glog
++        Folly::folly
+         ${LLVM_SUPPORT_LIBS}
+ )
+ 
