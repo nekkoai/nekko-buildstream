@@ -1,0 +1,42 @@
+diff --git a/CMake/folly-deps.cmake b/CMake/folly-deps.cmake
+index 7dafece7d..302882a89 100644
+--- a/CMake/folly-deps.cmake
++++ b/CMake/folly-deps.cmake
+@@ -64,10 +64,9 @@ if(LIBGFLAGS_FOUND)
+   set(FOLLY_LIBGFLAGS_INCLUDE ${LIBGFLAGS_INCLUDE_DIR})
+ endif()
+ 
+-find_package(Glog MODULE)
++find_package(glog 0.7.1 REQUIRED)
+ set(FOLLY_HAVE_LIBGLOG ${GLOG_FOUND})
+-list(APPEND FOLLY_LINK_LIBRARIES ${GLOG_LIBRARY})
+-list(APPEND FOLLY_INCLUDE_DIRECTORIES ${GLOG_INCLUDE_DIR})
++list(APPEND FOLLY_LINK_LIBRARIES glog::glog)
+ 
+ find_package(LibEvent MODULE REQUIRED)
+ list(APPEND FOLLY_LINK_LIBRARIES ${LIBEVENT_LIB})
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ecc11a796..eea6b2efb 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -12,7 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
++cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
+ # We use the GoogleTest module if it is available (only in CMake 3.9+)
+ # It requires CMP0054 and CMP0057 to be enabled.
+ if (POLICY CMP0054)
+diff --git a/folly/hash/Checksum.cpp b/folly/hash/Checksum.cpp
+index 1d42d6a6e..aeafdb20b 100644
+--- a/folly/hash/Checksum.cpp
++++ b/folly/hash/Checksum.cpp
+@@ -17,6 +17,7 @@
+ #include <folly/hash/Checksum.h>
+ 
+ #include <algorithm>
++#include <stdexcept>
+ 
+ #include <boost/crc.hpp>
+ 

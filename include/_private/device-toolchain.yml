@@ -1,0 +1,8 @@
+prefix: /opt/nekko/device
+lib: '%{prefix}/lib'
+cmake_module_path: '%{prefix}/share/cmake'
+cmake-global: >-
+  -D CMAKE_TOOLCHAIN_FILE=%{cmake_module_path}/riscv-toolchain.cmake
+  -D CMAKE_MODULE_PATH=%{cmake_module_path}
+  -D CMAKE_PREFIX_PATH=%{prefix}
+  %{cmake-project}

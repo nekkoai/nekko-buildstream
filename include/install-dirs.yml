@@ -1,0 +1,13 @@
+variables:
+  sbindir: "%{bindir}"
+  sysconfdir: "/etc"
+  localstatedir: "/var"
+  lib: "lib/%{gcc_triplet}"
+  indep-libdir: "%{prefix}/lib"
+  debugdir: "%{indep-libdir}/debug"
+  sourcedir: "%{debugdir}/source"
+  flatpak_xmldir: "%{prefix}/share/app-info/xmls"
+  licensedir: "%{datadir}/licenses"
+  project_licensedir: "%{licensedir}/%{project-name}"
+  # todo: figure out %{prefix}/ isn't getting expanded if in this variable below
+  cmake_moduledir: "lib/%{gcc_triplet}/cmake"

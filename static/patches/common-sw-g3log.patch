@@ -1,0 +1,26 @@
+diff --git a/host/common-sw/CMakeLists.txt b/host/common-sw/CMakeLists.txt
+index 464eefb..289a980 100644
+--- a/host/common-sw/CMakeLists.txt
++++ b/host/common-sw/CMakeLists.txt
+@@ -9,7 +9,7 @@
+ #------------------------------------------------------------------------------
+ 
+ 
+-cmake_minimum_required(VERSION 3.21)
++cmake_minimum_required(VERSION 3.29)
+ project(hostUtils VERSION 0.5.0 LANGUAGES CXX)
+ 
+ 
+diff --git a/host/common-sw/src/logging/CMakeLists.txt b/host/common-sw/src/logging/CMakeLists.txt
+index 7730777..3baf401 100644
+--- a/host/common-sw/src/logging/CMakeLists.txt
++++ b/host/common-sw/src/logging/CMakeLists.txt
+@@ -9,7 +9,7 @@
+ #------------------------------------------------------------------------------
+ 
+ 
+-cmake_minimum_required(VERSION 3.21)
++cmake_minimum_required(VERSION 3.29)
+ project(logging VERSION 0.1.0)
+ 
+ include(GNUInstallDirs)

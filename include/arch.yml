@@ -1,0 +1,37 @@
+variables:
+  # Definition of variables related to machine architecture
+  gcc_triplet: "%{gcc_arch}-linux-%{abi}"
+  triplet: "%{arch}-unknown-linux-%{abi}"
+  gcc_arch: "%{arch}"
+  flatpak_arch: "%{arch}"
+  abi: "gnu"
+
+  (?):
+  - target_arch == "x86_64":
+      arch: "x86_64"
+      linux-root: 4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709
+  - target_arch == "i686":
+      arch: "i686"
+      # See https://wiki.debian.org/Multiarch/Tuples#Why_not_use_GNU_triplets.3F
+      gcc_arch: "i386"
+      flatpak_arch: "i386"
+      linux-root: 44479540-F297-41B2-9AF7-D131D5F0458A
+  - target_arch == "aarch64":
+      arch: "aarch64"
+      linux-root: B921B045-1DF0-41C3-AF44-4C6F280D3FAE
+  - target_arch == "ppc64le":
+      arch: "powerpc64le"
+      gcc_arch: "powerpc64le"
+      flatpak_arch: "ppc64le"
+  - target_arch == "ppc64":
+      arch: "powerpc64"
+      gcc_arch: "powerpc64"
+      flatpak_arch: "ppc64"
+  - target_arch == "riscv64":
+      arch: "riscv64"
+      gcc_arch: "riscv64"
+      linux-root: 72EC70A6-CF74-40E6-BD49-4BDA08E8F224
+  - target_arch == "loongarch64":
+      arch: "loongarch64"
+      gcc_arch: "loongarch64"
+      linux-root: 77055800-792c-4f94-b39a-98c91b762bb6

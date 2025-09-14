@@ -1,0 +1,24 @@
+diff --git a/host/devicelayer/src/DevicePcie.h b/host/devicelayer/src/DevicePcie.h
+index e9e2fea..556d745 100644
+--- a/host/devicelayer/src/DevicePcie.h
++++ b/host/devicelayer/src/DevicePcie.h
+@@ -10,6 +10,7 @@
+ #pragma once
+ #include "device-layer/IDeviceLayer.h"
+ #include <et_ioctl.h>
++#include <array>
+ #include <mutex>
+ #include <unordered_map>
+ 
+diff --git a/host/devicelayer/src/DeviceSysEmu.cpp b/host/devicelayer/src/DeviceSysEmu.cpp
+index bdd7e26..e97e5a1 100644
+--- a/host/devicelayer/src/DeviceSysEmu.cpp
++++ b/host/devicelayer/src/DeviceSysEmu.cpp
+@@ -17,6 +17,7 @@
+ #include <mutex>
+ #include <stdio.h>
+ #include <thread>
++#include <cassert>
+ 
+ #if __has_include(<filesystem>)
+ #include <filesystem>

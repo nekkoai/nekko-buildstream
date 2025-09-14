@@ -1,0 +1,92 @@
+# Split rule domains
+
+devel:
+  - "%{includedir}"
+  - "%{includedir}/**"
+  - "%{libdir}/pkgconfig"
+  - "%{libdir}/pkgconfig/**"
+  - "%{datadir}/pkgconfig"
+  - "%{datadir}/pkgconfig/**"
+  - "%{datadir}/aclocal"
+  - "%{datadir}/aclocal/**"
+  - "%{datadir}/cmake/**"
+  - "%{prefix}/lib/cmake"
+  - "%{prefix}/lib/cmake/**"
+  - "%{libdir}/cmake"
+  - "%{libdir}/cmake/**"
+  - "%{prefix}/lib/*.a"
+  - "%{libdir}/*.a"
+  - "%{datadir}/gdb/auto-load"
+  - "%{datadir}/gdb/auto-load/**"
+  - "%{datadir}/gir-1.0"
+  - "%{datadir}/gir-1.0/**"
+  - "%{datadir}/vala*/vapi"
+  - "%{datadir}/vala*/vapi/**"
+  - "%{prefix}/src/**"
+
+debug:
+  - "%{debugdir}/**"
+
+doc:
+  - "%{docdir}"
+  - "%{docdir}/**"
+  - "%{infodir}"
+  - "%{infodir}/**"
+  - "%{mandir}"
+  - "%{mandir}/**"
+  - "%{datadir}/gtk-doc/html"
+  - "%{datadir}/gtk-doc/html/**"
+  - "%{datadir}/examples"
+  - "%{datadir}/examples/**"
+  - "%{datadir}/help"
+  - "%{datadir}/help/**"
+  - "%{datadir}/ri"
+  - "%{datadir}/ri/**"
+  - "%{datadir}/cmake-*/Help"
+  - "%{datadir}/cmake-*/Help/**"
+
+sysconf:
+  - "%{sysconfdir}"
+  - "%{sysconfdir}/**"
+
+tests:
+  - "%{datadir}/installed-tests"
+  - "%{datadir}/installed-tests/**"
+  - "%{libexecdir}/installed-tests"
+  - "%{libexecdir}/installed-tests/**"
+
+# shells not part of shippables
+shells:
+  - "%{datadir}/fish"
+  - "%{datadir}/fish/**"
+  - "%{datadir}/zsh"
+  - "%{datadir}/zsh/**"
+
+static-blocklist: []
+
+license:
+  - "%{licensedir}"
+  - "%{licensedir}/**"
+
+locale:
+  - "%{datadir}/locale"
+  - "%{datadir}/locale/**"
+  - "%{datadir}/i18n"
+  - "%{datadir}/i18n/**"
+
+vm-only:
+  - "%{indep-libdir}/systemd"
+  - "%{indep-libdir}/systemd/**"
+  - "%{indep-libdir}/sysusers.d"
+  - "%{indep-libdir}/sysusers.d/**"
+  - "%{indep-libdir}/tmpfiles.d"
+  - "%{indep-libdir}/tmpfiles.d/**"
+  - "%{indep-libdir}/udev"
+  - "%{indep-libdir}/udev/**"
+
+zoneinfo:
+  - "%{datadir}/zoneinfo"
+  - "%{datadir}/zoneinfo/**"
+  - "%{datadir}/zoneinfo-leaps"
+  - "%{datadir}/zoneinfo-leaps/**"
+  - "%{datadir}/zoneinfo-posix"

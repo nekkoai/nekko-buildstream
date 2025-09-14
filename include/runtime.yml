@@ -1,0 +1,8 @@
+# Include this file when building a runtime
+
+(@):
+- include/flags.yml
+- include/install-dirs.yml
+- include/arch.yml
+- include/strip.yml
+- include/install-extra.yml

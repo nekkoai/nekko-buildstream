@@ -1,0 +1,26 @@
+# Definition of variables related to machine architecture
+host-triplet: "%{triplet}"
+build-triplet: "%{triplet}"
+libtool_dlsearch_path: "/usr/lib/%{gcc_triplet}"
+snap_arch: "%{arch}"
+go-arch: "%{arch}"
+
+(?):
+- target_arch == "i686":
+    snap_arch: "i386"
+    go-arch: "386"
+- target_arch == "x86_64":
+    snap_arch: "amd64"
+    go-arch: "amd64"
+- target_arch == "aarch64":
+    snap_arch: "arm64"
+    go-arch: "arm64"
+- target_arch == "ppc64le":
+    go-arch: "ppc64le"
+- target_arch == "ppc64":
+    uname-arch: "ppc64"
+    go-arch: "ppc64"
+- target_arch == "riscv64":
+    go-arch: "riscv64"
+- target_arch == "loongarch64":
+    go-arch: "loong64"
