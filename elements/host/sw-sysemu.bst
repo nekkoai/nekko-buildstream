@@ -2,12 +2,12 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
-- deps/glog.bst
+- base/freedesktop-sdk.bst:components/glog.bst
 - host/sw-sysemu-elfio.bst
 - host/et-driver.bst
 
 depends:
-- deps/glog.bst
+- base/freedesktop-sdk.bst:components/glog.bst
 
 variables:
   command-subdir: host/sw-sysemu

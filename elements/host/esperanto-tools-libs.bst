@@ -2,9 +2,9 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:components/gflags.bst
 - deps/boost.bst
 - deps/cereal.bst
-- deps/gflags.bst
 - deps/libcap-cmake.bst
 - deps/easy-profiler.bst
 - host/cmake-modules.bst
@@ -16,9 +16,9 @@ build-depends:
 - host/common-sw.bst
 
 depends:
+- base/freedesktop-sdk.bst:components/gflags.bst
 - deps/boost.bst
 - deps/cereal.bst
-- deps/gflags.bst
 - deps/libcap-cmake.bst
 - deps/easy-profiler.bst
 - host/cmake-modules.bst

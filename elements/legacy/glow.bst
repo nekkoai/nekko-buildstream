@@ -3,6 +3,7 @@ kind: cmake
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
 - base/freedesktop-sdk.bst:components/protobuf.bst 
+- base/freedesktop-sdk.bst:components/gflags.bst
 - deps/folly.bst
 - deps/onnx.bst
 - deps/gtest.bst
@@ -10,6 +11,7 @@ build-depends:
 
 depends:
 - base/freedesktop-sdk.bst:components/protobuf.bst 
+- base/freedesktop-sdk.bst:components/gflags.bst
 - deps/folly.bst
 - deps/onnx.bst
 - deps/gtest.bst

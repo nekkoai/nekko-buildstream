@@ -2,12 +2,12 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
-- deps/glog.bst
+- base/freedesktop-sdk.bst:components/glog.bst
 - deps/g3log.bst
 - host/cmake-modules.bst
 
 depends:
-- deps/glog.bst
+- base/freedesktop-sdk.bst:components/glog.bst
 - deps/g3log.bst
 
 variables:

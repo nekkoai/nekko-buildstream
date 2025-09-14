@@ -2,13 +2,12 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:components/libevent.bst
+- base/freedesktop-sdk.bst:components/gflags.bst
+- base/freedesktop-sdk.bst:components/glog.bst
 - deps/boost.bst
 - deps/double-conversion.bst
 - deps/fast-float.bst
-# todo these are in freedesktopsdk but are not exported in the sdk image ...
-- deps/libevent.bst
-- deps/gflags.bst
-- deps/glog.bst
 
 variables:
   cmake-local: >-
