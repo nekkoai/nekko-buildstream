@@ -1,12 +1,21 @@
 diff --git a/glow/CMakeLists.txt b/glow/CMakeLists.txt
-index a1fc09ac..c85a8c26 100644
+index a1fc09ac..e7982ef2 100644
 --- a/glow/CMakeLists.txt
 +++ b/glow/CMakeLists.txt
-@@ -181,6 +181,7 @@ endif()
+@@ -97,7 +97,6 @@ if(GLOW_USE_LLD)
+ endif()
+ 
+ include(Glog)
+-include(Gflags)
+ include(GlowDefaults)
+ include(GlowTestSupport)
+ include(GlowExternalBackends)
+@@ -181,6 +180,8 @@ endif()
  
  # CPU backend, GlowAPI & apitest depend on nlohmann_json
  find_package(nlohmann_json REQUIRED)
 +find_package(fmt REQUIRED)
++find_package(Gflags REQUIRED)
  
  if(GLOW_WITH_LLVMIRCODEGEN)
    add_definitions(-DGLOW_WITH_LLVMIRCODEGEN=1)
@@ -58,6 +67,103 @@ index a1fc09ac..c85a8c26 100644
  else()
    list(APPEND LLVM_CORE_LIBS LLVMCore)
    list(APPEND LLVM_IR_LIBS
+diff --git a/glow/cmake/modules/Gflags.cmake b/glow/cmake/modules/Gflags.cmake
+deleted file mode 100644
+index b1827ae8..00000000
+--- a/glow/cmake/modules/Gflags.cmake
++++ /dev/null
+@@ -1,91 +0,0 @@
+-# ---[ gflags
+-# Stole from https://github.com/pytorch/pytorch/blob/45c9ed825a51c05395fd28b376271324e0315d0c/cmake/public/gflags.cmake
+-
+-# We will try to use the config mode first, and then manual find.
+-set(GFLAGS_USE_TARGET_NAMESPACE TRUE)
+-find_package(gflags CONFIG QUIET)
+-if((NOT TARGET gflags) OR (NOT TARGET gflags::gflags))
+-  find_package(gflags MODULE QUIET)
+-endif()
+-
+-if (TARGET gflags::gflags)
+-  message(STATUS "Glow: Found gflags with new-style gflags::gflags target.")
+-elseif(TARGET gflags)
+-  message(STATUS "Glow: Found gflags with new-style gflags target.")
+-  add_library(gflags::gflags ALIAS gflags)
+-elseif(GFLAGS_FOUND)
+-  message(STATUS "Glow: Found gflags with old-style gflag starget.")
+-  add_library(gflags UNKNOWN IMPORTED)
+-  set_property(
+-      TARGET gflags PROPERTY IMPORTED_LOCATION ${GFLAGS_LIBRARY})
+-  set_property(
+-      TARGET gflags PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+-      ${GFLAGS_INCLUDE_DIR})
+-  add_library(gflags::gflags ALIAS gflags)
+-else()
+-  message(STATUS
+-      "Glow: Cannot find gflags automatically. Using legacy find.")
+-
+-  # - Try to find GFLAGS in the legacy way.
+-  #
+-  # The following variables are optionally searched for defaults
+-  #  GFLAGS_ROOT_DIR: Base directory where all GFLAGS components are found
+-  #
+-  # The following are set after configuration is done:
+-  #  GFLAGS_FOUND
+-  #  GFLAGS_INCLUDE_DIRS
+-  #  GFLAGS_LIBRARIES
+-  #  GFLAGS_LIBRARYRARY_DIRS
+-  include(FindPackageHandleStandardArgs)
+-  set(GFLAGS_ROOT_DIR "" CACHE PATH "Folder contains Gflags")
+-
+-  # We are testing only a couple of files in the include directories
+-  if(WIN32)
+-    find_path(GFLAGS_INCLUDE_DIR gflags/gflags.h
+-        PATHS ${GFLAGS_ROOT_DIR}/src/windows)
+-  else()
+-    find_path(GFLAGS_INCLUDE_DIR gflags/gflags.h
+-        PATHS ${GFLAGS_ROOT_DIR})
+-  endif()
+-
+-  if(WIN32)
+-    find_library(GFLAGS_LIBRARY_RELEASE
+-        NAMES libgflags
+-        PATHS ${GFLAGS_ROOT_DIR}
+-        PATH_SUFFIXES Release)
+-
+-    find_library(GFLAGS_LIBRARY_DEBUG
+-        NAMES libgflags-debug
+-        PATHS ${GFLAGS_ROOT_DIR}
+-        PATH_SUFFIXES Debug)
+-    set(GFLAGS_LIBRARY optimized ${GFLAGS_LIBRARY_RELEASE} debug ${GFLAGS_LIBRARY_DEBUG})
+-  else()
+-    find_library(GFLAGS_LIBRARY gflags)
+-  endif()
+-
+-  find_package_handle_standard_args(
+-      gflags DEFAULT_MSG GFLAGS_INCLUDE_DIR GFLAGS_LIBRARY)
+-
+-  if(GFLAGS_FOUND)
+-    message(
+-        STATUS
+-        "Glow: Found gflags  (include: ${GFLAGS_INCLUDE_DIR}, "
+-        "library: ${GFLAGS_LIBRARY})")
+-    add_library(gflags UNKNOWN IMPORTED)
+-    set_property(
+-        TARGET gflags PROPERTY IMPORTED_LOCATION ${GFLAGS_LIBRARY})
+-    set_property(
+-        TARGET gflags PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+-        ${GFLAGS_INCLUDE_DIR})
+-    add_library(gflags::gflags ALIAS gflags)
+-  endif()
+-endif()
+-
+-# After above, we should have the gflags target now.
+-if(NOT TARGET gflags)
+-  message(WARNING
+-      "Glow: gflags cannot be found. Depending on whether you are building "
+-      "Glow or a Glow dependent library, the next warning / error will "
+-      "give you more info.")
+-endif()
+-
 diff --git a/glow/glowConfig.cmake.in b/glow/glowConfig.cmake.in
 index 5ff3bff8..89989379 100644
 --- a/glow/glowConfig.cmake.in
@@ -73,6 +179,18 @@ index 5ff3bff8..89989379 100644
      find_dependency(deviceLayer REQUIRED)
      @ETSOC2_SYSEMU_CMAKE_DEPENDENCY@
  
+diff --git a/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h b/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h
+index e0e3fc9b..034c1bd0 100644
+--- a/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h
++++ b/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h
+@@ -21,6 +21,7 @@
+ 
+ #include <condition_variable>
+ #include <cstdarg>
++#include <string>
+ #include <unordered_map>
+ 
+ /// Structure implements file I/O related functions. Currently,
 diff --git a/glow/lib/Backends/ETSOC/ETSOC.cpp b/glow/lib/Backends/ETSOC/ETSOC.cpp
 index 64b2bde2..6b7d6d82 100644
 --- a/glow/lib/Backends/ETSOC/ETSOC.cpp
@@ -228,19 +346,27 @@ index 94ce8bc5..c6c0c3ea 100644
    for (size_t k = 0; k < handle.size(); ++k) {
      double value = ((double)handle.raw(k) - offset) * scale;
      file.write((char *)&value, sizeof(double));
-diff --git a/glow/lib/Flags/CMakeLists.txt b/glow/lib/Flags/CMakeLists.txt
-index 309e38cd..6983fbcd 100644
---- a/glow/lib/Flags/CMakeLists.txt
-+++ b/glow/lib/Flags/CMakeLists.txt
-@@ -3,7 +3,7 @@ add_library(Flags
- add_library(glow::Flags ALIAS Flags)
- target_link_libraries(Flags
-     PUBLIC
--        gflags::gflags
-+        gflags::gflags_shared
-         ${LLVM_SUPPORT_LIBS}
-     PRIVATE
-         glog::glog
+diff --git a/glow/lib/GlowAPI/etsoc.cpp b/glow/lib/GlowAPI/etsoc.cpp
+index 1342bb79..3acda1d3 100644
+--- a/glow/lib/GlowAPI/etsoc.cpp
++++ b/glow/lib/GlowAPI/etsoc.cpp
+@@ -423,12 +423,14 @@ auto loadJSONFile(std::filesystem::path const &filepath)
+     -> GlowAPI::Expected<nlohmann::json> {
+   // Helper class for handling JSON parsing errors
+   class JsonParserNothrow
+-      : public nlohmann::detail::json_sax_dom_parser<nlohmann::json> {
++      : public nlohmann::detail::json_sax_dom_parser<nlohmann::json,
++	                                             nlohmann::detail::input_stream_adapter> {
+     std::string msg_;
+ 
+   public:
+     explicit JsonParserNothrow(nlohmann::json &j)
+-        : nlohmann::detail::json_sax_dom_parser<nlohmann::json>(
++        : nlohmann::detail::json_sax_dom_parser<nlohmann::json,
++	                                        nlohmann::detail::input_stream_adapter>(
+               j, /*allow_exceptions:*/ false) {}
+ 
+     bool parse_error(std::size_t position, std::string const &,
 diff --git a/glow/lib/Importer/CMakeLists.txt b/glow/lib/Importer/CMakeLists.txt
 index 80e985c4..9fa71967 100644
 --- a/glow/lib/Importer/CMakeLists.txt
@@ -271,6 +397,52 @@ index 80e985c4..9fa71967 100644
  PROTOBUF_GENERATE_CPP(CAFFE_SRCS CAFFE_HDRS caffe2.proto)
  
  # NB: We need to copy the *.pb.h files to appropriately-prefixed paths to
+diff --git a/glow/lib/Importer/ONNXModelLoader.cpp b/glow/lib/Importer/ONNXModelLoader.cpp
+index abc920de..17afde3c 100755
+--- a/glow/lib/Importer/ONNXModelLoader.cpp
++++ b/glow/lib/Importer/ONNXModelLoader.cpp
+@@ -54,6 +54,8 @@
+ #include <llvm/Support/ErrorHandling.h>                    // for llvm_u...
+ #include <llvm/Support/raw_ostream.h>                      // for errs
+ 
++#include <absl/strings/string_view.h>        // for string view
++
+ #include <algorithm>          // for max, copy
+ #include <array>              // for array
+ #include <assert.h>           // for assert
+@@ -1234,15 +1236,15 @@ ONNXModelLoader::loadProto(const std::string &filename, bool zipMode,
+   public:
+     OnnxTxtErrCollector() = default;
+     ~OnnxTxtErrCollector() override = default;
+-    void AddError(int line, int column, const std::string &message) override {
++    void RecordError(int line, google::protobuf::io::ColumnNumber column, absl::string_view message) override {
+       llvm::errs() << strFormat("ONNX parsing error at [%d, %d]: ", line,
+                                 column)
+-                   << message << "\n";
++                   << std::string(message) << "\n";
+     }
+-    void AddWarning(int line, int column, const std::string &message) override {
++    void RecordWarning(int line, google::protobuf::io::ColumnNumber column, absl::string_view message) override {
+       llvm::errs() << strFormat("ONNX parsing warning at [%d, %d]: ", line,
+                                 column)
+-                   << message << "\n";
++                   << std::string(message) << "\n";
+     }
+   };
+ 
+diff --git a/glow/lib/PassManager/PassManager.cpp b/glow/lib/PassManager/PassManager.cpp
+index d6711c97..042e318d 100644
+--- a/glow/lib/PassManager/PassManager.cpp
++++ b/glow/lib/PassManager/PassManager.cpp
+@@ -231,7 +231,7 @@ bool PassManagerBase::run(IRContainer *C, const CompilationContext &cctx) {
+     case ConvergenceMode::UntilFixedPoint:
+       while (runPassWithConfig(passConfig, C, cctx)) {
+         changed = true;
+-        VLOG_IF_EVERY_N(0, google::COUNTER > 1, 100)
++        VLOG_EVERY_N(0, 100)
+             << "Warning: " << getNameOfPass(passConfig).str()
+             << " Pass applied another 100 iterations without reaching fixed "
+                "point";
 diff --git a/glow/lib/Runtime/CMakeLists.txt b/glow/lib/Runtime/CMakeLists.txt
 index edce56cd..4d80e4cc 100644
 --- a/glow/lib/Runtime/CMakeLists.txt

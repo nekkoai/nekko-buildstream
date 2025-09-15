@@ -1,0 +1,321 @@
+diff --git a/trace-utils/cmake/Findglog.cmake b/trace-utils/cmake/Findglog.cmake
+deleted file mode 100644
+index 3c1d8cfd..00000000
+--- a/trace-utils/cmake/Findglog.cmake
++++ /dev/null
+@@ -1,50 +0,0 @@
+-# - Try to find Glog
+-#
+-# The following variables are optionally searched for defaults
+-#  GLOG_ROOT_DIR:            Base directory where all GLOG components are found
+-#
+-# The following targets are available after glog is found:
+-#  glog
+-#  glog::glog
+-
+-include(FindPackageHandleStandardArgs)
+-
+-set(GLOG_ROOT_DIR "" CACHE PATH "Folder contains Google glog")
+-
+-if(WIN32)
+-    find_path(GLOG_INCLUDE_DIR glog/logging.h
+-        PATHS ${GLOG_ROOT_DIR}/src/windows)
+-else()
+-    find_path(GLOG_INCLUDE_DIR glog/logging.h
+-        PATHS ${GLOG_ROOT_DIR})
+-endif()
+-
+-if(MSVC)
+-    find_library(GLOG_LIBRARY_RELEASE libglog_static
+-        PATHS ${GLOG_ROOT_DIR}
+-        PATH_SUFFIXES Release)
+-
+-    find_library(GLOG_LIBRARY_DEBUG libglog_static
+-        PATHS ${GLOG_ROOT_DIR}
+-        PATH_SUFFIXES Debug)
+-
+-    set(GLOG_LIBRARY optimized ${GLOG_LIBRARY_RELEASE} debug ${GLOG_LIBRARY_DEBUG})
+-else()
+-    find_library(GLOG_LIBRARY glog
+-        PATHS ${GLOG_ROOT_DIR}
+-        PATH_SUFFIXES lib lib64)
+-endif()
+-
+-find_package_handle_standard_args(glog DEFAULT_MSG GLOG_INCLUDE_DIR GLOG_LIBRARY)
+-mark_as_advanced(GLOG_ROOT_DIR GLOG_LIBRARY_RELEASE GLOG_LIBRARY_DEBUG GLOG_LIBRARY GLOG_INCLUDE_DIR)
+-
+-if (GLOG_FOUND)
+-    if (NOT TARGET glog)
+-        add_library(glog UNKNOWN IMPORTED GLOBAL)
+-        target_include_directories(glog INTERFACE ${GLOG_INCLUDE_DIR})
+-        set_target_properties(glog PROPERTIES IMPORTED_LOCATION ${GLOG_LIBRARY})
+-    endif()
+-    if (TARGET glog AND NOT TARGET glog::glog)
+-        add_library(glog::glog ALIAS glog)
+-    endif()
+-endif()
+\ No newline at end of file
+diff --git a/trace-utils/et-trace-utilsConfig.cmake.in b/trace-utils/et-trace-utilsConfig.cmake.in
+index 27fa39db..c3541342 100644
+--- a/trace-utils/et-trace-utilsConfig.cmake.in
++++ b/trace-utils/et-trace-utilsConfig.cmake.in
+@@ -15,6 +15,7 @@ find_dependency(nlohmann_json REQUIRED)
+ find_dependency(glog REQUIRED)
+ find_dependency(fmt REQUIRED)
+ find_dependency(Backward REQUIRED)
++find_dependency(tl-expected REQUIRED)
+ 
+ if (ENABLE_UEVENT)
+     find_dependency(uevent REQUIRED)
+@@ -31,5 +32,5 @@ if (ENABLE_CEREAL)
+     find_dependency(cereal REQUIRED)
+ endif()
+ 
+-include(${CMAKE_CURRENT_LIST_DIR}/et-trace-utilsTargets.cmake)
++#include(${CMAKE_CURRENT_LIST_DIR}/et-trace-utilsTargets.cmake)
+ check_required_components(et-trace-utils)
+diff --git a/trace-utils/include/et-trace-utils/support/frequency.h b/trace-utils/include/et-trace-utils/support/frequency.h
+index 0d5c7733..d87bd5bf 100644
+--- a/trace-utils/include/et-trace-utils/support/frequency.h
++++ b/trace-utils/include/et-trace-utils/support/frequency.h
+@@ -39,10 +39,6 @@ class Frequency {
+ 
+ std::ostream& operator<<(std::ostream& os, Frequency f);
+ 
+-#if FMT_VERSION >= 90000
+-template <> struct fmt::formatter<Frequency> : ostream_formatter {};
+-#endif
+-
+ [[nodiscard]] inline Frequency operator""_Hz(unsigned long long v) {
+   return Frequency(static_cast<double>(v) * 1.0);
+ }
+@@ -69,3 +65,7 @@ template <> struct fmt::formatter<Frequency> : ostream_formatter {};
+ }
+ 
+ } // end namespace et_tut
++
++#if FMT_VERSION >= 90000
++template <> struct fmt::formatter<et_tut::Frequency> : ostream_formatter {};
++#endif
+diff --git a/trace-utils/include/et-trace-utils/thread_layout.h b/trace-utils/include/et-trace-utils/thread_layout.h
+index 105a1fec..d588cb58 100644
+--- a/trace-utils/include/et-trace-utils/thread_layout.h
++++ b/trace-utils/include/et-trace-utils/thread_layout.h
+@@ -93,8 +93,9 @@ class ThreadLayout {
+ 
+ std::ostream& operator<<(std::ostream& os, ThreadLayout::Error err);
+ 
++} // end namespace et_tut
++
+ #if FMT_VERSION >= 90000
+-template <> struct fmt::formatter<ThreadLayout::Error> : ostream_formatter {};
++template <> struct fmt::formatter<et_tut::ThreadLayout::Error> : ostream_formatter {};
+ #endif
+ 
+-} // end namespace et_tut
+diff --git a/trace-utils/src/CMakeLists.txt b/trace-utils/src/CMakeLists.txt
+index 8bbf9e8a..733b9e4e 100644
+--- a/trace-utils/src/CMakeLists.txt
++++ b/trace-utils/src/CMakeLists.txt
+@@ -85,10 +85,20 @@ if (ENABLE_CEREAL)
+         cereal/perfetto_trace_sink.cc
+         cereal/trace_decode.cc
+     )
+-    
++   
++    find_package(LLVM REQUIRED CONFIG)
++    message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
++    message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
++
++    include_directories(${LLVM_INCLUDE_DIRS})
++    separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
++    add_definitions(${LLVM_DEFINITIONS_LIST})
++
++    llvm_map_components_to_libnames(llvm_libs support)
++
+     target_link_libraries(et-trace-utils PUBLIC
+         neuralizer::neuralizer
+-        LLVMSupport
++        ${llvm_libs}
+         runtime::etrt
+         $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,runtime::etrt,runtime::etrt_static>
+         cereal::cereal
+@@ -107,4 +117,4 @@ if (ET_TRACE_UTILS_INSTALL_LIB)
+         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/et-trace-utils
+         NAMESPACE et-trace-utils::
+     )
+-endif()
+\ No newline at end of file
++endif()
+diff --git a/trace-utils/src/cereal/cereal_evt_getters.cc b/trace-utils/src/cereal/cereal_evt_getters.cc
+index 8035a2cb..facee0e4 100644
+--- a/trace-utils/src/cereal/cereal_evt_getters.cc
++++ b/trace-utils/src/cereal/cereal_evt_getters.cc
+@@ -69,19 +69,19 @@ namespace detail {
+ 
+ template <typename T>
+ void add_argument_with_key(nl::json& args, std::string_view key, T argument) {
+-  args[key] = argument;
++  args[std::string(key)] = argument;
+ }
+ 
+ template <typename T>
+ void add_vect_arguments_with_key(nl::json& args, std::string_view key, const std::vector<T>& vect_argument) {
+-  args[key] = nl::json::array();
++  args[std::string(key)] = nl::json::array();
+   if constexpr (std::is_same_v<T, neura::AllocInfo>) {
+     for (size_t i = 0u; i < vect_argument.size(); ++i) {
+       nl::json args_allocs;
+       add_argument_with_key(args_allocs, "id", vect_argument[i].id);
+       add_argument_with_key(args_allocs, "align", vect_argument[i].align);
+       add_argument_with_key(args_allocs, "size", vect_argument[i].size);
+-      args[key].push_back(args_allocs);
++      args[std::string(key)].push_back(args_allocs);
+     }
+   } else if constexpr (std::is_same_v<T, neura::CopyInfoToDev>) {
+     for (size_t i = 0u; i < vect_argument.size(); ++i) {
+@@ -89,7 +89,7 @@ void add_vect_arguments_with_key(nl::json& args, std::string_view key, const std
+       add_argument_with_key(args_copies, "id", vect_argument[i].id);
+       add_argument_with_key(args_copies, "offset", vect_argument[i].offset);
+       add_argument_with_key(args_copies, "size", vect_argument[i].size);
+-      args[key].push_back(args_copies);
++      args[std::string(key)].push_back(args_copies);
+     }
+   } else if constexpr (std::is_same_v<T, neura::CopyInfoToHost>) {
+     for (size_t i = 0u; i < vect_argument.size(); ++i) {
+@@ -97,26 +97,26 @@ void add_vect_arguments_with_key(nl::json& args, std::string_view key, const std
+       add_argument_with_key(args_copies, "id", vect_argument[i].id);
+       add_argument_with_key(args_copies, "offset", vect_argument[i].offset);
+       add_argument_with_key(args_copies, "size", vect_argument[i].size);
+-      args[key].push_back(args_copies);
++      args[std::string(key)].push_back(args_copies);
+     }
+   } else if constexpr (std::is_same_v<T, neura::AllocId>) {
+     for (size_t i = 0u; i < vect_argument.size(); ++i) {
+       nl::json alloc_ids;
+       add_argument_with_key(alloc_ids, "id", vect_argument[i]);
+-      args[key].push_back(alloc_ids);
++      args[std::string(key)].push_back(alloc_ids);
+     }
+   } else if constexpr (std::is_same_v<T, neura::LaunchInfo>) {
+     for (size_t i = 0u; i < vect_argument.size(); ++i) {
+       nl::json kernel_launches;
+       add_argument_with_key(kernel_launches, "id", vect_argument[i].id);
+       add_vect_arguments_with_key(kernel_launches, "alloc_ids", vect_argument[i].args);
+-      args[key].push_back(kernel_launches);
++      args[std::string(key)].push_back(kernel_launches);
+     }
+   } else if constexpr (std::is_same_v<T, neura::EInstructionMetadata>) {
+     for (size_t i = 0u; i < vect_argument.size(); ++i) {
+       nl::json instructions;
+       add_argument_with_key(instructions, "number", vect_argument[i].number);
+-      args[key].push_back(instructions);
++      args[std::string(key)].push_back(instructions);
+     }
+   }
+ }
+@@ -144,7 +144,7 @@ void add_opt_argument_with_key(std::optional<nl::json>& args, std::string_view k
+     add_argument_with_key(args_co, "optLevel", compileOptions.optLevel);
+     add_argument_with_key(args_co, "logTensorSize", compileOptions.logTensorSize);
+     add_argument_with_key(args_co, "dev", compileOptions.dev);
+-    (*args)[key] = args_co;
++    (*args)[std::string(key)] = args_co;
+   } else if constexpr (std::is_same_v<Td, std::vector<neura::AllocInfo>> ||
+                        std::is_same_v<Td, std::vector<neura::CopyInfoToDev>> ||
+                        std::is_same_v<Td, std::vector<neura::CopyInfoToHost>> ||
+@@ -156,7 +156,7 @@ void add_opt_argument_with_key(std::optional<nl::json>& args, std::string_view k
+     const auto& argument = opt_argument.value();
+     auto& output_json = args.value();
+ 
+-    output_json[key] = nl::json{
++    output_json[std::string(key)] = nl::json{
+       {"device_arch", argument.deviceArch_},
+       {"frequency_Mhz", argument.frequency_},
+       {"available_shires", argument.availableShires_},
+diff --git a/trace-utils/src/et_trace/txt_trace_sink.cc b/trace-utils/src/et_trace/txt_trace_sink.cc
+index 61383655..2831b27d 100644
+--- a/trace-utils/src/et_trace/txt_trace_sink.cc
++++ b/trace-utils/src/et_trace/txt_trace_sink.cc
+@@ -5,6 +5,10 @@
+ #include <et-trace/layout.h>  // for trace_entry_header_t, trace_custom_event_t
+ 
+ #include <fmt/format.h>       // for join
++#include <fmt/ranges.h>       // for join
++#if FMT_VERSION >= 90000
++#include <fmt/ostream.h>
++#endif
+ 
+ #include <stdio.h>            // for stderr
+ #include <string.h>           // for strnlen
+@@ -35,25 +39,15 @@ struct DataPointFmt {
+   const std::string avg_;
+   const std::string min_;
+   const std::string max_;
+-};
+-
+-} // end namespace et_tut::et_trace
+ 
+-namespace fmt {
+-template <>
+-struct formatter<et_tut::et_trace::DataPointFmt> {
+-  template <typename ParseContext>
+-  constexpr auto parse(ParseContext& ctx) {
+-    return std::begin(ctx);
+-  }
+-
+-  template <typename FormatContext>
+-  auto format(const et_tut::et_trace::DataPointFmt& dp, FormatContext& ctx) {
+-    return format_to(ctx.out(), "{}({}-{})", dp.avg_, dp.min_, dp.max_);
++  friend std::ostream& operator<<(std::ostream& os, const DataPointFmt& dp) {  
++    return os << dp.avg_ << '(' << dp.min_ << '-' << dp.max_ << ')';
+   }
+ };
+-}  // namespace fmt
+ 
++} // end namespace et_tut::et_trace
++
++template <> struct fmt::formatter<et_tut::et_trace::DataPointFmt> : ostream_formatter {};
+ 
+ namespace et_tut::et_trace {
+ 
+diff --git a/trace-utils/src/symbol_table.h b/trace-utils/src/symbol_table.h
+index 798534fc..5dd3ebf5 100644
+--- a/trace-utils/src/symbol_table.h
++++ b/trace-utils/src/symbol_table.h
+@@ -120,8 +120,9 @@ class SymbolTable {
+ 
+ std::ostream& operator<<(std::ostream& os, SymbolTable::Error err);
+ 
++} // end namespace et_tut
++
+ #if FMT_VERSION >= 90000
+-template <> struct fmt::formatter<SymbolTable::Error> : ostream_formatter {};
++template <> struct fmt::formatter<et_tut::SymbolTable::Error> : ostream_formatter {};
+ #endif
+ 
+-} // end namespace et_tut
+diff --git a/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc b/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc
+index 658b217c..d1042507 100644
+--- a/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc
++++ b/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc
+@@ -232,7 +232,7 @@ TEST(get_args, should_process_runtime_events_with_metadata) {
+     EXPECT_TRUE(args.has_value());
+     auto args_js = args.value();
+     EXPECT_TRUE(args_js.contains(expected_key));
+-    EXPECT_EQ(args_js[expected_key], expected_value);
++    EXPECT_EQ(args_js[std::string(expected_key)], expected_value);
+   };
+ 
+   check({}, kEventId, 20);
+diff --git a/trace-utils/tools/evt2json/main.cc b/trace-utils/tools/evt2json/main.cc
+index fccc37c9..41999dcb 100644
+--- a/trace-utils/tools/evt2json/main.cc
++++ b/trace-utils/tools/evt2json/main.cc
+@@ -80,6 +80,7 @@ std::unique_ptr<DutTrace> get_dut_trace_or_die(const Options& opts) {
+       return std::make_unique<UeventTrace>(opts.trace);
+ #else   // ENABLE_UEVENT
+       die("Error: Uevent not supported!\n");
++      return nullptr;
+ #endif  // ENABLE_UEVENT
+     case TraceType::Cosim:
+       return std::make_unique<CosimTrace>(opts.trace);

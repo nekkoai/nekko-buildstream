@@ -2,7 +2,7 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
-- base/freedesktop-sdk.bst:components/protobuf.bst 
+- base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/gflags.bst
 - deps/folly.bst
 - deps/onnx.bst
@@ -10,7 +10,7 @@ build-depends:
 - legacy/neuralizer.bst
 
 depends:
-- base/freedesktop-sdk.bst:components/protobuf.bst 
+- base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/gflags.bst
 - deps/folly.bst
 - deps/onnx.bst
@@ -24,12 +24,15 @@ variables:
   cmake-local: >-
     -D CMAKE_INSTALL_RPATH="%{lib}"
     -D GLOW_BUILD_TESTS=off
+    -D GLOW_BUILD_WARNINGS_AS_ERRORS=off
     -D GLOW_BUILD_ETSOC_WITH_SYSEMU_ARTIFACTS=off
+    -D GLOW_BUILD_ETSOC_WARNINGS_AS_ERRORS=off
     -D folly_PROVIDER=find_package
     -D onnx_PROVIDER=find_package
     -D GLOW_WITH_JEMALLOC=off
     -D CMAKE_POSITION_INDEPENDENT_CODE=on
     -D CMAKE_POLICY_VERSION_MINIMUM=3.5
+    -D GFLAGS_USE_TARGET_NAMESPACE=gflags
 
 sources:
 - kind: git_repo

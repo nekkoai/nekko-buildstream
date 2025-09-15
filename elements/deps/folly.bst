@@ -9,6 +9,14 @@ build-depends:
 - deps/double-conversion.bst
 - deps/fast-float.bst
 
+depends:
+- base/freedesktop-sdk.bst:components/libevent.bst
+- base/freedesktop-sdk.bst:components/gflags.bst
+- base/freedesktop-sdk.bst:components/glog.bst
+- deps/boost.bst
+- deps/double-conversion.bst
+- deps/fast-float.bst
+
 variables:
   cmake-local: >-
     -D BUILD_TESTS=OFF
