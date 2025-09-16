@@ -35,6 +35,7 @@ variables:
     -D CMAKE_COMPILE_WARNING_AS_ERROR=off
     -D ENABLE_TESTS=off
     -D ENABLE_BENCHMARKS=off
+    -D ET_TRACE_UTILS_INSTALL_LIB=on
 
 sources:
 - kind: git_repo
