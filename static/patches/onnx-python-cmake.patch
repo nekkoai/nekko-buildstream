@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b666eec4..894776fa 100644
+index b666eec..770b250 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -104,10 +104,7 @@ endif()
@@ -14,6 +14,22 @@ index b666eec4..894776fa 100644
  
  if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
    set(CMAKE_NO_SYSTEM_FROM_IMPORTED 1)
+@@ -173,12 +170,12 @@ else()
+     find_path(Protobuf_INCLUDE_DIR google/protobuf/service.h
+               PATHS ${_PROTOBUF_INSTALL_PREFIX}/include
+               NO_DEFAULT_PATH)
+-    find_package(Protobuf)
+-    if (Protobuf_FOUND)
++    find_package(protobuf)
++    if (protobuf_FOUND)
+       set(PROTOBUF_DIR "${_PROTOBUF_INSTALL_PREFIX}")
+       set(PROTOBUF_INCLUDE_DIR "${_PROTOBUF_INSTALL_PREFIX}/include")
+       set(Build_Protobuf OFF)
+-      if ("${Protobuf_VERSION}" VERSION_GREATER_EQUAL "4.22.0")
++      if ("${protobuf_VERSION}" VERSION_GREATER_EQUAL "4.22.0")
+         # There are extra dependencies for protobuf.
+         find_package(absl REQUIRED)
+         find_package(utf8_range REQUIRED)
 @@ -361,7 +358,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP NAME SRCS HDRS ROOT_DIR DEPEND)
      endif()
  
@@ -41,8 +57,95 @@ index b666eec4..894776fa 100644
      target_compile_options(onnx_cpp2py_export
                             PRIVATE /MP
                                     /wd4244 # 'argument': conversion from 'google::
+diff --git a/backend.py b/backend.py
+new file mode 100644
+index 0000000..d34365d
+--- /dev/null
++++ b/backend.py
+@@ -0,0 +1,56 @@
++# Copyright (c) ONNX Project Contributors
++#
++# SPDX-License-Identifier: Apache-2.0
++
++"""PEP 517 build backend for onnx
++
++This is a thin wrapper over setuptools' PEP 517 build backend that
++automatically adds ``cmake`` to build dependencies if there is no CMake
++executable in PATH.  This approach ensures that the package uses system
++CMake (that may contain downstream patches) when one is available,
++and pulls in the CMake package from PyPI when it is not.
++"""
++
++from __future__ import annotations
++
++import shutil
++
++from setuptools.build_meta import (
++    build_editable,
++    build_sdist,
++    build_wheel,
++    get_requires_for_build_sdist,
++    prepare_metadata_for_build_editable,
++    prepare_metadata_for_build_wheel,
++)
++from setuptools.build_meta import (
++    get_requires_for_build_editable as _get_requires_for_build_editable,
++)
++from setuptools.build_meta import (
++    get_requires_for_build_wheel as _get_requires_for_build_wheel,
++)
++
++__all__ = [
++    "build_editable",
++    "build_sdist",
++    "build_wheel",
++    "get_requires_for_build_editable",
++    "get_requires_for_build_sdist",
++    "get_requires_for_build_wheel",
++    "prepare_metadata_for_build_editable",
++    "prepare_metadata_for_build_wheel",
++]
++
++
++def _get_cmake_dep() -> list[str]:
++    if shutil.which("cmake3") or shutil.which("cmake"):
++        return []
++    return ["cmake>=3.18"]
++
++
++def get_requires_for_build_editable(*args, **kwargs) -> list[str]:
++    return _get_requires_for_build_editable(*args, **kwargs) + _get_cmake_dep()
++
++
++def get_requires_for_build_wheel(*args, **kwargs) -> list[str]:
++    return _get_requires_for_build_wheel(*args, **kwargs) + _get_cmake_dep()
+diff --git a/pyproject.toml b/pyproject.toml
+index d02e7b2..ffa2596 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,8 +1,9 @@
+ # SPDX-License-Identifier: Apache-2.0
+ 
+ [build-system]
+-requires = ["setuptools>=64", "protobuf>=3.20.2", "cmake"]
+-build-backend = "setuptools.build_meta"
++requires = ["setuptools>=77", "protobuf>=4.25.1"]
++backend-path = ["."]
++build-backend = "backend"
+ 
+ [project]
+ name = "onnx"
+@@ -15,7 +16,7 @@ authors = [
+ classifiers = [
+     "Programming Language :: Python :: 3",
+ ]
+-license = {text = "Apache License v2.0"}
++license = "Apache-2.0"
+ requires-python = ">=3.8"
+ 
+ [project.urls]
 diff --git a/tools/protoc-gen-mypy.sh.in b/tools/protoc-gen-mypy.sh.in
-index 6231cb29..3b699915 100644
+index 6231cb2..3b69991 100644
 --- a/tools/protoc-gen-mypy.sh.in
 +++ b/tools/protoc-gen-mypy.sh.in
 @@ -1,4 +1,4 @@

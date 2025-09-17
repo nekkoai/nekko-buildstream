@@ -2,10 +2,13 @@ kind: pyproject
 
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python-setuptools.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-meson.bst
+- base/freedesktop-sdk.bst:components/cython.bst
+- deps/python3-patchelf.bst
+- deps/python3-meson-python.bst
 
 depends:
-- base/freedesktop-sdk.bst:components/cython.bst
-- deps/python3-meson-python.bst
+- base/freedesktop-sdk.bst:components/python3.bst
 
 sources:
 - kind: git

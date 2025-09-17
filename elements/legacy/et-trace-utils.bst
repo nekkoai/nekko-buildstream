@@ -25,6 +25,8 @@ depends:
 - host/device-api.bst
 - legacy/neuralizer.bst
 
+# todo handle options - see protobuf for an example
+# https://github.com/protocolbuffers/protobuf/blob/main/cmake/protobuf-options.cmake
 variables:
   command-subdir: trace-utils
   (@):
