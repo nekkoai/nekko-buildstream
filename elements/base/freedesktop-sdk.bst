@@ -1,6 +1,11 @@
 kind: junction
 description: Freedesktop SDK junction
 
+config:
+  overrides:
+     # TODO we need PIC-able gflags
+     components/gflags.bst: deps/gflags.bst
+
 sources:
 - kind: git
   url: gitlab:freedesktop-sdk/freedesktop-sdk.git

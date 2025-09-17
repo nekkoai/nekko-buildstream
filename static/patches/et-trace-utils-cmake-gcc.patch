@@ -1,3 +1,70 @@
+diff --git a/trace-utils/cmake/FindBackward.cmake b/trace-utils/cmake/FindBackward.cmake
+deleted file mode 100644
+index 71a4e819..00000000
+--- a/trace-utils/cmake/FindBackward.cmake
++++ /dev/null
+@@ -1,25 +0,0 @@
+-# WHEN USING CONAN THIS SHOULD NOT BE USED
+-# CMake find_package() Module for backward-cpp  library
+-#
+-# Example usage:
+-#
+-# find_package(backward-cpp REQUIRED)
+-#
+-
+-
+-include(FindPackageHandleStandardArgs)
+-
+-find_path(BACKWARD_CPP_INCLUDE_DIR backward.hpp PATHS ${PROJECT_SOURCE_DIR}/external)
+-
+-find_package_handle_standard_args(Backward DEFAULT_MSG BACKWARD_CPP_INCLUDE_DIR)
+-mark_as_advanced(BACKWARD_CPP_INCLUDE_DIR)
+-
+-if (Backward_FOUND)
+-    if (NOT TARGET Backward)
+-        add_library(Backward INTERFACE IMPORTED GLOBAL)
+-        target_include_directories(Backward INTERFACE ${BACKWARD_CPP_INCLUDE_DIR})
+-    endif()
+-    if (TARGET Backward AND NOT TARGET Backward::Backward)
+-        add_library(Backward::Backward ALIAS Backward)
+-    endif()
+-endif()
+\ No newline at end of file
+diff --git a/trace-utils/cmake/Findcereal.cmake b/trace-utils/cmake/Findcereal.cmake
+deleted file mode 100644
+index a3d7cdd3..00000000
+--- a/trace-utils/cmake/Findcereal.cmake
++++ /dev/null
+@@ -1,29 +0,0 @@
+-# WHEN USING CONAN THIS SHOULD NOT BE USED
+-# CMake find_package() Module for cereal library
+-#
+-# Example usage:
+-#
+-# find_package(cereal)
+-#
+-# If successful the following variables will be defined
+-# - CEREAL_FOUND - System has cereal
+-# If successful the following targets will be defined
+-# - cereal
+-# - cereal::cereal
+-
+-include(FindPackageHandleStandardArgs)
+-
+-find_path(CEREAL_INCLUDE_DIR cereal/cereal.hpp)
+-
+-find_package_handle_standard_args(cereal DEFAULT_MSG CEREAL_INCLUDE_DIR)
+-mark_as_advanced(CEREAL_INCLUDE_DIR)
+-
+-if (CEREAL_FOUND)
+-    if (NOT TARGET cereal)
+-        add_library(cereal INTERFACE IMPORTED GLOBAL)
+-        set_target_properties(cereal PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CEREAL_INCLUDE_DIR})
+-    endif()
+-    if (NOT TARGET cereal::cereal)
+-        add_library(cereal::cereal ALIAS cereal)
+-    endif()
+-endif ()
 diff --git a/trace-utils/cmake/Findglog.cmake b/trace-utils/cmake/Findglog.cmake
 deleted file mode 100644
 index 3c1d8cfd..00000000
@@ -56,24 +123,38 @@ index 3c1d8cfd..00000000
 -endif()
 \ No newline at end of file
 diff --git a/trace-utils/et-trace-utilsConfig.cmake.in b/trace-utils/et-trace-utilsConfig.cmake.in
-index 27fa39db..c3541342 100644
+index 27fa39db..cffdafd5 100644
 --- a/trace-utils/et-trace-utilsConfig.cmake.in
 +++ b/trace-utils/et-trace-utilsConfig.cmake.in
-@@ -15,6 +15,7 @@ find_dependency(nlohmann_json REQUIRED)
+@@ -15,21 +15,15 @@ find_dependency(nlohmann_json REQUIRED)
  find_dependency(glog REQUIRED)
  find_dependency(fmt REQUIRED)
  find_dependency(Backward REQUIRED)
 +find_dependency(tl-expected REQUIRED)
  
- if (ENABLE_UEVENT)
-     find_dependency(uevent REQUIRED)
-@@ -31,5 +32,5 @@ if (ENABLE_CEREAL)
-     find_dependency(cereal REQUIRED)
- endif()
+-if (ENABLE_UEVENT)
+-    find_dependency(uevent REQUIRED)
+-endif()
++#find_dependency(uevent OPTIONAL)
  
--include(${CMAKE_CURRENT_LIST_DIR}/et-trace-utilsTargets.cmake)
-+#include(${CMAKE_CURRENT_LIST_DIR}/et-trace-utilsTargets.cmake)
- check_required_components(et-trace-utils)
+-if (ENABLE_ET_TRACE)
+-    find_dependency(deviceApi REQUIRED)
+-    find_dependency(esperantoTrace REQUIRED)
+-endif()
++find_dependency(deviceApi)
++find_dependency(esperantoTrace)
+ 
+-if (ENABLE_CEREAL)
+-    find_dependency(neuralizer REQUIRED)
+-    find_dependency(runtime REQUIRED)
+-    find_dependency(cereal REQUIRED)
+-endif()
++find_dependency(neuralizer)
++find_dependency(runtime)
++find_dependency(cereal)
+ 
+ include(${CMAKE_CURRENT_LIST_DIR}/et-trace-utilsTargets.cmake)
+-check_required_components(et-trace-utils)
 diff --git a/trace-utils/include/et-trace-utils/support/frequency.h b/trace-utils/include/et-trace-utils/support/frequency.h
 index 0d5c7733..d87bd5bf 100644
 --- a/trace-utils/include/et-trace-utils/support/frequency.h
@@ -114,15 +195,47 @@ index 105a1fec..d588cb58 100644
  
 -} // end namespace et_tut
 diff --git a/trace-utils/src/CMakeLists.txt b/trace-utils/src/CMakeLists.txt
-index 8bbf9e8a..733b9e4e 100644
+index 8bbf9e8a..e15e049c 100644
 --- a/trace-utils/src/CMakeLists.txt
 +++ b/trace-utils/src/CMakeLists.txt
-@@ -85,10 +85,20 @@ if (ENABLE_CEREAL)
+@@ -15,31 +15,6 @@ add_subdirectory(perfetto)
+ add_subdirectory(support)
+ 
+ target_compile_features(et-trace-utils PUBLIC cxx_std_17)
+-target_compile_options(et-trace-utils
+-    PUBLIC
+-        -Wall
+-        -Wextra
+-        -Wshadow
+-        -Wno-missing-field-initializers
+-        $<$<BOOL:${ENABLE_WARNINGS_AS_ERRORS}>:-Werror>
+-        -Werror=all
+-        -Werror=extra
+-        -Werror=shadow
+-        -Werror=ignored-qualifiers
+-        -Werror=div-by-zero
+-        -Werror=unused-but-set-parameter
+-        -Werror=unused-but-set-variable
+-        -Werror=unused-parameter
+-        -Werror=unused-variable
+-        -Werror=float-conversion
+-        -Werror=double-promotion
+-        -Werror=cast-align
+-        -Werror=maybe-uninitialized
+-        -Werror=parentheses
+-        -Werror=unused-local-typedefs
+-        -Werror=sign-compare
+-        -Werror=narrowing
+-)
+ target_include_directories(et-trace-utils
+     PUBLIC
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+@@ -85,10 +60,20 @@ if (ENABLE_CEREAL)
          cereal/perfetto_trace_sink.cc
          cereal/trace_decode.cc
      )
 -    
-+   
++
 +    find_package(LLVM REQUIRED CONFIG)
 +    message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 +    message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -140,7 +253,7 @@ index 8bbf9e8a..733b9e4e 100644
          runtime::etrt
          $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,runtime::etrt,runtime::etrt_static>
          cereal::cereal
-@@ -107,4 +117,4 @@ if (ET_TRACE_UTILS_INSTALL_LIB)
+@@ -107,4 +92,4 @@ if (ET_TRACE_UTILS_INSTALL_LIB)
          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/et-trace-utils
          NAMESPACE et-trace-utils::
      )
