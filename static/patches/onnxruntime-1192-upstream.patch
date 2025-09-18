@@ -1,8 +1,8 @@
-diff --git a/onnx/onnxruntime/cmake/CMakeLists.txt b/onnx/onnxruntime/cmake/CMakeLists.txt
-index 1594fd83..bcc4aa83 100644
---- a/onnx/onnxruntime/cmake/CMakeLists.txt
-+++ b/onnx/onnxruntime/cmake/CMakeLists.txt
-@@ -987,7 +987,7 @@ function(onnxruntime_set_compile_flags target_name)
+diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
+index 5555fa6..27bc539 100644
+--- a/cmake/CMakeLists.txt
++++ b/cmake/CMakeLists.txt
+@@ -982,7 +982,7 @@ function(onnxruntime_set_compile_flags target_name)
        target_compile_definitions(${target_name} PRIVATE ORT_NEURAL_SPEED)
      endif()
  
@@ -11,10 +11,10 @@ index 1594fd83..bcc4aa83 100644
      if (onnxruntime_USE_CUDA)
        # Suppress a "conversion_function_not_usable" warning in gsl/span
        target_compile_options(${target_name} PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:-Xcudafe \"--diag_suppress=conversion_function_not_usable\">")
-diff --git a/onnx/onnxruntime/cmake/external/eigen.cmake b/onnx/onnxruntime/cmake/external/eigen.cmake
-index 77e15c8b..1d89cf81 100644
---- a/onnx/onnxruntime/cmake/external/eigen.cmake
-+++ b/onnx/onnxruntime/cmake/external/eigen.cmake
+diff --git a/cmake/external/eigen.cmake b/cmake/external/eigen.cmake
+index b123adb..e99990b 100644
+--- a/cmake/external/eigen.cmake
++++ b/cmake/external/eigen.cmake
 @@ -1,7 +1,5 @@
  if (onnxruntime_USE_PREINSTALLED_EIGEN)
 -    add_library(eigen INTERFACE)
@@ -24,11 +24,31 @@ index 77e15c8b..1d89cf81 100644
  else ()
      FetchContent_Declare(
          eigen
-diff --git a/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake b/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake
-index bf671e56..4feaa7fa 100644
---- a/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake
-+++ b/onnx/onnxruntime/cmake/external/onnxruntime_external_deps.cmake
-@@ -81,13 +81,11 @@ if (onnxruntime_BUILD_BENCHMARKS)
+diff --git a/cmake/external/onnxruntime_external_deps.cmake b/cmake/external/onnxruntime_external_deps.cmake
+index 775576a..7fb4fb0 100644
+--- a/cmake/external/onnxruntime_external_deps.cmake
++++ b/cmake/external/onnxruntime_external_deps.cmake
+@@ -28,17 +28,9 @@ foreach(ONNXRUNTIME_DEP IN LISTS ONNXRUNTIME_DEPS_LIST)
+ endforeach()
+ 
+ message("Loading Dependencies ...")
+-# ABSL should be included before protobuf because protobuf may use absl
+-include(external/abseil-cpp.cmake)
+ 
+-set(RE2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+-
+-FetchContent_Declare(
+-    re2
+-    URL ${DEP_URL_re2}
+-    URL_HASH SHA1=${DEP_SHA1_re2}
+-    FIND_PACKAGE_ARGS NAMES re2
+-)
++find_package(absl REQUIRED)
++find_package(re2 REQUIRED)
+ 
+ if (onnxruntime_BUILD_UNIT_TESTS)
+   # WebAssembly threading support in Node.js is still an experimental feature and
+@@ -81,13 +73,11 @@ if (onnxruntime_BUILD_BENCHMARKS)
  endif()
  
  if (NOT WIN32)
@@ -46,7 +66,7 @@ index bf671e56..4feaa7fa 100644
  list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/external)
  
  FetchContent_Declare(
-@@ -98,145 +96,9 @@ FetchContent_Declare(
+@@ -98,173 +88,19 @@ FetchContent_Declare(
  
  
  # Flatbuffers
@@ -129,7 +149,7 @@ index bf671e56..4feaa7fa 100644
 -        FetchContent_Declare(protoc_binary URL ${DEP_URL_protoc_linux_aarch64} URL_HASH SHA1=${DEP_SHA1_protoc_linux_aarch64})
 -        FetchContent_Populate(protoc_binary)
 -      endif()
--
+ 
 -      if(protoc_binary_SOURCE_DIR)
 -        message("Use prebuilt protoc")
 -        set(ONNX_CUSTOM_PROTOC_EXECUTABLE ${protoc_binary_SOURCE_DIR}/bin/protoc)
@@ -142,7 +162,9 @@ index bf671e56..4feaa7fa 100644
 -    endif()
 -  endif()
 -endif()
--
++find_package(flatbuffers REQUIRED)
++find_package(protobuf REQUIRED)
+ 
 -# if ONNX_CUSTOM_PROTOC_EXECUTABLE is set we don't need to build the protoc binary
 -if (ONNX_CUSTOM_PROTOC_EXECUTABLE)
 -  if (NOT EXISTS "${ONNX_CUSTOM_PROTOC_EXECUTABLE}")
@@ -179,7 +201,7 @@ index bf671e56..4feaa7fa 100644
 -# not in any export set.
 -#set(protobuf_INSTALL OFF CACHE BOOL "Install protobuf binaries and files" FORCE)
 -set(protobuf_USE_EXTERNAL_GTEST ON CACHE BOOL "" FORCE)
- 
+-
 -if (ANDROID)
 -  set(protobuf_WITH_ZLIB OFF CACHE BOOL "Build protobuf with zlib support" FORCE)
 -endif()
@@ -187,23 +209,28 @@ index bf671e56..4feaa7fa 100644
 -if (onnxruntime_DISABLE_RTTI)
 -  set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the binaries" FORCE)
 -endif()
-+find_package(protobuf REQUIRED)
- 
+-
 -include(protobuf_function)
  #protobuf end
  
- set(ENABLE_DATE_TESTING  OFF CACHE BOOL "" FORCE)
-@@ -253,22 +115,12 @@ if (NOT TARGET date::date AND TARGET date::date-tz)
-   add_library(date::date ALIAS date::date-tz)
- endif()
- 
+-set(ENABLE_DATE_TESTING  OFF CACHE BOOL "" FORCE)
+-set(USE_SYSTEM_TZ_DB  ON CACHE BOOL "" FORCE)
+-
+-FetchContent_Declare(
+-  date
+-  URL ${DEP_URL_date}
+-  URL_HASH SHA1=${DEP_SHA1_date}
+-  FIND_PACKAGE_ARGS 3...<4 NAMES date
+-)
+-onnxruntime_fetchcontent_makeavailable(date)
+-
 -FetchContent_Declare(
 -  mp11
 -  URL ${DEP_URL_mp11}
 -  URL_HASH SHA1=${DEP_SHA1_mp11}
--  FIND_PACKAGE_ARGS NAMES Boost
 -)
-+find_package(Boost REQUIRED)
++find_package(date REQUIRED)
++find_package(Boost CONFIG REQUIRED COMPONENTS mp11)
  
  set(JSON_BuildTests OFF CACHE INTERNAL "")
  set(JSON_Install OFF CACHE INTERNAL "")
@@ -218,7 +245,7 @@ index bf671e56..4feaa7fa 100644
  
  #TODO: include clog first
  if (onnxruntime_ENABLE_CPUINFO)
-@@ -305,20 +157,6 @@ else()
+@@ -301,20 +137,6 @@ else()
    set(CPUINFO_SUPPORTED FALSE)
  endif()
  
@@ -239,7 +266,7 @@ index bf671e56..4feaa7fa 100644
  if (CPUINFO_SUPPORTED)
    if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
      set(IOS ON CACHE INTERNAL "")
-@@ -354,6 +192,7 @@ if (CPUINFO_SUPPORTED)
+@@ -350,6 +172,7 @@ if (CPUINFO_SUPPORTED)
        )
    endif()
    set(ONNXRUNTIME_CPUINFO_PROJ pytorch_cpuinfo)
@@ -247,7 +274,7 @@ index bf671e56..4feaa7fa 100644
  endif()
  
  
-@@ -361,78 +200,16 @@ if (onnxruntime_BUILD_BENCHMARKS)
+@@ -357,72 +180,10 @@ if (onnxruntime_BUILD_BENCHMARKS)
    onnxruntime_fetchcontent_makeavailable(google_benchmark)
  endif()
  
@@ -277,32 +304,23 @@ index bf671e56..4feaa7fa 100644
 -    FIND_PACKAGE_ARGS 4.0 NAMES Microsoft.GSL
 -  )
 -endif()
-+find_package(safeint REQUIRED)
-+add_library(safeint_interface ALIAS safeint::safeint)
- 
+-
 -FetchContent_Declare(
 -    safeint
 -    URL ${DEP_URL_safeint}
 -    URL_HASH SHA1=${DEP_SHA1_safeint}
--    FIND_PACKAGE_ARGS NAMES safeint
 -)
-+find_package(re2 REQUIRED)
-+find_package(Microsoft.GSL REQUIRED)
-+find_package(flatbuffers REQUIRED)
++find_package(safeint REQUIRED)
++add_library(safeint_interface ALIAS safeint::safeint)
  
 -# use fetch content rather than makeavailable because safeint only includes unconditional test targets
 -FetchContent_Populate(safeint)
--onnxruntime_fetchcontent_makeavailable(safeint) # FetchContent_Populate doesn't call find_package
--
 -# The next line will generate an error message "fatal: not a git repository", but it is ok. It is from flatbuffers
 -onnxruntime_fetchcontent_makeavailable(utf8_range)
 -# protobuf's cmake/utf8_range.cmake has the following line
 -include_directories(${utf8_range_SOURCE_DIR})
 -
 -onnxruntime_fetchcontent_makeavailable(Protobuf nlohmann_json mp11 re2 GSL flatbuffers ${ONNXRUNTIME_CPUINFO_PROJ} ${ONNXRUNTIME_CLOG_PROJ})
- if (NOT TARGET cpuinfo AND TARGET cpuinfo::cpuinfo)
-   add_library(cpuinfo ALIAS cpuinfo::cpuinfo)
- endif()
 -if(NOT flatbuffers_FOUND)
 -  if(NOT TARGET flatbuffers::flatbuffers)
 -    add_library(flatbuffers::flatbuffers ALIAS flatbuffers)
@@ -328,10 +346,11 @@ index bf671e56..4feaa7fa 100644
 -    endif()
 -  endif()
 -endif()
++find_package(Microsoft.GSL REQUIRED)
  
  if (onnxruntime_BUILD_UNIT_TESTS)
    onnxruntime_fetchcontent_makeavailable(googletest)
-@@ -440,41 +217,8 @@ endif()
+@@ -430,41 +191,8 @@ endif()
  
  if(Protobuf_FOUND)
    message("Protobuf version: ${Protobuf_VERSION}")
@@ -374,48 +393,75 @@ index bf671e56..4feaa7fa 100644
  if (onnxruntime_USE_FULL_PROTOBUF)
    set(PROTOBUF_LIB protobuf::libprotobuf)
  else()
-@@ -512,7 +256,12 @@ include(eigen)
+@@ -473,45 +201,14 @@ endif()
+ 
+ 
+ # ONNX
+-if (NOT onnxruntime_USE_FULL_PROTOBUF)
+-  set(ONNX_USE_LITE_PROTO ON CACHE BOOL "" FORCE)
+-else()
+-  set(ONNX_USE_LITE_PROTO OFF CACHE BOOL "" FORCE)
+-endif()
+-
+-if(Patch_FOUND)
+-  set(ONNXRUNTIME_ONNX_PATCH_COMMAND ${Patch_EXECUTABLE} --binary --ignore-whitespace -p1 < ${PROJECT_SOURCE_DIR}/patches/onnx/onnx.patch)
+-else()
+-  set(ONNXRUNTIME_ONNX_PATCH_COMMAND "")
+-endif()
+-
+-FetchContent_Declare(
+-  onnx
+-  URL ${DEP_URL_onnx}
+-  URL_HASH SHA1=${DEP_SHA1_onnx}
+-  PATCH_COMMAND ${ONNXRUNTIME_ONNX_PATCH_COMMAND}
+-)
+-
+-
+-
+-
+-
++find_package(ONNX "1.16.1" REQUIRED CONFIG)
+ 
+ include(eigen)
  include(wil)
  
- if (NOT onnxruntime_MINIMAL_BUILD)
+-if (NOT onnxruntime_MINIMAL_BUILD)
 -    onnxruntime_fetchcontent_makeavailable(onnx)
-+   find_package(ONNX "1.16.1" REQUIRED CONFIG)
-+   #add_definitions(${ONNX_DEFINITIONS})
-+   #add_compile_definitions("-DONNX_ML=1")
-+   #target_compile_definitions(ONNX::onnx INTERFACE "-DONNX_ML=1")
-+   #include_directories(${ONNX_INCLUDE_DIR})
-+   # onnxruntime_fetchcontent_makeavailable(onnx)
- else()
-   include(onnx_minimal)
- endif()
-@@ -531,9 +280,8 @@ if (onnxruntime_USE_XNNPACK)
- endif()
+-else()
+-  include(onnx_minimal)
+-endif()
+-
+ set(GSL_TARGET "Microsoft.GSL::GSL")
+ set(GSL_INCLUDE_DIR "$<TARGET_PROPERTY:${GSL_TARGET},INTERFACE_INCLUDE_DIRECTORIES>")
  
- if (onnxruntime_USE_ETGLOW)
--  find_package(GLOW REQUIRED)
-+  find_package(glow REQUIRED)
-   find_package(et-trace-utils REQUIRED)
--  set(onnxruntime_EXTERNAL_LIBRARIES_GLOW glow::Api)
- endif ()
- 
- if (onnxruntime_USE_MIMALLOC)
-@@ -549,10 +297,10 @@ endif()
+-add_library(safeint_interface INTERFACE)
+-target_include_directories(safeint_interface INTERFACE ${safeint_SOURCE_DIR})
+-
+ # XNNPACK EP
+ if (onnxruntime_USE_XNNPACK)
+   if (onnxruntime_DISABLE_CONTRIB_OPS)
+@@ -534,15 +231,10 @@ endif()
  #onnxruntime_EXTERNAL_LIBRARIES could contain onnx, onnx_proto,libprotobuf, cuda/cudnn,
  # dnnl/mklml, onnxruntime_codegen_tvm, tvm and pthread
  # pthread is always at the last
--set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} ${WIL_TARGET} ${onnxruntime_EXTERNAL_LIBRARIES_GLOW} nlohmann_json::nlohmann_json onnx onnx_proto ${PROTOBUF_LIB} re2::re2 Boost::mp11 safeint_interface flatbuffers::flatbuffers ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${ONNXRUNTIME_CLOG_TARGET_NAME})
-+set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} ${WIL_TARGET} nlohmann_json::nlohmann_json ${PROTOBUF_LIB} re2::re2 Boost::mp11 safeint_interface ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${ONNXRUNTIME_CLOG_TARGET_NAME})
+-set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} ${WIL_TARGET} nlohmann_json::nlohmann_json onnx onnx_proto ${PROTOBUF_LIB} re2::re2 Boost::mp11 safeint_interface flatbuffers::flatbuffers ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${ONNXRUNTIME_CLOG_TARGET_NAME})
++set(onnxruntime_EXTERNAL_LIBRARIES ${onnxruntime_EXTERNAL_LIBRARIES_XNNPACK} ${WIL_TARGET} nlohmann_json::nlohmann_json ONNX::onnx ONNX::onnx_proto flatbuffers::flatbuffers ${PROTOBUF_LIB} re2::re2 Boost::mp11 safeint_interface ${GSL_TARGET} ${ABSEIL_LIBS} date::date ${ONNXRUNTIME_CLOG_TARGET_NAME})
  # The source code of onnx_proto is generated, we must build this lib first before starting to compile the other source code that uses ONNX protobuf types.
  # The other libs do not have the problem. All the sources are already there. We can compile them in any order.
 -set(onnxruntime_EXTERNAL_DEPENDENCIES onnx_proto flatbuffers::flatbuffers)
-+set(onnxruntime_EXTERNAL_DEPENDENCIES ONNX::onnx_proto flatbuffers::flatbuffers Eigen3::Eigen)
+-
+-target_compile_definitions(onnx PUBLIC $<TARGET_PROPERTY:onnx_proto,INTERFACE_COMPILE_DEFINITIONS> PRIVATE "__ONNX_DISABLE_STATIC_REGISTRATION")
+-if (NOT onnxruntime_USE_FULL_PROTOBUF)
+-  target_compile_definitions(onnx PUBLIC "__ONNX_NO_DOC_STRINGS")
+-endif()
++set(onnxruntime_EXTERNAL_DEPENDENCIES ONNX::onnx_proto flatbuffers::flatbuffers)
  
- # target_compile_definitions(onnx PUBLIC $<TARGET_PROPERTY:onnx_proto,INTERFACE_COMPILE_DEFINITIONS> PRIVATE "__ONNX_DISABLE_STATIC_REGISTRATION")
- # if (NOT onnxruntime_USE_FULL_PROTOBUF)
-diff --git a/onnx/onnxruntime/cmake/onnxruntime.cmake b/onnx/onnxruntime/cmake/onnxruntime.cmake
-index 927b4ac8..dcb7d540 100644
---- a/onnx/onnxruntime/cmake/onnxruntime.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime.cmake
+ if (onnxruntime_RUN_ONNX_TESTS)
+   add_definitions(-DORT_RUN_EXTERNAL_ONNX_TESTS)
+diff --git a/cmake/onnxruntime.cmake b/cmake/onnxruntime.cmake
+index 927b4ac..dcb7d54 100644
+--- a/cmake/onnxruntime.cmake
++++ b/cmake/onnxruntime.cmake
 @@ -118,7 +118,7 @@ endif()
  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
    add_dependencies(onnxruntime ${onnxruntime_EXTERNAL_DEPENDENCIES})
@@ -425,10 +471,10 @@ index 927b4ac8..dcb7d540 100644
  endif()
  target_include_directories(onnxruntime PRIVATE ${ONNXRUNTIME_ROOT} PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/onnxruntime>")
  
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_common.cmake b/onnx/onnxruntime/cmake/onnxruntime_common.cmake
-index 896379d7..d7e67911 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_common.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_common.cmake
+diff --git a/cmake/onnxruntime_common.cmake b/cmake/onnxruntime_common.cmake
+index 896379d..d7e6791 100644
+--- a/cmake/onnxruntime_common.cmake
++++ b/cmake/onnxruntime_common.cmake
 @@ -135,9 +135,7 @@ target_include_directories(onnxruntime_common
          ${OPTIONAL_LITE_INCLUDE_DIR})
  
@@ -440,10 +486,10 @@ index 896379d7..d7e67911 100644
  
  set_target_properties(onnxruntime_common PROPERTIES LINKER_LANGUAGE CXX)
  set_target_properties(onnxruntime_common PROPERTIES FOLDER "ONNXRuntime")
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake b/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake
-index 3ab4c191..1f94f99a 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_flatbuffers.cmake
+diff --git a/cmake/onnxruntime_flatbuffers.cmake b/cmake/onnxruntime_flatbuffers.cmake
+index 3ab4c19..1f94f99 100644
+--- a/cmake/onnxruntime_flatbuffers.cmake
++++ b/cmake/onnxruntime_flatbuffers.cmake
 @@ -9,12 +9,12 @@ file(GLOB onnxruntime_flatbuffers_srcs CONFIGURE_DEPENDS
  source_group(TREE ${REPO_ROOT} FILES ${onnxruntime_flatbuffers_srcs})
  
@@ -459,10 +505,10 @@ index 3ab4c191..1f94f99a 100644
  set_target_properties(onnxruntime_flatbuffers PROPERTIES FOLDER "ONNXRuntime")
  
  # Add dependency so the flatbuffers compiler is built if enabled
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_framework.cmake b/onnx/onnxruntime/cmake/onnxruntime_framework.cmake
-index c87a5fdb..44ed01be 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_framework.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_framework.cmake
+diff --git a/cmake/onnxruntime_framework.cmake b/cmake/onnxruntime_framework.cmake
+index b85edbf..dd29d2b 100644
+--- a/cmake/onnxruntime_framework.cmake
++++ b/cmake/onnxruntime_framework.cmake
 @@ -102,7 +102,7 @@ endif()
  
  set_target_properties(onnxruntime_framework PROPERTIES FOLDER "ONNXRuntime")
@@ -472,10 +518,10 @@ index c87a5fdb..44ed01be 100644
  
  # In order to find the shared provider libraries we need to add the origin to the rpath for all executables we build
  # For the shared onnxruntime library, this is set in onnxruntime.cmake through CMAKE_SHARED_LINKER_FLAGS
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_graph.cmake b/onnx/onnxruntime/cmake/onnxruntime_graph.cmake
-index 4d51325b..accd6040 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_graph.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_graph.cmake
+diff --git a/cmake/onnxruntime_graph.cmake b/cmake/onnxruntime_graph.cmake
+index 4d51325..accd604 100644
+--- a/cmake/onnxruntime_graph.cmake
++++ b/cmake/onnxruntime_graph.cmake
 @@ -95,7 +95,8 @@ if (onnxruntime_ENABLE_TRAINING_OPS)
  endif()
  
@@ -486,10 +532,10 @@ index 4d51325b..accd6040 100644
  onnxruntime_add_include_to_target(onnxruntime_graph onnxruntime_common ${WIL_TARGET} onnx onnx_proto ${PROTOBUF_LIB} flatbuffers::flatbuffers safeint_interface Boost::mp11)
  
  if (MSVC)
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake b/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake
-index bbcc709b..40049b38 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_providers_cpu.cmake
+diff --git a/cmake/onnxruntime_providers_cpu.cmake b/cmake/onnxruntime_providers_cpu.cmake
+index bbcc709..40049b3 100644
+--- a/cmake/onnxruntime_providers_cpu.cmake
++++ b/cmake/onnxruntime_providers_cpu.cmake
 @@ -193,7 +193,7 @@ endif()
  
  target_include_directories(onnxruntime_providers PRIVATE ${ONNXRUNTIME_ROOT} ${eigen_INCLUDE_DIRS})
@@ -499,44 +545,10 @@ index bbcc709b..40049b38 100644
  
  if (onnxruntime_ENABLE_TRAINING_OPS)
    target_include_directories(onnxruntime_providers PRIVATE ${ORTTRAINING_ROOT})
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake b/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake
-index 16b8d2fb..4fb31df5 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_providers_etglow.cmake
-@@ -1,5 +1,14 @@
- add_definitions(-DUSE_ETGLOW=1)
- 
-+find_package(et-trace-utils REQUIRED)
-+find_package(runtime REQUIRED)
-+
-+find_package(LLVM REQUIRED CONFIG)
-+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-+
-+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-+llvm_map_components_to_libnames(llvm_libs support)
-+
- file(GLOB_RECURSE onnxruntime_providers_etglow_src CONFIGURE_DEPENDS
-         "${ONNXRUNTIME_ROOT}/core/providers/etglow/*.h"
-         "${ONNXRUNTIME_ROOT}/core/providers/etglow/*.cc"
-@@ -22,8 +31,12 @@ endif ()
- 
- function(config_etglow_provider_shared_module target)
-     onnxruntime_add_include_to_target(${target} onnxruntime_common onnxruntime_framework onnx onnx_proto ${PROTOBUF_LIB} flatbuffers::flatbuffers)
--    add_dependencies(${target} onnxruntime_providers_shared ${onnxruntime_EXTERNAL_DEPENDENCIES})
--    target_link_libraries(${target} PRIVATE glow::Api et-trace-utils::et-trace-utils ${ONNXRUNTIME_PROVIDERS_SHARED} Boost::mp11 ${ABSEIL_LIBS} ${GSL_TARGET} safeint_interface)
-+    target_include_directories(${target} PRIVATE ${LLVM_INCLUDE_DIRS})
-+    target_compile_definitions(${target} PRIVATE ${LLVM_DEFINITIONS_LIST})
-+
-+    #target_link_libraries(${target} onnxruntime_providers_shared ${onnxruntime_EXTERNAL_DEPENDENCIES})
-+    target_link_libraries(${target} PRIVATE 
-+	   glow::Api runtime::etrt et-trace-utils::et-trace-utils Boost::mp11 ${llvm_libs})
-     set_target_properties(${target} PROPERTIES FOLDER "ONNXRuntime")
-     set_target_properties(${target} PROPERTIES LINKER_LANGUAGE CXX)
-     if(APPLE)
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_python.cmake b/onnx/onnxruntime/cmake/onnxruntime_python.cmake
-index 778453b6..118f25da 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_python.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_python.cmake
+diff --git a/cmake/onnxruntime_python.cmake b/cmake/onnxruntime_python.cmake
+index 270139c..af70859 100644
+--- a/cmake/onnxruntime_python.cmake
++++ b/cmake/onnxruntime_python.cmake
 @@ -170,6 +170,18 @@ if (onnxruntime_ENABLE_LAZY_TENSOR)
    endif()
  endif()
@@ -777,11 +789,11 @@ index 778453b6..118f25da 100644
    )
  endif()
  
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake b/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake
-index 8dc5da6e..02413c88 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_unittests.cmake
-@@ -986,7 +986,7 @@ endif()
+diff --git a/cmake/onnxruntime_unittests.cmake b/cmake/onnxruntime_unittests.cmake
+index 0c1e5e9..9e9539c 100644
+--- a/cmake/onnxruntime_unittests.cmake
++++ b/cmake/onnxruntime_unittests.cmake
+@@ -961,7 +961,7 @@ endif()
  set(test_data_target onnxruntime_test_all)
  
  onnxruntime_add_static_library(onnx_test_data_proto ${TEST_SRC_DIR}/proto/tml.proto)
@@ -790,7 +802,7 @@ index 8dc5da6e..02413c88 100644
  #onnx_proto target should mark this definition as public, instead of private
  target_compile_definitions(onnx_test_data_proto PRIVATE "-DONNX_API=")
  onnxruntime_add_include_to_target(onnx_test_data_proto onnx_proto)
-@@ -1784,9 +1784,9 @@ if (NOT onnxruntime_MINIMAL_BUILD AND NOT onnxruntime_EXTENDED_MINIMAL_BUILD
+@@ -1759,9 +1759,9 @@ if (NOT onnxruntime_MINIMAL_BUILD AND NOT onnxruntime_EXTENDED_MINIMAL_BUILD
    )
  
    onnxruntime_add_shared_library_module(test_execution_provider ${test_execution_provider_srcs})
@@ -802,10 +814,10 @@ index 8dc5da6e..02413c88 100644
    target_include_directories(test_execution_provider PRIVATE $<TARGET_PROPERTY:onnxruntime_common,INTERFACE_INCLUDE_DIRECTORIES>)
    target_include_directories(test_execution_provider PRIVATE ${ONNXRUNTIME_ROOT} ${CMAKE_CURRENT_BINARY_DIR} ${ORTTRAINING_ROOT})
    if (onnxruntime_ENABLE_TRAINING_TORCH_INTEROP)
-diff --git a/onnx/onnxruntime/cmake/onnxruntime_util.cmake b/onnx/onnxruntime/cmake/onnxruntime_util.cmake
-index ae7e842f..22a8b5b0 100644
---- a/onnx/onnxruntime/cmake/onnxruntime_util.cmake
-+++ b/onnx/onnxruntime/cmake/onnxruntime_util.cmake
+diff --git a/cmake/onnxruntime_util.cmake b/cmake/onnxruntime_util.cmake
+index ae7e842..22a8b5b 100644
+--- a/cmake/onnxruntime_util.cmake
++++ b/cmake/onnxruntime_util.cmake
 @@ -16,7 +16,7 @@ if(UNIX)
  endif()
  set_target_properties(onnxruntime_util PROPERTIES LINKER_LANGUAGE CXX)
@@ -815,10 +827,10 @@ index ae7e842f..22a8b5b0 100644
  if (WIN32)
      target_compile_definitions(onnxruntime_util PRIVATE _SCL_SECURE_NO_WARNINGS)
  endif()
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
-index d9dccd5c..913dbf7e 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
+index d9dccd5..913dbf7 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
 @@ -279,7 +279,7 @@ def AddFloats(builder, floats):
  def AttributeStartFloatsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -864,10 +876,10 @@ index d9dccd5c..913dbf7e 100644
      return AttributeStartGraphsVector(builder, numElems)
  
  def AttributeEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
-index 9d5f5feb..9986bc1c 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
+index 9d5f5fe..9986bc1 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
 @@ -109,7 +109,7 @@ def AddOptimizerGroups(builder, optimizerGroups):
  def CheckpointStartOptimizerGroupsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -877,10 +889,10 @@ index 9d5f5feb..9986bc1c 100644
      return CheckpointStartOptimizerGroupsVector(builder, numElems)
  
  def CheckpointAddPropertyBag(builder, propertyBag):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
-index 50bf8819..3293ed5d 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
+index 50bf881..3293ed5 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
 @@ -98,7 +98,7 @@ def AddNodeIndices(builder, nodeIndices):
  def DeprecatedKernelCreateInfosStartNodeIndicesVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -899,10 +911,10 @@ index 50bf8819..3293ed5d 100644
      return DeprecatedKernelCreateInfosStartKernelDefHashesVector(builder, numElems)
  
  def DeprecatedKernelCreateInfosEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
-index 485346f9..52e28842 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
+index 485346f..52e2884 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
 @@ -86,7 +86,7 @@ def AddSubGraphSessionStates(builder, subGraphSessionStates):
  def DeprecatedSessionStateStartSubGraphSessionStatesVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -912,10 +924,10 @@ index 485346f9..52e28842 100644
      return DeprecatedSessionStateStartSubGraphSessionStatesVector(builder, numElems)
  
  def DeprecatedSessionStateEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
-index 98cac5ed..086fea63 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
+index 98cac5e..086fea6 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
 @@ -226,7 +226,7 @@ def AddInitializers(builder, initializers):
  def GraphStartInitializersVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -979,10 +991,10 @@ index 98cac5ed..086fea63 100644
      return GraphStartSparseInitializersVector(builder, numElems)
  
  def GraphAddRuntimeOptimizations(builder, runtimeOptimizations):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
-index 467102d2..0c9f8130 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
+index 467102d..0c9f813 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
 @@ -81,7 +81,7 @@ def AddArgs(builder, args):
  def KernelTypeStrArgsEntryStartArgsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -992,10 +1004,10 @@ index 467102d2..0c9f8130 100644
      return KernelTypeStrArgsEntryStartArgsVector(builder, numElems)
  
  def KernelTypeStrArgsEntryEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
-index ff98bf0d..428a99cd 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
+index ff98bf0..428a99c 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
 @@ -68,7 +68,7 @@ def AddOpKernelTypeStrArgs(builder, opKernelTypeStrArgs):
  def KernelTypeStrResolverStartOpKernelTypeStrArgsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1005,10 +1017,10 @@ index ff98bf0d..428a99cd 100644
      return KernelTypeStrResolverStartOpKernelTypeStrArgsVector(builder, numElems)
  
  def KernelTypeStrResolverEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
-index f4144640..be77c776 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
+index f414464..be77c77 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
 @@ -159,7 +159,7 @@ def AddOpsetImport(builder, opsetImport):
  def ModelStartOpsetImportVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1027,10 +1039,10 @@ index f4144640..be77c776 100644
      return ModelStartMetadataPropsVector(builder, numElems)
  
  def ModelEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
-index 6c997ef8..6e2b4315 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
+index 6c997ef..6e2b431 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
 @@ -107,7 +107,7 @@ def AddRequiresGradParams(builder, requiresGradParams):
  def ModuleStateStartRequiresGradParamsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1049,10 +1061,10 @@ index 6c997ef8..6e2b4315 100644
      return ModuleStateStartFrozenParamsVector(builder, numElems)
  
  def ModuleStateAddIsNominalState(builder, isNominalState):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
-index 85ea3b5c..705da500 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
+index 85ea3b5..705da50 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
 @@ -259,7 +259,7 @@ def AddInputs(builder, inputs):
  def NodeStartInputsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1098,10 +1110,10 @@ index 85ea3b5c..705da500 100644
      return NodeStartImplicitInputsVector(builder, numElems)
  
  def NodeEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
-index b2fa4a58..68689a3e 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
+index b2fa4a5..68689a3 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
 @@ -104,7 +104,7 @@ def AddInputEdges(builder, inputEdges):
  def NodeEdgeStartInputEdgesVector(builder, numElems):
      return builder.StartVector(12, numElems, 4)
@@ -1120,10 +1132,10 @@ index b2fa4a58..68689a3e 100644
      return NodeEdgeStartOutputEdgesVector(builder, numElems)
  
  def NodeEdgeEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
-index 00d9fe4d..a4a498c3 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
+index 00d9fe4..a4a498c 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
 @@ -114,7 +114,7 @@ def AddNodeIndices(builder, nodeIndices):
  def NodesToOptimizeIndicesStartNodeIndicesVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1133,10 +1145,10 @@ index 00d9fe4d..a4a498c3 100644
      return NodesToOptimizeIndicesStartNodeIndicesVector(builder, numElems)
  
  def NodesToOptimizeIndicesAddNumInputs(builder, numInputs):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
-index 33c028d3..10a0d0e2 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
+index 33c028d..10a0d0e 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
 @@ -81,7 +81,7 @@ def AddKernelTypeStrArgs(builder, kernelTypeStrArgs):
  def OpIdKernelTypeStrArgsEntryStartKernelTypeStrArgsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1146,10 +1158,10 @@ index 33c028d3..10a0d0e2 100644
      return OpIdKernelTypeStrArgsEntryStartKernelTypeStrArgsVector(builder, numElems)
  
  def OpIdKernelTypeStrArgsEntryEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
-index 70c8a6d0..c92e6c38 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
+index 70c8a6d..c92e6c3 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
 @@ -107,7 +107,7 @@ def AddOptimizerStates(builder, optimizerStates):
  def OptimizerGroupStartOptimizerStatesVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1159,10 +1171,10 @@ index 70c8a6d0..c92e6c38 100644
      return OptimizerGroupStartOptimizerStatesVector(builder, numElems)
  
  def OptimizerGroupEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
-index f8a31ff9..0cdde97a 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
+index f8a31ff..0cdde97 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
 @@ -81,7 +81,7 @@ def AddMomentums(builder, momentums):
  def ParameterOptimizerStateStartMomentumsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1172,10 +1184,10 @@ index f8a31ff9..0cdde97a 100644
      return ParameterOptimizerStateStartMomentumsVector(builder, numElems)
  
  def ParameterOptimizerStateEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
-index adfb0785..bb93c62e 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
+index adfb078..bb93c62 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
 @@ -118,7 +118,7 @@ def AddInts(builder, ints):
  def PropertyBagStartIntsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1203,10 +1215,10 @@ index adfb0785..bb93c62e 100644
      return PropertyBagStartStringsVector(builder, numElems)
  
  def PropertyBagEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
-index ecfaaf85..8a447f0d 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
+index ecfaaf8..8a447f0 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
 @@ -95,7 +95,7 @@ def AddProducedOpIds(builder, producedOpIds):
  def RuntimeOptimizationRecordStartProducedOpIdsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1216,10 +1228,10 @@ index ecfaaf85..8a447f0d 100644
      return RuntimeOptimizationRecordStartProducedOpIdsVector(builder, numElems)
  
  def RuntimeOptimizationRecordEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
-index 01851121..e32f1847 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
+index 0185112..e32f184 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
 @@ -81,7 +81,7 @@ def AddRuntimeOptimizationRecords(builder, runtimeOptimizationRecords):
  def RuntimeOptimizationRecordContainerEntryStartRuntimeOptimizationRecordsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1229,10 +1241,10 @@ index 01851121..e32f1847 100644
      return RuntimeOptimizationRecordContainerEntryStartRuntimeOptimizationRecordsVector(builder, numElems)
  
  def RuntimeOptimizationRecordContainerEntryEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
-index 6f159169..4c8cff1d 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
+index 6f15916..4c8cff1 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
 @@ -69,7 +69,7 @@ def AddRecords(builder, records):
  def RuntimeOptimizationsStartRecordsVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1242,10 +1254,10 @@ index 6f159169..4c8cff1d 100644
      return RuntimeOptimizationsStartRecordsVector(builder, numElems)
  
  def RuntimeOptimizationsEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
-index 0603ef3c..390b514f 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
+index 0603ef3..390b514 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
 @@ -68,7 +68,7 @@ def AddDim(builder, dim):
  def ShapeStartDimVector(builder, numElems):
      return builder.StartVector(4, numElems, 4)
@@ -1255,10 +1267,10 @@ index 0603ef3c..390b514f 100644
      return ShapeStartDimVector(builder, numElems)
  
  def ShapeEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
-index 48da36c9..4653cdd8 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
+index 48da36c..4653cdd 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
 @@ -104,7 +104,7 @@ def AddDims(builder, dims):
  def SparseTensorStartDimsVector(builder, numElems):
      return builder.StartVector(8, numElems, 8)
@@ -1268,10 +1280,10 @@ index 48da36c9..4653cdd8 100644
      return SparseTensorStartDimsVector(builder, numElems)
  
  def SparseTensorEnd(builder):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
-index 6b745c2a..691dc224 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
+index 6b745c2..691dc22 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
 @@ -157,7 +157,7 @@ def AddDims(builder, dims):
  def TensorStartDimsVector(builder, numElems):
      return builder.StartVector(8, numElems, 8)
@@ -1299,10 +1311,10 @@ index 6b745c2a..691dc224 100644
      return TensorStartStringDataVector(builder, numElems)
  
  def TensorAddExternalDataOffset(builder, externalDataOffset):
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort.fbs.h b/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort.fbs.h
-index 50fc1db8..31dd7bf0 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort.fbs.h
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort.fbs.h
+diff --git a/onnxruntime/core/flatbuffers/schema/ort.fbs.h b/onnxruntime/core/flatbuffers/schema/ort.fbs.h
+index 50fc1db..31dd7bf 100644
+--- a/onnxruntime/core/flatbuffers/schema/ort.fbs.h
++++ b/onnxruntime/core/flatbuffers/schema/ort.fbs.h
 @@ -4,13 +4,13 @@
  #ifndef FLATBUFFERS_GENERATED_ORT_ONNXRUNTIME_FBS_H_
  #define FLATBUFFERS_GENERATED_ORT_ONNXRUNTIME_FBS_H_
@@ -1373,10 +1385,10 @@ index 50fc1db8..31dd7bf0 100644
    const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::KernelTypeStrArgsEntry>> *kernel_type_str_args() const {
      return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::KernelTypeStrArgsEntry>> *>(VT_KERNEL_TYPE_STR_ARGS);
    }
-diff --git a/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h b/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
-index 4b2c950d..aea14b6a 100644
---- a/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
-+++ b/onnx/onnxruntime/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
+diff --git a/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h b/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
+index 4b2c950..aea14b6 100644
+--- a/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
++++ b/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
 @@ -4,13 +4,13 @@
  #ifndef FLATBUFFERS_GENERATED_ORTTRAININGCHECKPOINT_ONNXRUNTIME_FBS_H_
  #define FLATBUFFERS_GENERATED_ORTTRAININGCHECKPOINT_ONNXRUNTIME_FBS_H_
@@ -1395,10 +1407,10 @@ index 4b2c950d..aea14b6a 100644
               "Non-compatible flatbuffers version included");
  
  #include "ort.fbs.h"
-diff --git a/onnx/onnxruntime/onnxruntime/core/graph/graph.cc b/onnx/onnxruntime/onnxruntime/core/graph/graph.cc
-index e950d689..3c1b3790 100644
---- a/onnx/onnxruntime/onnxruntime/core/graph/graph.cc
-+++ b/onnx/onnxruntime/onnxruntime/core/graph/graph.cc
+diff --git a/onnxruntime/core/graph/graph.cc b/onnxruntime/core/graph/graph.cc
+index e950d68..3c1b379 100644
+--- a/onnxruntime/core/graph/graph.cc
++++ b/onnxruntime/core/graph/graph.cc
 @@ -1250,10 +1250,12 @@ Graph::Graph(const Model& owning_model,
  
      // Remove sparse_initializers from protobuf to save memory as they are converted to dense now
@@ -1425,10 +1437,10 @@ index e950d689..3c1b3790 100644
  }
  
  const ONNX_NAMESPACE::TensorProto* Graph::GetConstantInitializer(const std::string& initializer_name,
-diff --git a/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc b/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
-index bdb6a44b..1b6a4e35 100644
---- a/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
-+++ b/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
+diff --git a/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc b/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
+index bdb6a44..1b6a4e3 100644
+--- a/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
++++ b/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
 @@ -11,6 +11,8 @@
  #include <unordered_set>
  #include <utility>
@@ -1438,10 +1450,10 @@ index bdb6a44b..1b6a4e35 100644
  
  #include <gsl/gsl>
  #include "core/common/make_string.h"
-diff --git a/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h b/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
-index e7d2d328..8892e3dd 100644
---- a/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
-+++ b/onnx/onnxruntime/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
+diff --git a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
+index e7d2d32..8892e3d 100644
+--- a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
++++ b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
 @@ -10,6 +10,7 @@
  #include <string_view>
  #include <unordered_map>
@@ -1450,10 +1462,10 @@ index e7d2d328..8892e3dd 100644
  #include <vector>
  
  namespace onnx_transpose_optimization {
-diff --git a/onnx/onnxruntime/onnxruntime/core/providers/cpu/controlflow/loop.cc b/onnx/onnxruntime/onnxruntime/core/providers/cpu/controlflow/loop.cc
-index c65dd2a0..b33b1f18 100644
---- a/onnx/onnxruntime/onnxruntime/core/providers/cpu/controlflow/loop.cc
-+++ b/onnx/onnxruntime/onnxruntime/core/providers/cpu/controlflow/loop.cc
+diff --git a/onnxruntime/core/providers/cpu/controlflow/loop.cc b/onnxruntime/core/providers/cpu/controlflow/loop.cc
+index c65dd2a..b33b1f1 100644
+--- a/onnxruntime/core/providers/cpu/controlflow/loop.cc
++++ b/onnxruntime/core/providers/cpu/controlflow/loop.cc
 @@ -244,7 +244,7 @@ static Status ConcatenateCpuOutput(void* /*stream*/,
  
    // we can't easily use a C++ template for the tensor element type,
@@ -1472,85 +1484,10 @@ index c65dd2a0..b33b1f18 100644
                                                 bytes_per_iteration);
      auto dst = output_span.subspan(i * bytes_per_iteration, bytes_per_iteration);
      gsl::copy(src, dst);
-diff --git a/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h b/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h
-index 85c55c89..5704bc9b 100644
---- a/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h
-+++ b/onnx/onnxruntime/onnxruntime/core/providers/etglow/etglow_provider_factory_creator.h
-@@ -6,14 +6,18 @@
- #include <memory>
- 
- #include "core/providers/providers.h"
-+#include "core/framework/provider_options.h"
- 
- #include <unordered_map>
- 
- struct OrtEtGlowProviderOptions;
- 
- namespace onnxruntime {
--
-+struct SessionOptions;
-+// defined in provider_bridge_ort.cc
- struct EtGlowProviderFactoryCreator {
-+  static std::shared_ptr<IExecutionProviderFactory> Create(ProviderOptions* provider_options_map,
-+                                                           const SessionOptions* session_options);
-   static std::shared_ptr<IExecutionProviderFactory> Create(const OrtEtGlowProviderOptions* provider_options);
- };
- 
-diff --git a/onnx/onnxruntime/onnxruntime/core/session/provider_bridge_ort.cc b/onnx/onnxruntime/onnxruntime/core/session/provider_bridge_ort.cc
-index c0d4a56b..85d7b2ec 100644
---- a/onnx/onnxruntime/onnxruntime/core/session/provider_bridge_ort.cc
-+++ b/onnx/onnxruntime/onnxruntime/core/session/provider_bridge_ort.cc
-@@ -1820,6 +1820,23 @@ std::shared_ptr<IExecutionProviderFactory> DnnlProviderFactoryCreator::Create(in
-   return s_library_dnnl.Get().CreateExecutionProviderFactory(use_arena);
- }
- 
-+void ORTSessionOptionsToOrtEtGlowProviderOptions(ProviderOptions& etglow_options,
-+                                                 const SessionOptions* session_options) {
-+  /* todo */
-+  bool disable_cpu_fallback = session_options->config_options.GetConfigOrDefault(
-+                                  kOrtSessionOptionsDisableCPUEPFallback, "0") == "1";
-+  if (disable_cpu_fallback)
-+    etglow_options["disable_cpu_fallback"] = "true";
-+}
-+
-+std::shared_ptr<IExecutionProviderFactory> EtGlowProviderFactoryCreator::Create(ProviderOptions* provider_options_map,
-+                                                                                const SessionOptions* session_options) {  // Append session options applicable for EP to EP Provider options.
-+  if (session_options) {
-+    onnxruntime::ORTSessionOptionsToOrtEtGlowProviderOptions(*provider_options_map, session_options);
-+  }
-+  return s_library_etglow.Get().CreateExecutionProviderFactory(provider_options_map);
-+}
-+
- std::shared_ptr<IExecutionProviderFactory> EtGlowProviderFactoryCreator::Create(const OrtEtGlowProviderOptions* provider_options) {
-   return s_library_etglow.Get().CreateExecutionProviderFactory(provider_options);
- }
-diff --git a/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc b/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc
-index db8b97f6..f43e8c5f 100644
---- a/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc
-+++ b/onnx/onnxruntime/onnxruntime/core/session/provider_registration.cc
-@@ -147,11 +147,17 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
-     options->provider_factories.push_back(JsProviderFactoryCreator::Create(provider_options, &(options->value)));
- #else
-     status = create_not_supported_status();
-+#endif
-+  } else if (strcmp(provider_name, "ETGLOW") == 0) {
-+#if defined(USE_ETGLOW)
-+    options->provider_factories.push_back(EtGlowProviderFactoryCreator::Create(&provider_options, &(options->value)));
-+#else
-+    status = create_not_supported_status();
- #endif
-   } else {
-     ORT_UNUSED_PARAMETER(options);
-     status = OrtApis::CreateStatus(ORT_INVALID_ARGUMENT,
--                                   "Unknown provider name. Currently supported values are 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
-+                                   "Unknown provider name. Currently supported values are 'ETGLOW', 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
-   }
- 
-   return status;
-diff --git a/onnx/onnxruntime/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h b/onnx/onnxruntime/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
-index 0c8e89a8..7ad3eb17 100644
---- a/onnx/onnxruntime/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
-+++ b/onnx/onnxruntime/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
+diff --git a/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h b/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
+index 0c8e89a..7ad3eb1 100644
+--- a/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
++++ b/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
 @@ -4,18 +4,16 @@
  #ifndef FLATBUFFERS_GENERATED_FLATBUFFERSUTILSTEST_ONNXRUNTIME_FBS_TEST_H_
  #define FLATBUFFERS_GENERATED_FLATBUFFERSUTILSTEST_ONNXRUNTIME_FBS_TEST_H_
@@ -1575,23 +1512,3 @@ index 0c8e89a8..7ad3eb17 100644
  
  namespace onnxruntime {
  namespace fbs {
-diff --git a/onnx/onnxruntime/tools/ci_build/build.py b/onnx/onnxruntime/tools/ci_build/build.py
-index 587d0355..0a1805a5 100644
---- a/onnx/onnxruntime/tools/ci_build/build.py
-+++ b/onnx/onnxruntime/tools/ci_build/build.py
-@@ -756,6 +756,7 @@ def parse_arguments():
- 
-     parser.add_argument("--use_xnnpack", action="store_true", help="Enable xnnpack EP.")
-     parser.add_argument("--use_azure", action="store_true", help="Enable azure EP.")
-+    parser.add_argument("--use_etglow", action="store_true", help="Enable ETGLOW EP.")
- 
-     parser.add_argument("--use_cache", action="store_true", help="Use compiler cache in CI")
- 
-@@ -1092,6 +1093,7 @@ def generate_build_tree(
-         "-Donnxruntime_DISABLE_FLOAT8_TYPES=" + ("ON" if disable_float8_types else "OFF"),
-         "-Donnxruntime_DISABLE_SPARSE_TENSORS=" + ("ON" if disable_sparse_tensors else "OFF"),
-         "-Donnxruntime_DISABLE_OPTIONAL_TYPE=" + ("ON" if disable_optional_type else "OFF"),
-+        "-Donnxruntime_USE_ETGLOW=" + ("ON" if args.use_etglow else "OFF"),
-     ]
- 
-     if args.rv64:

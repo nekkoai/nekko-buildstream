@@ -25,7 +25,7 @@ variables:
   - include/_private/legacy-toolchain.yml
   cmake-local: >-
     -D WARNINGS_AS_ERRORS=off
-    -D ET_LLVM_INSTALL_DIR=/opt/toolchain/llvm
+    -D ET_LLVM_INSTALL_DIR=/opt/nekko
     -D NEURALIZER_LINK_LLVM=1
     -D ETCOMMONLIBS_INCLUDE_DIRECTORIES=/opt/nekko/device/cm-umode/include
     -D ETCOMMONLIBS_LIBDIR=/opt/nekko/device/cm-umode/lib/

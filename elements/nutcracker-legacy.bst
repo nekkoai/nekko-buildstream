@@ -1,6 +1,7 @@
 kind: stack
 
 depends:
+- nutcracker-device.bst
 - nutcracker-host.bst
 - legacy/llvm.bst
 - legacy/neuralizer.bst

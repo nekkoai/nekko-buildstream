@@ -21,6 +21,7 @@ variables:
   cmake-local: >-
     -D BUILD_TESTS=OFF
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
+    -D BUILD_SHARED_LIBS=on
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
       
 sources:

@@ -26,7 +26,6 @@ config:
     env DESTDIR="%{install-root}" cmake --build .setuptools-cmake-build --target install
 
 # todo - bring in cmake-args , local, and global ...
-#    -D ONNX_BUILD_SHARED_LIBS=on
 environment:
   CMAKE_ARGS: >-
     -D CMAKE_INSTALL_PREFIX:PATH="%{prefix}"
@@ -36,6 +35,7 @@ environment:
     -D BUILD_ONNX_PYTHON=on
     -D ONNX_DISABLE_STATIC_REGISTRATION=on
     -D ONNX_USE_PROTOBUF_SHARED_LIBS=on
+    -D BUILD_SHARED_LIBS=on
     -D Protobuf_PROTOC_EXECUTABLE=/usr/bin/protoc
 
 sources:
