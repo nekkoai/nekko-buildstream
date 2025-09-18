@@ -1,7 +1,7 @@
 kind: pyproject
 
 build-depends:
-- base/freedesktop-sdk.bst:public-stacks/buildsystem-python-setuptools.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-meson.bst
 - base/freedesktop-sdk.bst:components/cython.bst
 - deps/python3-patchelf.bst
@@ -37,9 +37,3 @@ sources:
       checkout: True
   track: maintenance/2.3.x
   ref: 441262af28d48b160315126f7c08feaea58699c3
-- kind: pip
-  requirements-files:
-  - requirements/build_requirements.txt
-  ref: "build==1.3.0\nclick==8.2.1\ncython==3.1.4\nimportlib_metadata==8.7.0\nmeson==1.9.0\n\
-    meson_python==0.18.0\nninja==1.13.0\npackaging==25.0\npyproject_hooks==1.2.0\n\
-    pyproject_metadata==0.9.1\nspin==0.13\nzipp==3.23.0"

@@ -33,6 +33,7 @@ variables:
     -D CMAKE_POSITION_INDEPENDENT_CODE=on
     -D CMAKE_POLICY_VERSION_MINIMUM=3.5
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
+    -D BUILD_SHARED_LIBS=on
 
 sources:
 - kind: git_repo

@@ -51,19 +51,15 @@ variables:
     -D onnxruntime_USE_PREINSTALLED_EIGEN=on
 
 # todo cover your eyes - this is the inverse of our approach to onnx...
+# for patchelf - see https://github.com/microsoft/onnxruntime/issues/24911
 config:
   install-commands:
   - |
     %{make-install}
   - |
     (cd %{build-dir} && python ../setup.py install --root=%{install-root} --prefix=%{prefix})
-
-# todo - cleaner way to get python version rather than globbing? 
-# see https://github.com/microsoft/onnxruntime/issues/24911
-#public:
-#  bst:
-#    integration-commands:
-#    - patchelf --clear-execstack "%{lib}/python*/site-packages/onnxruntime/capi/*.so"
+  - |
+    patchelf --clear-execstack %{install-root}%{lib}/python*/site-packages/onnxruntime/capi/*.so
 
 sources:
 - kind: git_repo

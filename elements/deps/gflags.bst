@@ -11,6 +11,7 @@ variables:
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     -DLIB_INSTALL_DIR:STRING="%{lib}"
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
+    -D BUILD_SHARED_LIBS=on
 
 sources:
 - kind: git_repo

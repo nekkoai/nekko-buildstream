@@ -8,3 +8,4 @@ depends:
 - legacy/onnxruntime.bst
 - legacy/python3-site-nekko.bst
 - base/freedesktop-sdk.bst:components/patchelf.bst
+- base/freedesktop-sdk.bst:components/gdb.bst
