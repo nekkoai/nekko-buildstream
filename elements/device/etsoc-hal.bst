@@ -4,6 +4,9 @@ build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
 - device/riscv-toolchain.bst
 
+depends:
+- device/riscv-toolchain.bst
+
 variables:
   command-subdir: device/etsoc_hal
   (@):

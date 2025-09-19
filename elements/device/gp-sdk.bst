@@ -5,6 +5,10 @@ build-depends:
 - device/et-common-libs.bst
 - device/dnn-library.bst
 
+depends:
+- device/et-common-libs.bst
+- device/dnn-library.bst
+
 variables:
   command-subdir: device/gp-sdk/device
   (@):
