@@ -7,6 +7,8 @@ depends:
 - legacy/neuralizer.bst
 - legacy/glow.bst
 - legacy/onnxruntime.bst
+# Python libraries used by downstream consumers
+- deps/python3-pillow.bst
 # friendly items for usability and debugging below
 - legacy/python3-site-nekko.bst
 - base/freedesktop-sdk.bst:integration/ldconfig.bst
