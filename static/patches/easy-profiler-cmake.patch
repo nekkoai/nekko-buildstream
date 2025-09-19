@@ -1,0 +1,65 @@
+diff --git a/easy_profiler_core/CMakeLists.txt b/easy_profiler_core/CMakeLists.txt
+index 9125d54..0721335 100644
+--- a/easy_profiler_core/CMakeLists.txt
++++ b/easy_profiler_core/CMakeLists.txt
+@@ -192,7 +192,7 @@ add_library(easy_profiler ${SOURCES} resources.rc)
+ 
+ target_include_directories(easy_profiler PUBLIC
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+-    $<INSTALL_INTERFACE:include>  # <prefix>/include
++    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>  # <prefix>/include
+ )
+ target_compile_definitions(easy_profiler PRIVATE
+     -D_BUILD_PROFILER=1
+@@ -265,8 +265,12 @@ endif ()
+ 
+ #########################################################################################
+ # Installation:
+-set(config_install_dir "lib/cmake/${PROJECT_NAME}")
+-set(include_install_dir "include")
++include(CMakePackageConfigHelpers)
++include(InstallRequiredSystemLibraries)
++include(GNUInstallDirs)
++
++set(config_install_dir "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
++set(include_install_dir "${CMAKE_INSTALL_INCLUDEDIR}")
+ 
+ set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+ 
+@@ -275,9 +279,6 @@ set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+ set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+ set(targets_export_name "${PROJECT_NAME}Targets")
+ 
+-include(CMakePackageConfigHelpers)
+-include(InstallRequiredSystemLibraries)
+-
+ write_basic_package_version_file(
+     "${version_config}"
+     VERSION
+@@ -301,7 +302,7 @@ install(
+     DIRECTORY
+     ${EASY_INCLUDE_DIR}
+     DESTINATION
+-    include/
++    ${include_install_dir}
+ )
+ 
+ install(
+@@ -317,12 +318,11 @@ install(
+     easy_profiler
+     EXPORT
+     ${targets_export_name}
+-    LIBRARY DESTINATION lib COMPONENT Runtime
+-    ARCHIVE DESTINATION lib COMPONENT Development
+-    RUNTIME DESTINATION bin COMPONENT Runtime
+-    BUNDLE DESTINATION bin COMPONENT Runtime
+-    PUBLIC_HEADER DESTINATION include COMPONENT Development
+-    BUNDLE DESTINATION bin COMPONENT Runtime
++    LIBRARY COMPONENT Runtime
++    ARCHIVE COMPONENT Development
++    RUNTIME COMPONENT Runtime
++    BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime
++    PUBLIC_HEADER COMPONENT Development
+ )
+ 
+ install(

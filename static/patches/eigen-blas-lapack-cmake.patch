@@ -1,0 +1,51 @@
+diff --git a/blas/CMakeLists.txt b/blas/CMakeLists.txt
+index c530957fb..08112ff19 100644
+--- a/blas/CMakeLists.txt
++++ b/blas/CMakeLists.txt
+@@ -37,6 +37,8 @@ if (EIGEN_BUILD_SHARED_LIBS)
+   list(APPEND EIGEN_BLAS_TARGETS eigen_blas)
+ endif()
+ 
++include(GNUInstallDirs)
++
+ foreach(target IN LISTS EIGEN_BLAS_TARGETS)
+   if(EIGEN_STANDARD_LIBRARIES_TO_LINK_TO)
+       target_link_libraries(${target} ${EIGEN_STANDARD_LIBRARIES_TO_LINK_TO})
+@@ -44,9 +46,9 @@ foreach(target IN LISTS EIGEN_BLAS_TARGETS)
+ 
+   add_dependencies(blas ${target})
+   install(TARGETS ${target}
+-          RUNTIME DESTINATION bin
+-          LIBRARY DESTINATION lib
+-          ARCHIVE DESTINATION lib)
++          RUNTIME
++          LIBRARY
++          ARCHIVE)
+ endforeach()
+ 
+ if(EIGEN_Fortran_COMPILER_WORKS)
+diff --git a/lapack/CMakeLists.txt b/lapack/CMakeLists.txt
+index 196835cd5..13e55b149 100644
+--- a/lapack/CMakeLists.txt
++++ b/lapack/CMakeLists.txt
+@@ -107,6 +107,7 @@ if (EIGEN_BUILD_SHARED_LIBS)
+   target_link_libraries(eigen_lapack  eigen_blas)
+ endif()
+ 
++include(GNUInstallDirs)
+ foreach(target IN LISTS EIGEN_LAPACK_TARGETS)
+   if(EIGEN_STANDARD_LIBRARIES_TO_LINK_TO)
+     target_link_libraries(${target} ${EIGEN_STANDARD_LIBRARIES_TO_LINK_TO})
+@@ -114,9 +115,9 @@ foreach(target IN LISTS EIGEN_LAPACK_TARGETS)
+   target_link_libraries(${target} Eigen3::Eigen)
+   add_dependencies(lapack ${target})
+   install(TARGETS ${target}
+-          RUNTIME DESTINATION bin
+-          LIBRARY DESTINATION lib
+-          ARCHIVE DESTINATION lib)
++          RUNTIME
++          LIBRARY
++          ARCHIVE)
+ endforeach()
+ 
+ 

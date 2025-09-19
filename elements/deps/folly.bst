@@ -24,6 +24,7 @@ variables:
     -D BUILD_SHARED_LIBS=on
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
     -D LIB_INSTALL_DIR="%{lib}"
+    -D CMAKE_INSTALL_DIR="%{lib}/cmake/folly"
       
 sources:
 - kind: git
