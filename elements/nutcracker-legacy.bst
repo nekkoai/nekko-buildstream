@@ -8,5 +8,7 @@ depends:
 - legacy/glow.bst
 - legacy/onnxruntime.bst
 - legacy/python3-site-nekko.bst
+- legacy/ldconfig-nekko.bst
+- base/freedesktop-sdk.bst:integration/ldconfig.bst
 - base/freedesktop-sdk.bst:components/patchelf.bst
 - base/freedesktop-sdk.bst:components/gdb.bst

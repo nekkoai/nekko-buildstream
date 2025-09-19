@@ -23,6 +23,7 @@ variables:
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
     -D BUILD_SHARED_LIBS=on
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
+    -D LIB_INSTALL_DIR="%{lib}"
       
 sources:
 - kind: git
