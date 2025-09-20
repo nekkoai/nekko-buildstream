@@ -1,0 +1,38 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7fa4285..c121b59 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,6 +21,7 @@ ELSE()
+   SET(PTHREADPOOL_BUILD_TESTS OFF CACHE BOOL "Build pthreadpool unit tests")
+   SET(PTHREADPOOL_BUILD_BENCHMARKS OFF CACHE BOOL "Build pthreadpool micro-benchmarks")
+ ENDIF()
++OPTION(PTHREADPOOL_USE_SYSTEM_LIBS "Use system-provided dependency libraries" OFF)
+ 
+ # ---[ CMake options
+ INCLUDE(GNUInstallDirs)
+@@ -40,7 +41,7 @@ MACRO(PTHREADPOOL_TARGET_ENABLE_CXX11 target)
+ ENDMACRO()
+ 
+ # ---[ Download deps
+-IF(NOT DEFINED FXDIV_SOURCE_DIR)
++IF (NOT PTHREADPOOL_USE_SYSTEM_LIBS AND NOT DEFINED FXDIV_SOURCE_DIR)
+   MESSAGE(STATUS "Downloading FXdiv to ${CMAKE_BINARY_DIR}/FXdiv-source (define FXDIV_SOURCE_DIR to avoid it)")
+   CONFIGURE_FILE(cmake/DownloadFXdiv.cmake "${CMAKE_BINARY_DIR}/FXdiv-download/CMakeLists.txt")
+   EXECUTE_PROCESS(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+@@ -154,14 +155,14 @@ IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+ ENDIF()
+ 
+ # ---[ Configure FXdiv
+-IF(NOT TARGET fxdiv)
++IF (NOT PTHREADPOOL_USE_SYSTEM_LIBS AND NOT TARGET fxdiv)
+   SET(FXDIV_BUILD_TESTS OFF CACHE BOOL "")
+   SET(FXDIV_BUILD_BENCHMARKS OFF CACHE BOOL "")
+   ADD_SUBDIRECTORY(
+     "${FXDIV_SOURCE_DIR}"
+     "${CMAKE_BINARY_DIR}/FXdiv")
++  TARGET_LINK_LIBRARIES(pthreadpool PRIVATE fxdiv)
+ ENDIF()
+-TARGET_LINK_LIBRARIES(pthreadpool PRIVATE fxdiv)
+ 
+ INSTALL(TARGETS pthreadpool
+   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
