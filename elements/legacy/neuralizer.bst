@@ -2,6 +2,7 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:components/ccache.bst
 - deps/boost.bst
 - deps/nlohmann-json.bst
 - deps/cereal.bst
@@ -11,6 +12,7 @@ build-depends:
 - legacy/llvm.bst
 
 depends:
+- base/freedesktop-sdk.bst:components/ccache.bst
 - deps/boost.bst
 - deps/nlohmann-json.bst
 - deps/cereal.bst
@@ -26,6 +28,8 @@ variables:
   cmake-local: >-
     -D WARNINGS_AS_ERRORS=off
     -D ET_LLVM_INSTALL_DIR=/opt/toolchain/llvm
+    -D ET_GCC_INSTALL_DIR=/opt/toolchain/gnu
+    -D ENABLE_COMPILER_CACHE=ON
     -D NEURALIZER_LINK_LLVM=1
     -D ETCOMMONLIBS_INCLUDE_DIRECTORIES=/opt/nekko/device/cm-umode/include
     -D ETCOMMONLIBS_LIBDIR=/opt/nekko/device/cm-umode/lib/

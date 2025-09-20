@@ -1,10 +1,14 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
+- base/freedesktop-sdk.bst:components/python3.bst
+- base/freedesktop-sdk.bst:components/grep.bst
+- base/freedesktop-sdk.bst:components/sed.bst
 - deps/gtest.bst
 
 #depends:
+# todo can we strip down LLVM_ENABLE_PROJECTS further as we only appear to need support libraries
 
 variables:
   prefix: /opt/toolchain/llvm
@@ -16,7 +20,6 @@ variables:
     -D LLVM_INCLUDE_TESTS:BOOL=OFF
     -D LLVM_INCLUDE_DOCS:BOOL=OFF
     -D BUILD_SHARED_LIBS=1
-    -D CMAKE_BUILD_TYPE=Release
     -D CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 sources:

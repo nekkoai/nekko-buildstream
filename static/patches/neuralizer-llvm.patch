@@ -1,5 +1,5 @@
 diff --git a/neuralizer/CMakeLists.txt b/neuralizer/CMakeLists.txt
-index f9fa0a40..6649b7c2 100644
+index f9fa0a40..9ef43a90 100644
 --- a/neuralizer/CMakeLists.txt
 +++ b/neuralizer/CMakeLists.txt
 @@ -65,9 +65,18 @@ set_property(CACHE NEURALIZER_ETSOC2_TENSOR_EXTENSION_VERSION PROPERTY STRINGS 0
@@ -21,7 +21,23 @@ index f9fa0a40..6649b7c2 100644
  if(ENABLE_ETSOC2)
      find_package(dnnlib2_host REQUIRED)
  endif()    
-@@ -165,7 +174,7 @@ target_link_libraries(neuralizer
+@@ -104,6 +113,7 @@ message(STATUS "* AVX2_ON=" ${AVX2_ON})
+ message(STATUS "* AVX512_ON=" ${AVX512_ON})
+ message(STATUS "* NEURALIZER_USE_LLVM_RVET_ENV=" ${NEURALIZER_USE_LLVM_RVET_ENV})
+ message(STATUS "* ET_LLVM_INSTALL_DIR=" ${ET_LLVM_INSTALL_DIR})
++message(STATUS "* ET_GCC_INSTALL_DIR=" ${ET_GCC_INSTALL_DIR})
+ 
+ message(DEBUG "CMAKE_INSTALL_PREFIX=" ${CMAKE_INSTALL_PREFIX})
+ message(DEBUG "CMAKE_CURRENT_SOURCE_DIR=" ${CMAKE_CURRENT_SOURCE_DIR})
+@@ -153,6 +163,7 @@ target_compile_definitions(neuralizer
+         NEURALIZER_CLANG_DEFAULT=$<BOOL:${NEURALIZER_CLANG_DEFAULT}>
+         NEURALIZER_USE_LLVM_RVET_ENV=$<BOOL:${NEURALIZER_USE_LLVM_RVET_ENV}>
+         ET_LLVM_INSTALL_DIR="${ET_LLVM_INSTALL_DIR}"
++	ET_GCC_INSTALL_DIR="${ET_GCC_INSTALL_DIR}"
+         ETSOC2_TENSOR_EXTENSION_VERSION="${NEURALIZER_ETSOC2_TENSOR_EXTENSION_VERSION}"
+ )
+ 
+@@ -165,7 +176,7 @@ target_link_libraries(neuralizer
          $<$<BOOL:${ENABLE_ETSOC2}>:dnnlib2_host::dnnlib2_host>
          nlohmann_json::nlohmann_json
          $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0.0>>:stdc++fs>
@@ -79,6 +95,69 @@ index 2a8d3cf1..137ca722 100644
  #include <unordered_map>
  
  namespace neura {
+diff --git a/neuralizer/src/Packager/CodePackager.cpp b/neuralizer/src/Packager/CodePackager.cpp
+index 4195270c..6acf3cd9 100644
+--- a/neuralizer/src/Packager/CodePackager.cpp
++++ b/neuralizer/src/Packager/CodePackager.cpp
+@@ -216,7 +216,12 @@ void CodePackager::configureCompile() {
+     .inc = {"-I../", "-I../inc"},
+     .cc =
+       {
++#ifdef ET_GCC_INSTALL_DIR
++        .gcc = ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-g++",
++#else
++	/* Assume it is available in PATH */
+         .gcc = "riscv64-unknown-elf-g++",
++#endif
+ #if NEURALIZER_USE_LLVM_RVET_ENV
+         .clang = "$(LLVM_RVET)/bin/clang",
+ #else
+@@ -237,11 +242,19 @@ void CodePackager::configureCompile() {
+           "-target riscv64",
+           "-mcpu=et-soc1-min",
+           "-mabi=lp64f",
++#ifdef ET_GCC_INSTALL_DIR
++          "--sysroot=$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf",
++          "-I$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/"
++          "riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf/include/c++/8.2.0/",
++          "-I$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/"
++          "riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf/include/c++/8.2.0/riscv64-unknown-elf",
++#else
+           "--sysroot=$(abspath $(shell dirname $(shell which riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf",
+           "-I$(abspath $(shell dirname $(shell which "
+           "riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf/include/c++/8.2.0/",
+           "-I$(abspath $(shell dirname $(shell which "
+           "riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf/include/c++/8.2.0/riscv64-unknown-elf",
++#endif
+           "-mcmodel=medium",
+           "-D__ETSOC1__",
+           "-std=gnu++17",
+@@ -283,7 +296,12 @@ void CodePackager::configureLink() {
+     }
+ 
+     std::string linkerScriptName = "linker" + baseAddressToFileSuffix(baseAddress) + ".ld";
+-    Link link = {.ld = "riscv64-unknown-elf-gcc",
++    Link link = {
++#ifdef ET_GCC_INSTALL_DIR
++                 .ld = ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-gcc",
++#else
++                 .ld = "riscv64-unknown-elf-gcc",
++#endif
+                  .ldflags = {"-T" + linkerScriptName, "-nostartfiles", "-nostdlib"},
+                  .lib = {"-L" + ETCOMMONLIBS_LIBDIR, "-lcm-umode", "-lm", "-lgcc"}};
+ 
+@@ -475,7 +493,11 @@ void CodePackager::dumpMake(bool dumpS) const {
+         substr += ".S";
+         of << substr << " : " << target.name << "\n";
+         std::string objdump = neuraOpt_.isETSoC1()
++#ifdef ET_GCC_INSTALL_DIR
++                                ? ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-objdump"
++#else
+                                 ? "riscv64-unknown-elf-objdump"
++#endif
+                                 : "/esperanto/minion2/gnu_2023.04.29-llvm_16.0.3-rel_0/bin/llvm-objdump";
+         of << "\t" << objdump << " -lwdS -Mnumeric " << target.name << " > " << substr << "\n";
+         if (cfg_.checkUnimplementedInstructions) {
 diff --git a/neuralizer/src/Partitioner/PartitionGraph.h b/neuralizer/src/Partitioner/PartitionGraph.h
 index a0a0f285..3e6e8d05 100644
 --- a/neuralizer/src/Partitioner/PartitionGraph.h

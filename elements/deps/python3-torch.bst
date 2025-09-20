@@ -24,6 +24,7 @@ build-depends:
 - deps/sleef.bst
 - deps/opentelemetry-cpp.bst
 - deps/nlohmann-json.bst
+- deps/kineto.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst
@@ -35,7 +36,7 @@ environment:
   USE_TENSORPIPE: OFF
   USE_DISTRIBUTED: OFF
   USE_GLOO: OFF
-  USE_KINETO: OFF
+  USE_KINETO: ON
   USE_FBGEMM: OFF
   BUILD_TEST: OFF
   BUILD_SHARED_LIBS: ON

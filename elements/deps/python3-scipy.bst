@@ -16,6 +16,9 @@ depends:
 - base/freedesktop-sdk.bst:components/python3.bst
 - deps/python3-pythran.bst
 - deps/python3-numpy.bst
+- deps/pybind.bst
+- deps/python3-pybind.bst
+- deps/openblas.bst
 
 sources:
 - kind: git
