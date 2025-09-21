@@ -60,7 +60,7 @@ depends:
 # See: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=946255
 # See: https://sourceware.org/pipermail/dwz/2021q1/001029.html
 variables:
-  strip-binaries: ''
+  optimize-debug: false
 
 environment:
   CMAKE_BUILD_TYPE: MinSizeRel
