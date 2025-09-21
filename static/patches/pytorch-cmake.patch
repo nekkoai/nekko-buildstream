@@ -1,0 +1,175 @@
+diff --git a/caffe2/CMakeLists.txt b/caffe2/CMakeLists.txt
+index d1ce24e37f..899de41856 100644
+--- a/caffe2/CMakeLists.txt
++++ b/caffe2/CMakeLists.txt
+@@ -601,23 +601,6 @@ if(USE_CUDA)
+   set_source_files_properties(${TORCH_SRC_DIR}/csrc/jit/codegen/cuda/interface.cpp PROPERTIES COMPILE_FLAGS "-DUSE_CUDA=1")
+ endif()
+ 
+-if(BUILD_ONEDNN_GRAPH)
+-  list(APPEND Caffe2_CPU_SRCS
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/LlgaTensorImpl.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/graph_fuser.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/graph_rewriter.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/graph_helper.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/register_interface.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/decompose_silu.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/interface.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/kernel.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/defer_size_check.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/layout_propagation.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/prepare_binary.cpp
+-    ${TORCH_SRC_DIR}/csrc/jit/codegen/onednn/guard_shape.cpp
+-  )
+-endif()
+-
+ if(USE_ROCM)
+   list(APPEND Caffe2_HIP_SRCS ${Caffe2_GPU_HIP_JIT_FUSERS_SRCS})
+   if(USE_NCCL)
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index a93386c27f..d2ac56cc75 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -276,7 +276,7 @@ endif()
+ # --- [ PocketFFT
+ set(AT_POCKETFFT_ENABLED 0)
+ if(NOT AT_MKL_ENABLED)
+-  set(POCKETFFT_INCLUDE_DIR "${Torch_SOURCE_DIR}/third_party/pocketfft/")
++  set(POCKETFFT_INCLUDE_DIR "/usr/include/pocketfft/")
+   if(NOT EXISTS "${POCKETFFT_INCLUDE_DIR}")
+     message(FATAL_ERROR "pocketfft directory not found, expected ${POCKETFFT_INCLUDE_DIR}")
+   elseif(NOT EXISTS "${POCKETFFT_INCLUDE_DIR}/pocketfft_hdronly.h")
+@@ -557,16 +557,6 @@ if(USE_XNNPACK AND NOT USE_SYSTEM_XNNPACK)
+   include_directories(SYSTEM ${XNNPACK_INCLUDE_DIR})
+   list(APPEND Caffe2_DEPENDENCY_LIBS XNNPACK microkernels-prod)
+ elseif(NOT TARGET XNNPACK AND USE_SYSTEM_XNNPACK)
+-  add_library(XNNPACK SHARED IMPORTED)
+-  add_library(microkernels-prod SHARED IMPORTED)
+-  find_library(XNNPACK_LIBRARY XNNPACK)
+-  find_library(microkernels-prod_LIBRARY microkernels-prod)
+-  set_property(TARGET XNNPACK PROPERTY IMPORTED_LOCATION "${XNNPACK_LIBRARY}")
+-  set_property(TARGET microkernels-prod PROPERTY IMPORTED_LOCATION "${microkernels-prod_LIBRARY}")
+-  if(NOT XNNPACK_LIBRARY or NOT microkernels-prod_LIBRARY)
+-    message(FATAL_ERROR "Cannot find XNNPACK")
+-  endif()
+-  message("-- Found XNNPACK: ${XNNPACK_LIBRARY}")
+   list(APPEND Caffe2_DEPENDENCY_LIBS XNNPACK microkernels-prod)
+ endif()
+ 
+@@ -742,7 +732,7 @@ if(USE_ITT)
+     list(APPEND TORCH_PYTHON_LINK_LIBRARIES ${ITT_LIBRARIES})
+   else()
+     message(WARNING "Not compiling with ITT. Suppress this warning with -DUSE_ITT=OFF")
+-    set(USE_ITT OFF CACHE BOOL "" FORCE)
++    set(USE_ITT OFF CACHE BOOL "ITT" FORCE)
+     caffe2_update_option(USE_ITT OFF)
+   endif()
+ endif()
+@@ -1557,16 +1547,7 @@ endif()
+ #
+ set(TEMP_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
+-add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/fmt)
+-
+-# Disable compiler feature checks for `fmt`.
+-#
+-# CMake compiles a little program to check compiler features. Some of our build
+-# configurations (notably the mobile build analyzer) will populate
+-# CMAKE_CXX_FLAGS in ways that break feature checks. Since we already know
+-# `fmt` is compatible with a superset of the compilers that PyTorch is, it
+-# shouldn't be too bad to just disable the checks.
+-set_target_properties(fmt-header-only PROPERTIES INTERFACE_COMPILE_FEATURES "")
++find_package(fmt REQUIRED)
+ 
+ list(APPEND Caffe2_DEPENDENCY_LIBS fmt::fmt-header-only)
+ set(BUILD_SHARED_LIBS ${TEMP_BUILD_SHARED_LIBS} CACHE BOOL "Build shared libs" FORCE)
+@@ -1609,10 +1590,7 @@ if(USE_KINETO)
+     message(STATUS "Using CPU-only version of Kineto")
+   endif()
+ 
+-  set(CAFFE2_THIRD_PARTY_ROOT "${PROJECT_SOURCE_DIR}/third_party" CACHE STRING "")
+-  set(KINETO_SOURCE_DIR "${CAFFE2_THIRD_PARTY_ROOT}/kineto/libkineto" CACHE STRING "")
+-  set(KINETO_BUILD_TESTS OFF CACHE BOOL "")
+-  set(KINETO_LIBRARY_TYPE "static" CACHE STRING "")
++  find_package(kineto REQUIRED)
+ 
+   message(STATUS "Configuring Kineto dependency:")
+   message(STATUS "  KINETO_SOURCE_DIR = ${KINETO_SOURCE_DIR}")
+@@ -1695,10 +1673,6 @@ if(USE_KINETO)
+     endif()
+   endif()
+ 
+-  if(NOT TARGET kineto)
+-    add_subdirectory("${KINETO_SOURCE_DIR}")
+-    set_property(TARGET kineto PROPERTY POSITION_INDEPENDENT_CODE ON)
+-  endif()
+   list(APPEND Caffe2_DEPENDENCY_LIBS kineto)
+   string(APPEND CMAKE_CXX_FLAGS " -DUSE_KINETO")
+   if(LIBKINETO_NOCUPTI)
+diff --git a/pyproject.toml b/pyproject.toml
+index ccf9c2aeb4..d090141221 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -28,13 +28,11 @@ requires = [
+     # API temporarily restored and shim used. Please fix
+     # Setuptools will drop support for setup.py past 80
+     # min version for recursive glob package data support
+-    "setuptools>=62.3.0,<80.0",
++    "setuptools>=62.3.0",
+     "wheel",
+     "astunparse",
+     "numpy",
+-    "ninja",
+     "pyyaml",
+-    "cmake",
+     "typing-extensions>=4.10.0",
+     "requests",
+ ]
+diff --git a/setup.py b/setup.py
+index b4ebc92f59..fc69134113 100644
+--- a/setup.py
++++ b/setup.py
+@@ -906,7 +906,7 @@ class concat_license_files:
+ 
+ 
+ try:
+-    from wheel.bdist_wheel import bdist_wheel
++    from setuptools.command.bdist_wheel import bdist_wheel
+ except ImportError:
+     # This is useful when wheel is not installed and bdist_wheel is not
+     # specified on the command line. If it _is_ specified, parsing the command
+diff --git a/torch/csrc/jit/serialization/mobile_bytecode_generated.h b/torch/csrc/jit/serialization/mobile_bytecode_generated.h
+index b61fad2ab7..24934305ed 100644
+--- a/torch/csrc/jit/serialization/mobile_bytecode_generated.h
++++ b/torch/csrc/jit/serialization/mobile_bytecode_generated.h
+@@ -8,9 +8,9 @@
+ 
+ // Ensure the included flatbuffers.h is the same version as when this file was
+ // generated, otherwise it may not be compatible.
+-static_assert(FLATBUFFERS_VERSION_MAJOR == 24 &&
+-              FLATBUFFERS_VERSION_MINOR == 12 &&
+-              FLATBUFFERS_VERSION_REVISION == 23,
++static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
++              FLATBUFFERS_VERSION_MINOR == 2 &&
++              FLATBUFFERS_VERSION_REVISION == 10,
+              "Non-compatible flatbuffers version included");
+ 
+ namespace torch {
+@@ -2597,4 +2597,3 @@ inline void FinishSizePrefixedModuleBuffer(
+ }  // namespace torch
+ 
+ #endif  // FLATBUFFERS_GENERATED_MOBILEBYTECODE_TORCH_JIT_MOBILE_SERIALIZATION_H_
+-// @generated
+diff --git a/torch/csrc/profiler/kineto_shim.h b/torch/csrc/profiler/kineto_shim.h
+index c4efd7785b..b67b447bfa 100644
+--- a/torch/csrc/profiler/kineto_shim.h
++++ b/torch/csrc/profiler/kineto_shim.h
+@@ -12,7 +12,7 @@
+ #undef USE_KINETO
+ #endif
+ 
+-#include <ActivityType.h>
++#include <kineto/ActivityType.h>
+ 
+ #include <torch/csrc/Export.h>
+ #include <torch/csrc/profiler/api.h>

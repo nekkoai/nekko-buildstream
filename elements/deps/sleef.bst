@@ -2,10 +2,8 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
-- deps/tlfloat.bst
 
-depends:
-- deps/tlfloat.bst
+#depends:
 
 variables:
   cmake-local: >-
@@ -17,12 +15,9 @@ variables:
 sources:
 - kind: git
   url: github:shibatch/sleef
-  track: master
-  ref: 51cc68ab794a49d9c80f4975b81211a98b346f01
-  checkout-submodules: false
-  submodules:
-    submodules/tlfloat:
-      url: github:shibatch/tlfloat
-      checkout: False
-- kind: patch
-  path: static/patches/sleef-tlflags-cmake.patch
+  #track: master
+  #ref: 51cc68ab794a49d9c80f4975b81211a98b346f01
+  track: 3.8
+  ref: 5a1d179df9cf652951b59010a2d2075372d67f68
+#- kind: patch
+#  path: static/patches/sleef-tlflags-cmake.patch
