@@ -5,6 +5,8 @@ config:
   overrides:
      # TODO we need PIC-able gflags
      components/gflags.bst: deps/gflags.bst
+     # TODO we need libjpeg to support 70+ (JPEG7)
+     components/jpeg.bst: deps/jpeg.bst
 
 sources:
 - kind: git

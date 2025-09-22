@@ -1,0 +1,13 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 880b268..dea867b 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -316,7 +316,7 @@ endif()
+ install(FILES sentencepiece_trainer.h sentencepiece_processor.h
+   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+ if (NOT SPM_PROTOBUF_PROVIDER STREQUAL "internal")
+-  install(FILES ${SPM_PROTO_HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
++  install(FILES ${SPM_PROTO_HDRS} ${SPM_MODEL_PROTO_HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+ endif()
+ 
+ file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/data" data_dir)

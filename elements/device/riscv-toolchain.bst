@@ -4,6 +4,7 @@ depends:
 - device/riscv-toolchain-cmake.bst
 - deps/mpc.bst
 
+# TODO: figure out how to run strip-commands against this tarball
 # Fetch the precompiled compiler binaries
 # This URL should be available via the tailnet - otherwise, extract it to static/gnu and switch to local
 sources:
