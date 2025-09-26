@@ -16,20 +16,40 @@ on etsoc devices.
 
 ## Building
 
-To build the artifacts, you will need to:
+The final result of a build is an OCI image that can be run with Docker, Podman or in Kubernetes.
+
+You can build in one of two ways:
+
+* In Docker with `docker build`
+* Locally with installed tools
+
+### Build with Docker
+
+To build with docker, you need to have your tailscale auth key made available as a secret.  You can do that by exporting it as an environment variable or from a file.
+
+```sh
+# from environment variable
+% docker build --secret id=tsauth-key,env=TS_AUTHKEY -t ghcr.io/nekkoai/nutcracker-legacy:latest .
+# from file
+% docker build --secret id=tsauth-key,src=/path/to/authkey.txt -t ghcr.io/nekkoai/nutcracker-legacy:latest .
+```
+
+### Build locally
+
+To build the image locally, you will need to:
 
 1. Clone this repository
 1. Ensure proper network connections and credentials access
 1. Install dependencies
 1. Execute the build
 
-### Check out Nutcracker Buildstream repository
+#### Check out Nutcracker Buildstream repository
 
 ```sh
 % git clone ssh://git@github.com/nekkoai/nutcracker-legacy
 ```
 
-### Network access and credentials
+#### Network access and credentials
 
 Until `github.com/nekkoai` repositories are public, you must use authenticated access to the private repositories.
 
@@ -47,7 +67,7 @@ Hi jerenkrantz! You've successfully authenticated, but GitHub does not provide s
 
 Some of the artifacts are not reproducible, and sit on a private server named `cassian`. To access the server, you need to be on the correct tailnet `nekkoai` tailnet. If you are not on the tailnet, request access. If you are, ensure it is connected.
 
-### Dependencies
+#### Dependencies
 
 At a minimum, you will need `bubblewrap` as that is the sandboxing tech used by `Buildstream`.  You will need a few other host utilities - as an example for `freedesktop-sdk`, some of the sources are bundled with `lzip`.
 
@@ -58,7 +78,7 @@ At a minimum, you will need `bubblewrap` as that is the sandboxing tech used by 
 % pip install buildstream buildstream-plugins dulwich tomlkit
 ```
 
-#### Ubuntu 24.04 apparmor note
+##### Ubuntu 24.04 apparmor note
 
 Ubuntu 24.04's default `apparmor` profiles may cause `bubblewrap` to fail with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`.  (See [bwrap: operation not permitted](https://github.com/ocaml/opam/issues/5968) for some back and forth.)
 
@@ -68,7 +88,7 @@ $ sudo ln -s /usr/share/apparmor/extra-profiles/bwrap-userns-restrict /etc/appar
 $ systemctl reload apparmor
 ```
 
-### Build
+#### Build
 
 ```sh
 % bst build nutcracker-legacy.bst
