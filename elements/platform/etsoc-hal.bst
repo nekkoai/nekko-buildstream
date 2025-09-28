@@ -9,6 +9,12 @@ variables:
   (@):
   - include/_private/platform-device-toolchain.yml
 
+public:
+  bst:
+    split-rules:
+      doc:
+      - '%{includedir}/**.html'
+
 sources:
 - kind: git
   url: github:aifoundry-org/et-platformsw

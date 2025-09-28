@@ -6,6 +6,9 @@ build-depends:
 variables:
   cmake-local: >-
     -D CMAKE_POSITION_INDEPENDENT_CODE=on
+    -D EIGEN_BUILD_TESTING=off
+    -D EIGEN_BUILD_BLAS=off
+    -D EIGEN_BUILD_LAPACK=off
       
 sources:
 - kind: git
