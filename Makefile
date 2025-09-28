@@ -14,10 +14,10 @@ help:
 # Build using default method of build-docker
 build: build-docker
 
-# Build using Docker; your tailscale auth key must be available as an environment variable TS_AUTHKEY
+# Build using Docker; your tailscale network must be up
 build-docker:
 	@echo "Building using Docker..."
-	docker build --secret id=tsauth-key,env=TS_AUTHKEY -t $(IMAGE) .
+	docker build -t $(IMAGE) .
 	@echo "Build complete.  The resulting artifact can be found in docker as $(IMAGE)."
 
 # Build using locally installed dependencies and tools; you must be connected to the tailscale network before running

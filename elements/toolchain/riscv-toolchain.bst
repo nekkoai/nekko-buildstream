@@ -27,8 +27,10 @@ depends:
 #  path: static/gnu
 
 sources:
-- kind: tar
-  url: http://cassian/dist/et-gnu-toolchain-0.3.0.tar.gz
-  ref: ba187ad49f8e996029504365ac18ae9d9ea7a6c06cd43d1016eb603176cf95ab
+- kind: docker
+  registry-url: https://ghcr.io
+  image: nekkoai/et-gnu-toolchain
+  track: v0.3.0
+  ref: b93ee595a3a5144499890c237d1e23e1e4549c5b20786928f0beebe72fbaf769
 config:
   target: /opt/toolchain/gnu
