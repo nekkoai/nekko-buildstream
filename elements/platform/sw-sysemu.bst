@@ -21,5 +21,5 @@ sources:
   url: github:aifoundry-org/et-platformsw
   track: master
   ref: d08fcdcb37654f5ef4e9989c9dba4b9c07312038
-- kind: patch
-  path: static/patches/platformsw-sw-sysemu.patch
+- kind: patch_queue
+  path: static/patches/platformsw/sw-sysemu

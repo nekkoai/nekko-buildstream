@@ -1,14 +1,3 @@
-index 962d3b4..89e3dc6 100644
---- a/sw-sysemu/agent.h
-+++ b/sw-sysemu/agent.h
-@@ -12,6 +12,7 @@
- #define BEMU_AGENT_H
- 
- #include <string>
-+#include <cstdint>
- 
- namespace bemu {
- 
 diff --git a/sw-sysemu/cmake/Findglog.cmake b/sw-sysemu/cmake/Findglog.cmake
 deleted file mode 100644
 index 35b8192..0000000
@@ -67,29 +56,3 @@ index 35b8192..0000000
 -                                   GLOG_LIBRARY GLOG_INCLUDE_DIR)
 -endif()
 \ No newline at end of file
-diff --git a/sw-sysemu/sw-sysemu/SysEmuImp.cpp b/sw-sysemu/sw-sysemu/SysEmuImp.cpp
-index b42a684..ffff1fc 100644
---- a/sw-sysemu/sw-sysemu/SysEmuImp.cpp
-+++ b/sw-sysemu/sw-sysemu/SysEmuImp.cpp
-@@ -18,6 +18,9 @@
- #include <future>
- #include <mutex>
- #include <thread>
-+
-+extern int optind;
-+
- using namespace emu;
- 
- namespace {
-diff --git a/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h b/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h
-index 9e9f431..177886b 100644
---- a/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h
-+++ b/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h
-@@ -11,6 +11,7 @@
- #pragma once
- #include <string>
- #include <vector>
-+#include <cstdint>
- 
- #pragma GCC visibility push(default)
- 
