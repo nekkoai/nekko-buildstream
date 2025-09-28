@@ -1,15 +1,8 @@
 kind: pip
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python-maturin.bst
-- base/freedesktop-sdk.bst:components/python3-pyyaml.bst
-- base/freedesktop-sdk.bst:components/python3-requests.bst
-- base/freedesktop-sdk.bst:components/python3-urllib3.bst
-- base/freedesktop-sdk.bst:components/python3-filelock.bst
-- deps/python3-numpy.bst
-- deps/python3-hf_xet.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst
@@ -18,6 +11,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3-urllib3.bst
 - base/freedesktop-sdk.bst:components/python3-filelock.bst
 - deps/python3-hf_xet.bst
+- deps/python3-numpy.bst
 
 variables:
   pip-flags: |

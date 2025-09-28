@@ -1,7 +1,11 @@
 kind: autotools
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
+- base/freedesktop-sdk.bst:components/texinfo.bst
+
+depends:
+- base/freedesktop-sdk.bst:components/mpfr.bst
 
 #public:
 #  bst:

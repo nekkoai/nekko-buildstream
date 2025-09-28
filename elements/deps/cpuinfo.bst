@@ -1,8 +1,7 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
-- deps/pthreadpool.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 
 depends:
 - deps/pthreadpool.bst

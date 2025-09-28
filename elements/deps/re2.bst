@@ -1,7 +1,10 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
+
+depends:
+- base/freedesktop-sdk.bst:components/abseil-cpp.bst
 
 variables:
   cmake-local: >-

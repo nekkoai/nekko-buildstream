@@ -2,10 +2,6 @@ kind: pyproject
 
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
-- deps/python3-gast.bst
-- deps/python3-beniget.bst
-- deps/python3-ply.bst
-- deps/python3-numpy.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst

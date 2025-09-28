@@ -1,8 +1,8 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
-- deps/cpuinfo.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
+- base/freedesktop-sdk.bst:components/python3.bst
 
 depends:
 - deps/cpuinfo.bst

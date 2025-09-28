@@ -1,7 +1,7 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 
 sources:
 - kind: git

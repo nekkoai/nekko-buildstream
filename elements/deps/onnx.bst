@@ -1,8 +1,6 @@
 kind: pyproject
 
 build-depends:
-#- base/freedesktop-sdk.bst:sdk.bst
-#- base/freedesktop-sdk.bst:components/vim.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst

@@ -1,7 +1,7 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 
 # todo By default, it installs into shared/cmake rather than libdir ...
 #    -D CMAKE_INSTALL_DATAROOTDIR=%{cmake_moduledir}

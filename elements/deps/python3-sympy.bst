@@ -2,7 +2,6 @@ kind: pip
 
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
-- deps/python3-mpmath.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst

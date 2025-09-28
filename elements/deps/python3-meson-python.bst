@@ -1,8 +1,6 @@
 kind: pyproject
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
-#public-stacks/buildsystem-python-setuptools.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python-setuptools.bst
 - deps/python3-patchelf.bst
 

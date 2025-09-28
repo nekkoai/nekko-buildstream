@@ -1,18 +1,13 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
-- base/freedesktop-sdk.bst:components/libevent.bst
-- base/freedesktop-sdk.bst:components/gflags.bst
-- base/freedesktop-sdk.bst:components/glog.bst
-- deps/boost.bst
-- deps/double-conversion.bst
-- deps/fast-float.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/libevent.bst
 - base/freedesktop-sdk.bst:components/gflags.bst
 - base/freedesktop-sdk.bst:components/glog.bst
+- base/freedesktop-sdk.bst:components/fmtlib.bst
 - deps/boost.bst
 - deps/double-conversion.bst
 - deps/fast-float.bst

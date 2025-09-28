@@ -3,11 +3,7 @@ kind: pyproject
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python-maturin.bst
-- base/freedesktop-sdk.bst:components/openssl.bst
 - base/freedesktop-sdk.bst:components/pkg-config.bst
-- base/freedesktop-sdk.bst:components/python3-pyyaml.bst
-- base/freedesktop-sdk.bst:components/python3-requests.bst
-- base/freedesktop-sdk.bst:components/python3-urllib3.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/openssl.bst
