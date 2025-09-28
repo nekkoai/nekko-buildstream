@@ -1,21 +1,27 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/gflags.bst
+- base/freedesktop-sdk.bst:components/libpng.bst
+- base/freedesktop-sdk.bst:components/libunwind.bst
 - deps/folly.bst
 - deps/onnx.bst
 - deps/gtest.bst
 - legacy/neuralizer.bst
+- legacy/et-driver.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/gflags.bst
+- base/freedesktop-sdk.bst:components/libpng.bst
+- base/freedesktop-sdk.bst:components/libunwind.bst
 - deps/folly.bst
 - deps/onnx.bst
 - deps/gtest.bst
 - legacy/neuralizer.bst
+- legacy/et-driver.bst
 
 variables:
   command-subdir: glow

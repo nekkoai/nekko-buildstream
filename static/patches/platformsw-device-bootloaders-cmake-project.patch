@@ -1,0 +1,30 @@
+diff --git a/device-bootloaders/src/ServiceProcessorBL2/CMakeLists.txt b/device-bootloaders/src/ServiceProcessorBL2/CMakeLists.txt
+index c6776984..6d57e2ec 100644
+--- a/device-bootloaders/src/ServiceProcessorBL2/CMakeLists.txt
++++ b/device-bootloaders/src/ServiceProcessorBL2/CMakeLists.txt
+@@ -67,7 +67,6 @@ foreach(BL2_BUILD_VARIANT IN ITEMS production fast-boot testframework mdi_enable
+            )
+     endif()
+     
+-              
+ 
+     add_riscv_executable(${TARGET_NAME}
+         ${CMAKE_CURRENT_SOURCE_DIR}/common/entry.S
+@@ -130,14 +129,15 @@ foreach(BL2_BUILD_VARIANT IN ITEMS production fast-boot testframework mdi_enable
+         ${CMAKE_CURRENT_SOURCE_DIR}/services/bl2_scratch_buffer.c
+         ${CMAKE_CURRENT_SOURCE_DIR}/services/minion_debug.c
+         ${MAXION_SOURCES}
+-        ${PROJECT_BINARY_DIR}/src/Maxion/Bootrom/maxion_bootrom.h
+     )
+     
++    add_dependencies(${TARGET_NAME}.elf maxion_boot_rom)
++
+     target_include_directories(${TARGET_NAME}.elf
+         PRIVATE
+             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+             $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+-            $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/src/Maxion/Bootrom>
++            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../Maxion/Bootrom>
+             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/esperanto-fw>
+     )
+     target_compile_definitions(${TARGET_NAME}.elf

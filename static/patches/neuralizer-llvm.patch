@@ -58,6 +58,19 @@ index 82d773ab..a71a5f83 100644
  
  namespace std {
  
+diff --git a/neuralizer/src/CodeGenerator/Jitter/JitCodeGen/CodeContainer.h b/neuralizer/src/CodeGenerator/Jitter/JitCodeGen/CodeContainer.h
+index 600bd86c..11273048 100644
+--- a/neuralizer/src/CodeGenerator/Jitter/JitCodeGen/CodeContainer.h
++++ b/neuralizer/src/CodeGenerator/Jitter/JitCodeGen/CodeContainer.h
+@@ -387,7 +387,7 @@ private:
+   static constexpr int CLANG_REG_ALLOC_MAX_ASM_REGS = 28;
+ 
+   // Maximum number of registers allowed in an assembler block by GCC
+-  static constexpr int GCC_REG_ALLOC_MAX_ASM_REGS = 30;
++  static constexpr int GCC_REG_ALLOC_MAX_ASM_REGS = 28;
+ 
+   // Suffix appended to ASM labels to avoid collision problems with compiler optimizations
+   static constexpr auto UNIQUE_LABEL_SUFFIX = "%=";
 diff --git a/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp b/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp
 index cac45da5..f8bc74eb 100644
 --- a/neuralizer/src/CodeGenerator/Jitter/Logging/YamlCreator.cpp
@@ -96,15 +109,24 @@ index 2a8d3cf1..137ca722 100644
  
  namespace neura {
 diff --git a/neuralizer/src/Packager/CodePackager.cpp b/neuralizer/src/Packager/CodePackager.cpp
-index 4195270c..6acf3cd9 100644
+index 4195270c..4a1ca375 100644
 --- a/neuralizer/src/Packager/CodePackager.cpp
 +++ b/neuralizer/src/Packager/CodePackager.cpp
-@@ -216,7 +216,12 @@ void CodePackager::configureCompile() {
+@@ -211,12 +211,21 @@ void addIncludesFromDependencies(std::vector<std::string>& inc) {
+   }
+ }
+ 
++#ifndef ET_GCC_TRIPLE
++#define ET_GCC_TRIPLE "riscv64-unknown-elf"
++#endif
++
+ void CodePackager::configureCompile() {
+   cfg_.make.compile = {
      .inc = {"-I../", "-I../inc"},
      .cc =
        {
 +#ifdef ET_GCC_INSTALL_DIR
-+        .gcc = ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-g++",
++        .gcc = ET_GCC_INSTALL_DIR "/bin/" ET_GCC_TRIPLE "-g++",
 +#else
 +	/* Assume it is available in PATH */
          .gcc = "riscv64-unknown-elf-g++",
@@ -112,16 +134,16 @@ index 4195270c..6acf3cd9 100644
  #if NEURALIZER_USE_LLVM_RVET_ENV
          .clang = "$(LLVM_RVET)/bin/clang",
  #else
-@@ -237,11 +242,19 @@ void CodePackager::configureCompile() {
+@@ -237,11 +246,19 @@ void CodePackager::configureCompile() {
            "-target riscv64",
            "-mcpu=et-soc1-min",
            "-mabi=lp64f",
 +#ifdef ET_GCC_INSTALL_DIR
-+          "--sysroot=$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf",
++          "--sysroot=$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/" ET_GCC_TRIPLE "-gcc))/..)/riscv64-unknown-elf",
 +          "-I$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/"
-+          "riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf/include/c++/8.2.0/",
++          ET_GCC_TRIPLE "-gcc))/..)/" ET_GCC_TRIPLE "/include/c++/8.2.0/",
 +          "-I$(abspath $(shell dirname $(shell which " ET_GCC_INSTALL_DIR "/bin/"
-+          "riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf/include/c++/8.2.0/riscv64-unknown-elf",
++          ET_GCC_TRIPLE "-gcc))/..)/..)/" ET_GCC_TRIPLE "/include/c++/8.2.0/riscv64-unknown-elf",
 +#else
            "--sysroot=$(abspath $(shell dirname $(shell which riscv64-unknown-elf-gcc))/..)/riscv64-unknown-elf",
            "-I$(abspath $(shell dirname $(shell which "
@@ -132,26 +154,26 @@ index 4195270c..6acf3cd9 100644
            "-mcmodel=medium",
            "-D__ETSOC1__",
            "-std=gnu++17",
-@@ -283,7 +296,12 @@ void CodePackager::configureLink() {
+@@ -283,7 +300,12 @@ void CodePackager::configureLink() {
      }
  
      std::string linkerScriptName = "linker" + baseAddressToFileSuffix(baseAddress) + ".ld";
 -    Link link = {.ld = "riscv64-unknown-elf-gcc",
 +    Link link = {
 +#ifdef ET_GCC_INSTALL_DIR
-+                 .ld = ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-gcc",
++                 .ld = ET_GCC_INSTALL_DIR "/bin/" ET_GCC_TRIPLE "-gcc",
 +#else
 +                 .ld = "riscv64-unknown-elf-gcc",
 +#endif
                   .ldflags = {"-T" + linkerScriptName, "-nostartfiles", "-nostdlib"},
                   .lib = {"-L" + ETCOMMONLIBS_LIBDIR, "-lcm-umode", "-lm", "-lgcc"}};
  
-@@ -475,7 +493,11 @@ void CodePackager::dumpMake(bool dumpS) const {
+@@ -475,7 +497,11 @@ void CodePackager::dumpMake(bool dumpS) const {
          substr += ".S";
          of << substr << " : " << target.name << "\n";
          std::string objdump = neuraOpt_.isETSoC1()
 +#ifdef ET_GCC_INSTALL_DIR
-+                                ? ET_GCC_INSTALL_DIR "/bin/riscv64-unknown-elf-objdump"
++                                ? ET_GCC_INSTALL_DIR "/bin/" ET_GCC_TRIPLE "-objdump"
 +#else
                                  ? "riscv64-unknown-elf-objdump"
 +#endif

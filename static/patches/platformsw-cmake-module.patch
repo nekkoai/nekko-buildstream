@@ -1,0 +1,91 @@
+diff --git a/cmake-modules/DeviceUtils.cmake b/cmake-modules/DeviceUtils.cmake
+index 53854a54..1c42c3cd 100644
+--- a/cmake-modules/DeviceUtils.cmake
++++ b/cmake-modules/DeviceUtils.cmake
+@@ -9,10 +9,14 @@ macro(add_riscv_executable TARGET_NAME)
+         set(MAP_FILE ${TARGET_RUNTIME_OUTPUT_DIRECTORY}/${TARGET_NAME}.map)
+         set(LST_FILE ${TARGET_RUNTIME_OUTPUT_DIRECTORY}/${TARGET_NAME}.lst)
+     else()
+-        set(ELF_FILE_PATH ${ELF_FILE})
+-        set(BIN_FILE ${TARGET_NAME}.bin)
+-        set(MAP_FILE ${TARGET_NAME}.map)
+-        set(LST_FILE ${TARGET_NAME}.lst)
++	#set(ELF_FILE_PATH ${ELF_FILE})
++	#set(BIN_FILE ${TARGET_NAME}.bin)
++	#set(MAP_FILE ${TARGET_NAME}.map)
++	#set(LST_FILE ${TARGET_NAME}.lst)
++	set(ELF_FILE_PATH ${CMAKE_CURRENT_BINARY_DIR}/${ELF_FILE})
++	set(BIN_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.bin)
++	set(MAP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.map)
++	set(LST_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.lst)
+     endif()
+ 
+     add_executable(${ELF_FILE} ${ARGN}) # ARGN is "the rest of the arguments", i.e. the source list
+@@ -53,30 +57,15 @@ macro(add_riscv_executable TARGET_NAME)
+     target_link_directories(${ELF_FILE} PRIVATE ${SHARED_INC_DIR})
+ 
+     # custom command to generate a bin from the elf
+-    add_custom_command(
+-        OUTPUT ${BIN_FILE}
++    add_custom_command(TARGET ${ELF_FILE}
++        POST_BUILD
+         COMMAND ${CMAKE_OBJCOPY} -O binary ${ELF_FILE_PATH} ${BIN_FILE}
+-        DEPENDS ${ELF_FILE}
+     )
+ 
+     # custom command to generate an assembly listing from the elf
+-    add_custom_command(
+-        OUTPUT ${LST_FILE}
++    add_custom_command(TARGET ${ELF_FILE}
++        POST_BUILD
+         COMMAND ${CMAKE_OBJDUMP} -h -S ${ELF_FILE_PATH} > ${LST_FILE}
+-        DEPENDS ${ELF_FILE}
+-    )
+-
+-    add_custom_target(${TARGET_NAME}.map ALL
+-        DEPENDS ${ELF_FILE}
+-                ${CMAKE_CURRENT_BINARY_DIR}/${MAP_FILE}
+-    )
+-
+-    add_custom_target(${TARGET_NAME}.lst ALL
+-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LST_FILE}
+-    )
+-
+-    add_custom_target(${TARGET_NAME}.bin ALL
+-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${BIN_FILE}
+     )
+ 
+     if (DEFINED ZEBU_TARGET)
+@@ -112,7 +101,6 @@ function(target_report_riscv_size TARGET_NAME)
+ 
+     add_custom_command(TARGET ${TARGET_NAME}
+         POST_BUILD
+-        DEPENDS ${TARGET_NAME}
+         COMMAND ${SIZE_PROGRAM} --format=SysV ${TARGET_NAME}
+         COMMAND ${SIZE_PROGRAM} --format=berkeley ${TARGET_NAME}
+         COMMENT "Generated ${TARGET_NAME} size (build_type: ${CMAKE_BUILD_TYPE})"
+@@ -128,8 +116,7 @@ function(target_report_riscv_elf_file_header TARGET_NAME)
+ 
+     add_custom_command(TARGET ${TARGET_NAME}
+         POST_BUILD
+-        DEPENDS ${TARGET_NAME}
+         COMMAND ${READELF_PROGRAM} -h ${TARGET_NAME}
+         COMMENT "Generated ${TARGET_NAME} elf file header (build_type: ${CMAKE_BUILD_TYPE})"
+     )
+-endfunction(target_report_riscv_elf_file_header)
+\ No newline at end of file
++endfunction(target_report_riscv_elf_file_header)
+diff --git a/cmake-modules/FindlinuxDriver.cmake b/cmake-modules/FindlinuxDriver.cmake
+new file mode 100644
+index 00000000..af01f099
+--- /dev/null
++++ b/cmake-modules/FindlinuxDriver.cmake
+@@ -0,0 +1,8 @@
++
++if(NOT TARGET linuxDriver::linuxDriver)
++  add_library(linuxDriver::linuxDriver INTERFACE IMPORTED)
++  set_target_properties(linuxDriver::linuxDriver PROPERTIES
++    INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_INSTALL_PREFIX}/include
++  )
++  set(linuxDriver_FOUND TRUE)
++endif()

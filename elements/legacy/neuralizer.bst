@@ -1,13 +1,12 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:components/ccache.bst
 - deps/boost.bst
 - deps/nlohmann-json.bst
 - deps/cereal.bst
-- nutcracker-device.bst
-- nutcracker-host.bst
+- platform/platformsw-base.bst
 - legacy/dnn-library-api.bst
 - legacy/llvm.bst
 
@@ -16,10 +15,10 @@ depends:
 - deps/boost.bst
 - deps/nlohmann-json.bst
 - deps/cereal.bst
-- nutcracker-device.bst
-- nutcracker-host.bst
+- platform/platformsw-base.bst
 - legacy/dnn-library-api.bst
 - legacy/llvm.bst
+- deps/python3-tabulate.bst
 
 variables:
   command-subdir: neuralizer
@@ -31,10 +30,10 @@ variables:
     -D ET_GCC_INSTALL_DIR=/opt/toolchain/gnu
     -D ENABLE_COMPILER_CACHE=ON
     -D NEURALIZER_LINK_LLVM=1
-    -D ETCOMMONLIBS_INCLUDE_DIRECTORIES=/opt/nekko/device/cm-umode/include
-    -D ETCOMMONLIBS_LIBDIR=/opt/nekko/device/cm-umode/lib/
-    -D ETTRACE_INCLUDE_DIRECTORIES="/opt/nekko/device/include/esperanto"
-    -D DNNLIB_INCLUDE_DIRECTORIES="/opt/nekko/device/include"
+    -D ETCOMMONLIBS_INCLUDE_DIRECTORIES=/opt/nekko/platform/cm-umode/include
+    -D ETCOMMONLIBS_LIBDIR=/opt/nekko/platform/cm-umode/lib/
+    -D ETTRACE_INCLUDE_DIRECTORIES="/opt/nekko/platform/include/esperanto"
+    -D DNNLIB_INCLUDE_DIRECTORIES="/opt/nekko/platform/include"
     -D BUILD_DOCS=off
     -D BUILD_TESTS=off
 

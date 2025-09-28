@@ -1,0 +1,15 @@
+prefix: /opt/nekko/platform
+lib: '%{prefix}/lib'
+# Our device compiler won't accept the host compile flags - so, strip them
+target_common_flags: >-
+  %{debug_flags}
+target_arch_flags: ''
+# do not allow freedesktop-sdk stripper to touch our ELF files
+strip-binaries: ''
+cmake_module_path: '%{prefix}/share/cmake'
+cmake-global: >-
+  -D CMAKE_TOOLCHAIN_FILE=%{cmake_module_path}/platformsw-riscv-toolchain.cmake
+  -D CMAKE_MODULE_PATH=%{cmake_module_path}
+  -D CMAKE_PREFIX_PATH=%{prefix}
+  -D CMAKE_PROGRAM_PATH=/opt/toolchain/gnu/bin
+  %{cmake-project}

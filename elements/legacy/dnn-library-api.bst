@@ -1,8 +1,11 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
-- device/dnn-library.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
+- legacy/dnn-library.bst
+
+depends:
+- legacy/dnn-library.bst
 
 variables:
   command-subdir: dnn-library-api

@@ -1,4 +1,4 @@
-prefix: /opt/nekko/host
+prefix: /opt/nekko/platform
 lib: '%{prefix}/lib'
 cmake_module_path: '%{prefix}/share/cmake'
 cmake-global: >-

@@ -1,7 +1,7 @@
 kind: cmake
 
 build-depends:
-- base/freedesktop-sdk.bst:sdk.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:components/glog.bst
 - base/freedesktop-sdk.bst:components/fmtlib.bst
 - base/freedesktop-sdk.bst:components/lz4.bst
@@ -9,8 +9,9 @@ build-depends:
 - deps/tl-expected.bst
 - deps/nlohmann-json.bst
 - deps/backward.bst
-- host/et-trace.bst
-- host/device-api.bst
+- platform/et-trace.bst
+- platform/device-api.bst
+- legacy/et-driver.bst
 - legacy/neuralizer.bst
 
 depends:
@@ -21,8 +22,9 @@ depends:
 - deps/tl-expected.bst
 - deps/nlohmann-json.bst
 - deps/backward.bst
-- host/et-trace.bst
-- host/device-api.bst
+- platform/et-trace.bst
+- platform/device-api.bst
+- legacy/et-driver.bst
 - legacy/neuralizer.bst
 
 # todo handle options - see protobuf for an example

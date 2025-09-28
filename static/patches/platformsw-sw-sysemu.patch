@@ -1,0 +1,95 @@
+index 962d3b4..89e3dc6 100644
+--- a/sw-sysemu/agent.h
++++ b/sw-sysemu/agent.h
+@@ -12,6 +12,7 @@
+ #define BEMU_AGENT_H
+ 
+ #include <string>
++#include <cstdint>
+ 
+ namespace bemu {
+ 
+diff --git a/sw-sysemu/cmake/Findglog.cmake b/sw-sysemu/cmake/Findglog.cmake
+deleted file mode 100644
+index 35b8192..0000000
+--- a/sw-sysemu/cmake/Findglog.cmake
++++ /dev/null
+@@ -1,51 +0,0 @@
+-# - Try to find Glog
+-#
+-# The following variables are optionally searched for defaults
+-#  GLOG_ROOT_DIR:            Base directory where all GLOG components are found
+-#
+-# The following targets are available after glog is found:
+-#  glog
+-#  glog::glog
+-
+-include(FindPackageHandleStandardArgs)
+-
+-set(GLOG_ROOT_DIR "" CACHE PATH "Folder contains Google glog")
+-
+-if(WIN32)
+-    find_path(GLOG_INCLUDE_DIR glog/logging.h
+-        PATHS ${GLOG_ROOT_DIR}/src/windows)
+-else()
+-    find_path(GLOG_INCLUDE_DIR glog/logging.h
+-        PATHS ${GLOG_ROOT_DIR})
+-endif()
+-
+-if(MSVC)
+-    find_library(GLOG_LIBRARY_RELEASE libglog_static
+-        PATHS ${GLOG_ROOT_DIR}
+-        PATH_SUFFIXES Release)
+-
+-    find_library(GLOG_LIBRARY_DEBUG libglog_static
+-        PATHS ${GLOG_ROOT_DIR}
+-        PATH_SUFFIXES Debug)
+-
+-    set(GLOG_LIBRARY optimized ${GLOG_LIBRARY_RELEASE} debug ${GLOG_LIBRARY_DEBUG})
+-else()
+-    find_library(GLOG_LIBRARY glog
+-        PATHS ${GLOG_ROOT_DIR}
+-        PATH_SUFFIXES lib lib64)
+-endif()
+-
+-find_package_handle_standard_args(glog DEFAULT_MSG GLOG_INCLUDE_DIR GLOG_LIBRARY)
+-
+-if (GLOG_FOUND)
+-    add_library(glog UNKNOWN IMPORTED GLOBAL)
+-    add_library(glog::glog ALIAS glog)
+-    target_include_directories(glog INTERFACE ${GLOG_INCLUDE_DIR})
+-    set_target_properties(glog PROPERTIES IMPORTED_LOCATION ${GLOG_LIBRARY})
+-
+-    set(GLOG_INCLUDE_DIRS ${GLOG_INCLUDE_DIR})
+-    set(GLOG_LIBRARIES ${GLOG_LIBRARY})
+-    message(STATUS "Found glog    (include: ${GLOG_INCLUDE_DIR}, library: ${GLOG_LIBRARY})")
+-    mark_as_advanced(GLOG_ROOT_DIR GLOG_LIBRARY_RELEASE GLOG_LIBRARY_DEBUG
+-                                   GLOG_LIBRARY GLOG_INCLUDE_DIR)
+-endif()
+\ No newline at end of file
+diff --git a/sw-sysemu/sw-sysemu/SysEmuImp.cpp b/sw-sysemu/sw-sysemu/SysEmuImp.cpp
+index b42a684..ffff1fc 100644
+--- a/sw-sysemu/sw-sysemu/SysEmuImp.cpp
++++ b/sw-sysemu/sw-sysemu/SysEmuImp.cpp
+@@ -18,6 +18,9 @@
+ #include <future>
+ #include <mutex>
+ #include <thread>
++
++extern int optind;
++
+ using namespace emu;
+ 
+ namespace {
+diff --git a/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h b/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h
+index 9e9f431..177886b 100644
+--- a/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h
++++ b/sw-sysemu/sw-sysemu/include/sw-sysemu/SysEmuOptions.h
+@@ -11,6 +11,7 @@
+ #pragma once
+ #include <string>
+ #include <vector>
++#include <cstdint>
+ 
+ #pragma GCC visibility push(default)
+ 

@@ -5,5 +5,5 @@ cmake_module_path: '%{prefix}/share/cmake'
 #;/opt/nekko/device;/opt/nekko/host:/opt/toolchain/llvm
 cmake-global: >-
   -D CMAKE_MODULE_PATH=%{cmake_module_path}
-  -D CMAKE_PREFIX_PATH="%{prefix};/opt/nekko/device;/opt/nekko/host;/opt/toolchain/llvm"
+  -D CMAKE_PREFIX_PATH="%{prefix};/opt/nekko/platform;/opt/toolchain/llvm"
   %{cmake-project}

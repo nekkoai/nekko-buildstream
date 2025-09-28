@@ -1,0 +1,12 @@
+diff --git a/et-common-libs/include/etsoc/isa/tensors.h b/et-common-libs/include/etsoc/isa/tensors.h
+index 5044365f..28c2bb08 100644
+--- a/et-common-libs/include/etsoc/isa/tensors.h
++++ b/et-common-libs/include/etsoc/isa/tensors.h
+@@ -23,7 +23,6 @@ extern "C" {
+ 
+ #if defined(__cplusplus) && (__cplusplus >= 201103L)
+ #include <cinttypes>
+-#include <cstdbool>
+ #else
+ #include <inttypes.h>
+ #include <stdbool.h>
