@@ -1,9 +1,15 @@
-kind: import
+kind: manual
 
-# todo need to filter out just the include files!!
-# https://docs.buildstream.build/master/elements/filter.html
+build-depends:
+- base/freedesktop-sdk.bst:public-stacks/runtime-minimal.bst
+
+variables:
+  strip-binaries: ''
+
 config:
-  target: "/usr/include/dr_libs"
+  install-commands:
+  - |
+    install -D -m644 -t "%{install-root}%{includedir}/dr_libs" *.h
 
 sources:
 - kind: git

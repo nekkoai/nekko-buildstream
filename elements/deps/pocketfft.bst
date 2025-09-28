@@ -1,8 +1,15 @@
-kind: import
+kind: manual
 
-# todo this is a header-only library - we really only want pocketfft_hdronly.h staged
+build-depends:
+- base/freedesktop-sdk.bst:public-stacks/runtime-minimal.bst
+
+variables:
+  strip-binaries: ''
+
 config:
-  target: "/usr/include/pocketfft"
+  install-commands:
+  - |
+    install -D -m644 -t "%{install-root}%{includedir}/pocketfft" *.h
 
 sources:
 - kind: git

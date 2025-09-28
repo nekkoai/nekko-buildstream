@@ -1,15 +1,17 @@
-kind: import
+kind: manual
 
-depends:
-- platform/et-ioctl-filter.bst
+build-depends:
+- base/freedesktop-sdk.bst:public-stacks/runtime-minimal.bst
 
 variables:
+  strip-binaries: ''
   (@):
   - include/_private/platform-host-toolchain.yml
 
 config:
-  source: et-driver/
-  target: "%{prefix}/include"
+  install-commands:
+  - |
+    install -D -m644 -t "%{install-root}%{includedir}" et-driver/et_ioctl.h
 
 sources:
 - kind: git
