@@ -11,166 +11,6 @@ index c3cfe2c97a..6d7d6f1f41 100644
      elif device_type == "ort":
          return C.get_ort_device(device_index).device_type()
      else:
-diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
-index 8fdac25729..8af80687ba 100644
---- a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
-+++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
-@@ -13,6 +13,7 @@
- #include "core/framework/tensor_shape.h"
- #include "core/framework/tensor.h"
- #include "core/framework/allocator.h"
-+#include "core/framework/arena_extend_strategy.h"
- #include "core/framework/TensorSeq.h"
- #include "core/framework/data_types.h"
- #include "core/framework/onnxruntime_typeinfo.h"
-@@ -396,6 +397,55 @@ AllocatorPtr GetRocmAllocator(OrtDevice::DeviceId id) {
- 
- #endif
- 
-+#ifdef USE_ETGLOW
-+void CpuToEtGlowMemCpy(int dst_device_id, void* dst, const void* src, size_t num_bytes) {
-+  GetProviderInfo_EtGlow().etrtMemcpy_HostToDevice(dst_device_id, dst, src, num_bytes);
-+}
-+
-+void EtGlowToCpuMemCpy(int src_device_id, void* dst, const void* src, size_t num_bytes) {
-+  GetProviderInfo_EtGlow().etrtMemcpy_DeviceToHost(src_device_id, dst, src, num_bytes);
-+}
-+
-+const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id) {
-+  static std::unordered_map<OrtDevice::DeviceType, MemCpyFunc> map{
-+      {OrtDevice::GPU, [device_id](void* dst, const void* src, size_t num_bytes) {
-+         EtGlowToCpuMemCpy(device_id, dst, src, num_bytes);
-+       }}};
-+  return &map;
-+}
-+
-+bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id) {
-+  int num_devices = GetProviderInfo_EtGlow().etrtGetDeviceCount();
-+
-+  if (0 == num_devices) {
-+    LOGS(logger, WARNING) << "your system does not have a EtSoC capable device.";
-+    return false;
-+  }
-+
-+  if (id < 0 || id >= num_devices) {
-+    LOGS(logger, WARNING) << "etsoc_device=" << id << " is invalid, must choose device ID between 0 and " << num_devices - 1;
-+    return false;
-+  }
-+
-+  return true;
-+}
-+
-+AllocatorPtr GetEtGlowAllocator(OrtDevice::DeviceId id) {
-+  size_t mem_limit = std::numeric_limits<size_t>::max();
-+  onnxruntime::ArenaExtendStrategy arena_extend_strategy = onnxruntime::ArenaExtendStrategy::kSameAsRequested;
-+
-+  static auto* id_to_allocator_map = std::make_unique<std::unordered_map<OrtDevice::DeviceId, AllocatorPtr>>().release();
-+
-+  auto it = id_to_allocator_map->find(id);
-+  if (it == id_to_allocator_map->end()) {
-+    it = id_to_allocator_map->emplace(id, GetProviderInfo_EtGlow().CreateEtGlowAllocator(id, mem_limit, arena_extend_strategy)).first;
-+  }
-+
-+  return it->second;
-+}
-+
-+#endif
-+
- int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type) {
-   static std::map<MLDataType, int> type_map{
-       {DataTypeImpl::GetType<bool>(), NPY_BOOL},
-diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.h b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
-index c76292040b..6353b9ee54 100644
---- a/onnxruntime/python/onnxruntime_pybind_mlvalue.h
-+++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
-@@ -40,7 +40,7 @@ int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type);
- 
- MLDataType NumpyTypeToOnnxRuntimeTensorType(int numpy_type);
- 
--using MemCpyFunc = void (*)(void*, const void*, size_t);
-+using MemCpyFunc = std::function<void(void*, const void*, size_t)>;
- 
- using DataTransferAlternative = std::variant<const DataTransferManager*, MemCpyFunc>;
- 
-@@ -117,6 +117,20 @@ const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetRocmToHostMemCpy
- 
- #endif
- 
-+#ifdef USE_ETGLOW
-+
-+void CpuToEtGlowMemCpy(int dst_device_id, void* dst, const void* src, size_t num_bytes);
-+
-+void EtGlowToCpuMemCpy(int src_device_id, void* dst, const void* src, size_t num_bytes);
-+
-+const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id);
-+
-+bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);
-+
-+AllocatorPtr GetEtGlowAllocator(OrtDevice::DeviceId id);
-+
-+#endif
-+
- void CreateGenericMLValue(const onnxruntime::InputDefList* input_def_list, const AllocatorPtr& alloc,
-                           const std::string& name_input, const pybind11::object& value, OrtValue* p_mlvalue,
-                           bool accept_only_numpy_array = false, bool use_numpy_data_memory = true, MemCpyFunc mem_cpy_to_device = CpuToCpuMemCpy);
-diff --git a/onnxruntime/python/onnxruntime_pybind_ortvalue.cc b/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
-index d76b9032af..86a3b6867f 100644
---- a/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
-+++ b/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
-@@ -66,6 +66,12 @@ void addOrtValueMethods(pybind11::module& m) {
-       // TODO: Add check to ensure that string arrays are not passed - we currently don't support string tensors in DML
-       CreateGenericMLValue(
-         nullptr, GetDmlAllocator(device.Id()), "", array_on_cpu, ml_value.get(), true, false, CpuToDmlMemCpy);
-+#elif USE_ETGLOW
-+          if (!IsEtGlowDeviceIdValid(logging::LoggingManager::DefaultLogger(), device.Id())) {
-+            throw std::runtime_error("The provided device id doesn't match any available EtSoC on the machine.");
-+          }
-+          CreateGenericMLValue(nullptr, GetEtGlowAllocator(device.Id()), "", array_on_cpu, ml_value.get(), true, false,
-+                               [device_id = device.Id()](void* dst, const void* src, size_t num_bytes) { CpuToEtGlowMemCpy(device_id, dst, src, num_bytes); });
- #else
-       throw std::runtime_error(
-           "Can't allocate memory on the CUDA device using this package of OnnxRuntime. "
-@@ -134,6 +140,15 @@ void addOrtValueMethods(pybind11::module& m) {
-             values_type,
-             *(ml_value->GetMutable<Tensor>()),
-             CpuToDmlMemCpy);
-+#elif USE_ETGLOW
-+          if (!IsEtGlowDeviceIdValid(logging::LoggingManager::DefaultLogger(), device.Id())) {
-+            throw std::runtime_error("The provided device id doesn't match any available EtSoCs on the machine.");
-+          }
-+          onnxruntime::python::CopyDataToTensor(
-+              py_values,
-+              values_type,
-+              *(ml_value->GetMutable<Tensor>()),
-+              [device_id = device.Id()](void* dst, const void* src, size_t num_bytes) { CpuToEtGlowMemCpy(device_id, dst, src, num_bytes); });
- #else
-         throw std::runtime_error(
-             "Unsupported GPU device: Cannot find the supported GPU device.");
-@@ -178,6 +193,14 @@ void addOrtValueMethods(pybind11::module& m) {
-           throw std::runtime_error(
-               "Can't allocate memory on the DirectML device using this package of OnnxRuntime. "
-               "Please use the DirectML package of OnnxRuntime to use this feature.");
-+#endif
-+        } else if (strcmp(GetDeviceName(device), ET) == 0) {
-+#if USE_ETGLOW
-+          allocator = GetEtGlowAllocator(device.Id());
-+#else
-+          throw std::runtime_error(
-+              "Can't allocate memory on the ETSOC device using this package of OnnxRuntime. "
-+              "Please use the ETSOC package of OnnxRuntime to use this feature.");
- #endif
-         } else {
-           throw std::runtime_error("Unsupported device: Cannot place the OrtValue on this device");
-@@ -296,6 +319,9 @@ void addOrtValueMethods(pybind11::module& m) {
-         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetCannToHostMemCpyFunction());
- #elif USE_DML
-         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetDmlToHostMemCpyFunction());
-+#elif USE_ETGLOW
-+        const auto& tensor = ml_value->Get<Tensor>();
-+        py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetEtGlowToHostMemCpyFunction(tensor.Location().device.Id()));
- #else
-         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, nullptr);
- #endif
 diff --git a/onnxruntime/python/onnxruntime_pybind_state.cc b/onnxruntime/python/onnxruntime_pybind_state.cc
 index ffcd339c0c..0c369b2e00 100644
 --- a/onnxruntime/python/onnxruntime_pybind_state.cc
@@ -412,3 +252,107 @@ index 0000000000..e0b757dd13
 +    ETGLOW_TRACE_DEVICE_KERNEL_INST = 16
 +    ETGLOW_TRACE_DEFAULT = ETGLOW_TRACE_GLOW + ETGLOW_TRACE_NEURALIZER + ETGLOW_TRACE_RUNTIME
 +    ETGLOW_TRACE_ALL = ETGLOW_TRACE_DEFAULT + ETGLOW_TRACE_DEVICE_KERNEL_NODES + ETGLOW_TRACE_DEVICE_KERNEL_INST
+diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
+index ebb1a54..30e0add 100644
+--- a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
++++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
+@@ -13,6 +13,7 @@
+ #include "core/framework/tensor_shape.h"
+ #include "core/framework/tensor.h"
+ #include "core/framework/allocator.h"
++#include "core/framework/arena_extend_strategy.h"
+ #include "core/framework/TensorSeq.h"
+ #include "core/framework/data_types.h"
+ #include "core/framework/onnxruntime_typeinfo.h"
+@@ -396,6 +397,57 @@ AllocatorPtr GetRocmAllocator(OrtDevice::DeviceId id) {
+ 
+ #endif
+ 
++#ifdef USE_ETGLOW
++void CpuToEtGlowMemCpy(void* dst, const void* src, size_t num_bytes) {
++  // TODO : no way this works with multiple devices
++  int dst_device_id = 0;
++  GetProviderInfo_EtGlow().etrtMemcpy_HostToDevice(dst_device_id, dst, src, num_bytes);
++}
++
++void EtGlowToCpuMemCpy(void* dst, const void* src, size_t num_bytes) {
++  // TODO : no way this works with multiple devices
++  int src_device_id = 0;
++  GetProviderInfo_EtGlow().etrtMemcpy_DeviceToHost(src_device_id, dst, src, num_bytes);
++}
++
++const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id) {
++  static std::unordered_map<OrtDevice::DeviceType, MemCpyFunc> map{
++      {OrtDevice::GPU, EtGlowToCpuMemCpy}};
++  return &map;
++}
++
++bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id) {
++  int num_devices = GetProviderInfo_EtGlow().etrtGetDeviceCount();
++
++  if (0 == num_devices) {
++    LOGS(logger, WARNING) << "your system does not have a EtSoC capable device.";
++    return false;
++  }
++
++  if (id < 0 || id >= num_devices) {
++    LOGS(logger, WARNING) << "etsoc_device=" << id << " is invalid, must choose device ID between 0 and " << num_devices - 1;
++    return false;
++  }
++
++  return true;
++}
++
++AllocatorPtr GetEtGlowAllocator(OrtDevice::DeviceId id) {
++  size_t mem_limit = std::numeric_limits<size_t>::max();
++  onnxruntime::ArenaExtendStrategy arena_extend_strategy = onnxruntime::ArenaExtendStrategy::kSameAsRequested;
++
++  static auto* id_to_allocator_map = std::make_unique<std::unordered_map<OrtDevice::DeviceId, AllocatorPtr>>().release();
++
++  auto it = id_to_allocator_map->find(id);
++  if (it == id_to_allocator_map->end()) {
++    it = id_to_allocator_map->emplace(id, GetProviderInfo_EtGlow().CreateEtGlowAllocator(id, mem_limit, arena_extend_strategy)).first;
++  }
++
++  return it->second;
++}
++
++#endif
++
+ int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type) {
+   static std::map<MLDataType, int> type_map{
+       {DataTypeImpl::GetType<bool>(), NPY_BOOL},
+diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.h b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
+index 78a5ea4..423b2a5 100644
+--- a/onnxruntime/python/onnxruntime_pybind_mlvalue.h
++++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
+@@ -42,7 +42,7 @@ MLDataType NumpyTypeToOnnxRuntimeTensorType(int numpy_type);
+ 
+ MLDataType OnnxTypeToOnnxRuntimeTensorType(int onnx_element_type);
+ 
+-using MemCpyFunc = void (*)(void*, const void*, size_t);
++using MemCpyFunc = std::function<void(void*, const void*, size_t)>;
+ 
+ using DataTransferAlternative = std::variant<const DataTransferManager*, MemCpyFunc>;
+ 
+@@ -119,6 +119,20 @@ const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetRocmToHostMemCpy
+ 
+ #endif
+ 
++#ifdef USE_ETGLOW
++
++void CpuToEtGlowMemCpy(void* dst, const void* src, size_t num_bytes);
++
++void EtGlowToCpuMemCpy(void* dst, const void* src, size_t num_bytes);
++
++const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id);
++
++bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);
++
++AllocatorPtr GetEtGlowAllocator(OrtDevice::DeviceId id);
++
++#endif
++
+ void CreateGenericMLValue(const onnxruntime::InputDefList* input_def_list, const AllocatorPtr& alloc,
+                           const std::string& name_input, const pybind11::object& value, OrtValue* p_mlvalue,
+                           bool accept_only_numpy_array = false, bool use_numpy_data_memory = true, MemCpyFunc mem_cpy_to_device = CpuToCpuMemCpy);

@@ -73,7 +73,7 @@ config:
 sources:
 - kind: git_repo
   url: github:microsoft/onnxruntime
-  track: v1.19.0
-  ref: v1.19.0-0-g26250ae74d2c9a3c6860625ba4a147ddfb936907
+  track: v1.20.2
+  ref: v1.20.2-0-g8608bf02f21774be0388d2aa3a9f886d009d0b4c
 - kind: patch_queue
   path: static/patches/onnxruntime

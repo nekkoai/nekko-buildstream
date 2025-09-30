@@ -17,8 +17,8 @@ index 587d035541..0a1805a566 100644
 --- a/tools/ci_build/build.py
 +++ b/tools/ci_build/build.py
 @@ -756,6 +756,7 @@ def parse_arguments():
- 
      parser.add_argument("--use_xnnpack", action="store_true", help="Enable xnnpack EP.")
+     parser.add_argument("--use_avx512", action="store_true", help="Enable AVX512 instructions")
      parser.add_argument("--use_azure", action="store_true", help="Enable azure EP.")
 +    parser.add_argument("--use_etglow", action="store_true", help="Enable ETGLOW EP.")
  

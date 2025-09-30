@@ -123,19 +123,19 @@ index 9886d98dcc..c1eb3837f4 100644
        "\t-n [test_case_name]: Specifies a single test case to run.\n"
 -      "\t-e [EXECUTION_PROVIDER]: EXECUTION_PROVIDER could be 'cpu', 'cuda', 'dnnl', 'tensorrt', 'vsinpu'"
 +      "\t-e [EXECUTION_PROVIDER]: EXECUTION_PROVIDER could be 'cpu', 'cuda', 'dnnl', 'etglow', 'tensorrt', 'vsinpu'"
-       "'openvino', 'rocm', 'migraphx', 'acl', 'armnn', 'xnnpack', 'nnapi', 'qnn', 'snpe' or 'coreml'. "
+       "'openvino', 'rocm', 'migraphx', 'acl', 'armnn', 'xnnpack', 'webgpu', 'nnapi', 'qnn', 'snpe' or 'coreml'. "
        "Default: 'cpu'.\n"
        "\t-p: Pause after launch, can attach debugger and continue\n"
 @@ -180,6 +180,7 @@ int real_main(int argc, char* argv[], Ort::Env& env) {
-   bool enable_rocm = false;
    bool enable_migraphx = false;
+   bool enable_webgpu = false;
    bool enable_xnnpack = false;
 +  bool enable_glow = false;
    bool override_tolerance = false;
    double atol = 1e-5;
    double rtol = 1e-5;
 @@ -269,6 +270,8 @@ int real_main(int argc, char* argv[], Ort::Env& env) {
-             enable_migraphx = true;
+             enable_webgpu = true;
            } else if (!CompareCString(optarg, ORT_TSTR("xnnpack"))) {
              enable_xnnpack = true;
 +          } else if (!CompareCString(optarg, ORT_TSTR("etglow"))) {
@@ -167,9 +167,9 @@ index 84c3bc1634..93ed3e8a4e 100644
        "\t-A: Disable memory arena\n"
        "\t-I: Generate tensor input binding (Free dimensions are treated as 1.)\n"
        "\t-c [parallel runs]: Specifies the (max) number of runs to invoke simultaneously. Default:1.\n"
--      "\t-e [cpu|cuda|dnnl|tensorrt|openvino|dml|acl|nnapi|coreml|qnn|snpe|rocm|migraphx|xnnpack|vitisai]: Specifies the provider 'cpu','cuda','dnnl','tensorrt', "
-+      "\t-e [cpu|cuda|dnnl|etglow|tensorrt|openvino|dml|acl|nnapi|coreml|qnn|snpe|rocm|migraphx|xnnpack|vitisai]: Specifies the provider 'cpu','cuda','dnnl','etglow','tensorrt', "
-       "'openvino', 'dml', 'acl', 'nnapi', 'coreml', 'qnn', 'snpe', 'rocm', 'migraphx', 'xnnpack' or 'vitisai'. "
+-      "\t-e [cpu|cuda|dnnl|tensorrt|openvino|dml|acl|nnapi|coreml|qnn|snpe|rocm|migraphx|xnnpack|vitisai|webgpu]: Specifies the provider 'cpu','cuda','dnnl','tensorrt', "
++      "\t-e [cpu|cuda|dnnl|etglow|tensorrt|openvino|dml|acl|nnapi|coreml|qnn|snpe|rocm|migraphx|xnnpack|vitisai|webgpu]: Specifies the provider 'cpu','cuda','dnnl','etglow','tensorrt', "
+       "'openvino', 'dml', 'acl', 'nnapi', 'coreml', 'qnn', 'snpe', 'rocm', 'migraphx', 'xnnpack', 'vitisai' or 'webgpu'. "
        "Default:'cpu'.\n"
        "\t-b [tf|ort]: backend to use. Default:ort\n"
 @@ -133,8 +133,14 @@ namespace perftest {
@@ -369,9 +369,9 @@ index f1a4220ab3..b9f020599c 100644
 +  std::vector<std::string> api_param_values_;
 +  std::vector<char const*> api_param_values_ptrs_;
 +
-   std::vector<std::string> output_names_;
-   // The same size with output_names_.
-   // TODO: implement a customized allocator, then we can remove output_names_ to simplify this code
+   OrtAllocator* allocator_ = Ort::AllocatorWithDefaultOptions();
+   std::unique_ptr<Ort::Allocator> custom_allocator_;
+   std::vector<Ort::Value> outputs_;
 diff --git a/onnxruntime/test/providers/base_tester.cc b/onnxruntime/test/providers/base_tester.cc
 index 01de15e6f8..887718bf09 100644
 --- a/onnxruntime/test/providers/base_tester.cc
@@ -387,17 +387,17 @@ index 01de15e6f8..887718bf09 100644
          break;
        }
 @@ -657,6 +658,7 @@ void BaseTester::RunWithConfig(size_t* number_of_pre_packed_weights_counter,
-           kQnnExecutionProvider,
            kSnpeExecutionProvider,
            kXnnpackExecutionProvider,
+           kWebGpuExecutionProvider,
 +          kEtGlowExecutionProvider,
        };
  
        // need to special case any synthetic EP names in the exclude list
 @@ -712,6 +714,8 @@ void BaseTester::RunWithConfig(size_t* number_of_pre_packed_weights_counter,
-           execution_provider = DefaultXnnpackExecutionProvider();
-         else if (provider_type == onnxruntime::kDmlExecutionProvider)
            execution_provider = DefaultDmlExecutionProvider();
+         else if (provider_type == onnxruntime::kWebGpuExecutionProvider)
+           execution_provider = DefaultWebGpuExecutionProvider();
 +        else if (provider_type == onnxruntime::kEtGlowExecutionProvider)
 +          execution_provider = DefaultEtGlowExecutionProvider();
  
@@ -408,9 +408,9 @@ index 3ef74259e2..369e2194c7 100644
 --- a/onnxruntime/test/providers/compare_provider_test_utils.cc
 +++ b/onnxruntime/test/providers/compare_provider_test_utils.cc
 @@ -36,6 +36,8 @@ std::unique_ptr<IExecutionProvider> GetExecutionProvider(const std::string& prov
-     execution_provider = DefaultRocmExecutionProvider();
-   else if (provider_type == onnxruntime::kDmlExecutionProvider)
      execution_provider = DefaultDmlExecutionProvider();
+   else if (provider_type == onnxruntime::kWebGpuExecutionProvider)
+     execution_provider = DefaultWebGpuExecutionProvider();
 +  else if (provider_type == onnxruntime::kEtGlowExecutionProvider)
 +    execution_provider = DefaultEtGlowExecutionProvider();
    // skip if execution provider is disabled
@@ -608,7 +608,7 @@ index bd3d21d492..c850f350da 100644
 +  test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kTensorrtExecutionProvider, kEtGlowExecutionProvider});  // TensorRT: Input batch size is inconsistent
  }
  
- TEST(MathOpTest, Max_6) {
+ void TestFloat16MinMax(
 @@ -1806,7 +1806,7 @@ TEST(MathOpTest, Max_6) {
                          {1.0f, 0.0f, 3.0f,
                           -1.0f, 3.3f, 64.0f,
@@ -708,8 +708,8 @@ index cb9887314e..c9118278cb 100644
  
  // test infrastructure
 @@ -261,6 +265,13 @@ TEST_P(ModelTest, Run) {
-       else if (provider_name == "armnn") {
-         ASSERT_ORT_STATUS_OK(OrtSessionOptionsAppendExecutionProvider_ArmNN(ortso));
+       else if (provider_name == "xnnpack") {
+         ortso.AppendExecutionProvider("XNNPACK");
        }
 +#endif
 +#ifdef USE_ETGLOW
@@ -722,7 +722,7 @@ index cb9887314e..c9118278cb 100644
        OrtSession* ort_session;
        OrtStatus* ort_st = OrtApis::CreateSession(*ort_env, model_path.c_str(), ortso, &ort_session);
 @@ -428,6 +439,9 @@ static constexpr ORT_STRING_VIEW provider_name_acl = ORT_TSTR("acl");
- static constexpr ORT_STRING_VIEW provider_name_armnn = ORT_TSTR("armnn");
+ static constexpr ORT_STRING_VIEW provider_name_xnnpack = ORT_TSTR("xnnpack");
  #endif
  static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
 +#ifdef USE_ETGLOW
@@ -732,8 +732,8 @@ index cb9887314e..c9118278cb 100644
  ::std::vector<::std::basic_string<ORTCHAR_T>> GetParameterStrings() {
    // Map key is provider name(CPU, CUDA, etc). Value is the ONNX node tests' opsets to run.
 @@ -474,6 +488,9 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
- #ifdef USE_DML
-   provider_names[provider_name_dml] = {opset7, opset8, opset9, opset10, opset11, opset12, opset13, opset14, opset15, opset16, opset17, opset18};
+ #ifdef USE_XNNPACK
+   provider_names[provider_name_xnnpack] = {opset12, opset13, opset14, opset15, opset16, opset17, opset18};
  #endif
 +#ifdef USE_ETGLOW
 +  provider_names[provider_name_etglow] = {opset7, opset8, opset9, opset10, opset11, opset12};
@@ -822,8 +822,8 @@ index 2d885ee9d4..7f1c11b71e 100644
    attrs.excluded_providers.insert(kAclExecutionProvider);
 +  attrs.excluded_providers.insert(kEtGlowExecutionProvider);
  
-   TestConvOp(attrs, {X, W}, {X_shape, W_shape}, {}, out_shape, false, OpTester::ExpectResult::kExpectSuccess, "", 10);
- }
+   TestConvOp(attrs, {X, W}, {X_shape, W_shape}, {}, out_shape, false, optional<float>(),
+              OpTester::ExpectResult::kExpectSuccess, "", 10);
 diff --git a/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc b/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc
 index 2bf53ce5b5..16d420d305 100644
 --- a/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc
@@ -4061,7 +4061,7 @@ index 56417f13fb..4358f5eda7 100644
 +                                self.skipTest(f"Skipping on {device.upper()} due unsupported dtype: {dtype}")
 +
                              x = np.arange(8).reshape((-1, 2)).astype(dtype)
-                             proto_dtype = NP_TYPE_TO_TENSOR_TYPE[x.dtype]
+                             proto_dtype = helper.np_dtype_to_tensor_dtype(x.dtype)
  
 -                            X = helper.make_tensor_value_info("X", proto_dtype, [None, x.shape[1]])  # noqa: N806
 -                            Y = helper.make_tensor_value_info("Y", proto_dtype, [None, x.shape[1]])  # noqa: N806
@@ -6554,7 +6554,7 @@ index 606dfc068d..07428f9ebe 100644
 --- a/onnxruntime/test/util/include/default_providers.h
 +++ b/onnxruntime/test/util/include/default_providers.h
 @@ -64,6 +64,8 @@ std::unique_ptr<IExecutionProvider> QnnExecutionProviderWithOptions(const Provid
- std::unique_ptr<IExecutionProvider> DefaultXnnpackExecutionProvider();
+ std::unique_ptr<IExecutionProvider> DefaultWebGpuExecutionProvider();
  std::unique_ptr<IExecutionProvider> DefaultCannExecutionProvider();
  std::unique_ptr<IExecutionProvider> DefaultDmlExecutionProvider();
 +std::unique_ptr<IExecutionProvider> DefaultEtGlowExecutionProvider();

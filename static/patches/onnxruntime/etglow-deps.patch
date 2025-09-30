@@ -74,7 +74,7 @@ index 097873c5e3..0033fa1865 100644
 +constexpr const char* ET = "ET";
  constexpr const char* OpenVINO_CPU = "OpenVINO_CPU";
  constexpr const char* OpenVINO_GPU = "OpenVINO_GPU";
- constexpr const char* WEBGPU_BUFFER = "WebGPU_Buffer";
+ constexpr const char* OpenVINO_RT = "OpenVINO_RT";
 diff --git a/include/onnxruntime/core/graph/constants.h b/include/onnxruntime/core/graph/constants.h
 index 39acb6b4f2..20d40e3c37 100644
 --- a/include/onnxruntime/core/graph/constants.h
@@ -100,9 +100,9 @@ index 5aafdd149e..cbcd680bec 100644
  ORT_RUNTIME_CLASS(OpAttr);
  ORT_RUNTIME_CLASS(Logger);
 @@ -4666,6 +4667,65 @@ struct OrtApi {
-                   _In_reads_(num_external_initializer_files) char* const* external_initializer_file_buffer_array,
-                   _In_reads_(num_external_initializer_files) const size_t* external_initializer_file_lengths,
-                   size_t num_external_initializer_files);
+    */
+   ORT_API2_STATUS(SetEpDynamicOptions, _Inout_ OrtSession* sess, _In_reads_(kv_len) const char* const* keys,
+                   _In_reads_(kv_len) const char* const* values, _In_ size_t kv_len);
 +
 +  /// \name OrtEtGlowProviderOptions
 +  /// @{
@@ -247,12 +247,13 @@ diff --git a/onnxruntime/core/framework/allocator.cc b/onnxruntime/core/framewor
 index c3e96e450c..d31f5c2fba 100644
 --- a/onnxruntime/core/framework/allocator.cc
 +++ b/onnxruntime/core/framework/allocator.cc
-@@ -141,6 +141,7 @@ ORT_API_STATUS_IMPL(OrtApis::CreateMemoryInfo, _In_ const char* name1, enum OrtA
+@@ -141,7 +141,8 @@ ORT_API_STATUS_IMPL(OrtApis::CreateMemoryInfo, _In_ const char* name1, enum OrtA
               strcmp(name1, onnxruntime::OpenVINO_GPU) == 0 ||
               strcmp(name1, onnxruntime::DML) == 0 ||
               strcmp(name1, onnxruntime::HIP) == 0 ||
 +             strcmp(name1, onnxruntime::ET) == 0 ||
-              strcmp(name1, onnxruntime::WEBGPU_BUFFER) == 0) {
+              strcmp(name1, onnxruntime::WEBGPU_BUFFER) == 0 ||
+              strcmp(name1, onnxruntime::WEBNN_TENSOR) == 0) {
      *out = new OrtMemoryInfo(
          name1, type, OrtDevice(OrtDevice::GPU, OrtDevice::MemType::DEFAULT, static_cast<OrtDevice::DeviceId>(id1)), id1,
 diff --git a/onnxruntime/core/graph/graph.cc b/onnxruntime/core/graph/graph.cc
@@ -297,15 +298,7 @@ index 54bd44ec2d..1ccdab4029 100644
  #include "core/optimizer/label_encoder_fusion.h"
  #include "core/optimizer/layer_norm_fusion.h"
  #include "core/optimizer/matmul_activation_fusion.h"
-@@ -234,7 +235,6 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
-       transformers.emplace_back(std::make_unique<ReshapeFusion>());
-       transformers.emplace_back(std::make_unique<FreeDimensionOverrideTransformer>(
-           session_options.free_dimension_overrides));
--
-       if (!disable_quant_qdq) {
-         transformers.emplace_back(std::make_unique<QDQPropagationTransformer>());
- 
-@@ -278,10 +278,19 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
+@@ -278,10 +278,20 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
        const InlinedHashSet<std::string_view> cpu_cuda_rocm_eps = {onnxruntime::kCpuExecutionProvider,
                                                                    onnxruntime::kCudaExecutionProvider,
                                                                    onnxruntime::kRocmExecutionProvider};
@@ -317,24 +310,25 @@ index 54bd44ec2d..1ccdab4029 100644
                                                                        onnxruntime::kCudaExecutionProvider,
                                                                        onnxruntime::kRocmExecutionProvider,
                                                                        onnxruntime::kDmlExecutionProvider};
-+      const InlinedHashSet<std::string_view> cpu_cuda_dml_rocm_et_eps = {onnxruntime::kCpuExecutionProvider,
-+                                                                         onnxruntime::kCudaExecutionProvider,
-+                                                                         onnxruntime::kRocmExecutionProvider,
-+                                                                         onnxruntime::kDmlExecutionProvider,
-+                                                                         onnxruntime::kEtGlowExecutionProvider};
-       const InlinedHashSet<std::string_view> cpu_cuda_rocm_acl_armnn_js_eps = {onnxruntime::kCpuExecutionProvider,
-                                                                                onnxruntime::kCudaExecutionProvider,
-                                                                                onnxruntime::kRocmExecutionProvider,
++      const InlinedHashSet<std::string_view> cpu_acl_cuda_dml_rocm_et_eps = {onnxruntime::kCpuExecutionProvider,
++                                                                             onnxruntime::kAclExecutionProvider,
++                                                                             onnxruntime::kCudaExecutionProvider,
++                                                                             onnxruntime::kRocmExecutionProvider,
++                                                                             onnxruntime::kDmlExecutionProvider,
++                                                                             onnxruntime::kEtGlowExecutionProvider};
+       const InlinedHashSet<std::string_view> cpu_acl_cuda_dml_rocm_eps = {onnxruntime::kCpuExecutionProvider,
+                                                                           onnxruntime::kAclExecutionProvider,
+                                                                           onnxruntime::kCudaExecutionProvider,
 @@ -321,8 +330,8 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
-       transformers.emplace_back(std::make_unique<ConvActivationFusion>(cpu_cuda_rocm_acl_armnn_js_eps));
+       transformers.emplace_back(std::make_unique<ConvActivationFusion>(cpu_rocm_acl_armnn_js_eps));
  
-       transformers.emplace_back(std::make_unique<GeluFusion>(cpu_cuda_dml_rocm_eps));
--      transformers.emplace_back(std::make_unique<LayerNormFusion>(cpu_cuda_dml_rocm_eps));
+       transformers.emplace_back(std::make_unique<GeluFusion>(cpu_acl_cuda_dml_rocm_eps, level));
+-      transformers.emplace_back(std::make_unique<LayerNormFusion>(cpu_acl_cuda_dml_rocm_eps, level));
 -      transformers.emplace_back(std::make_unique<SimplifiedLayerNormFusion>(cpu_cuda_rocm_eps));
-+      transformers.emplace_back(std::make_unique<LayerNormFusion>(cpu_cuda_dml_rocm_et_eps));
++      transformers.emplace_back(std::make_unique<LayerNormFusion>(cpu_acl_cuda_dml_rocm_et_eps, level));
 +      transformers.emplace_back(std::make_unique<SimplifiedLayerNormFusion>(cpu_cuda_rocm_et_eps));
-       transformers.emplace_back(std::make_unique<AttentionFusion>(cpu_cuda_dml_rocm_eps));
-       transformers.emplace_back(std::make_unique<EmbedLayerNormFusion>(cpu_cuda_dml_rocm_eps));
+       transformers.emplace_back(std::make_unique<AttentionFusion>(cpu_acl_cuda_dml_rocm_eps));
+       transformers.emplace_back(std::make_unique<EmbedLayerNormFusion>(cpu_acl_cuda_dml_rocm_eps));
        transformers.emplace_back(std::make_unique<GatherSliceToSplitFusion>(cpu_cuda_rocm_eps));
 @@ -377,6 +386,9 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
        // fusions might be prevented if this one removes a Q/DQ node too early.
@@ -545,9 +539,9 @@ index 5cf5ff9b3b..1fa65b61eb 100644
  #include "onnxruntime_extensions.h"
  #endif
 @@ -2730,6 +2735,13 @@ static constexpr OrtApi ort_api_1_to_19 = {
-     &OrtApis::KernelInfoGetAllocator,
-     &OrtApis::AddExternalInitializersFromFilesInMemory,
-     // End of Version 18 - DO NOT MODIFY ABOVE (see above text for more information)
+     &OrtApis::RunOptionsAddActiveLoraAdapter,
+
+     &OrtApis::SetEpDynamicOptions,
 +
 +    &OrtApis::SessionOptionsAppendExecutionProvider_ETGLOW,
 +    &OrtApis::CreateEtGlowProviderOptions,
@@ -563,9 +557,9 @@ index fcae173e6c..72750f9fad 100644
 --- a/onnxruntime/core/session/ort_apis.h
 +++ b/onnxruntime/core/session/ort_apis.h
 @@ -523,4 +523,16 @@ ORT_API_STATUS_IMPL(SessionOptionsAppendExecutionProvider_VitisAI, _In_ OrtSessi
- ORT_API_STATUS_IMPL(KernelContext_GetScratchBuffer, _In_ const OrtKernelContext* context, _In_ const OrtMemoryInfo* mem_info, _In_ size_t count_or_bytes, _Outptr_ void** out);
  
- ORT_API_STATUS_IMPL(KernelInfoGetAllocator, _In_ const OrtKernelInfo* info, _In_ OrtMemType mem_type, _Outptr_ OrtAllocator** out);
+ ORT_API_STATUS_IMPL(SetEpDynamicOptions, _Inout_ OrtSession* sess, _In_reads_(kv_len) const char* const* keys,
+                     _In_reads_(kv_len) const char* const* values, _In_ size_t kv_len);
 +
 +ORT_API_STATUS_IMPL(SessionOptionsAppendExecutionProvider_ETGLOW,
 +                    _In_ OrtSessionOptions* options, _In_ const OrtEtGlowProviderOptions* etglow_options);
@@ -793,17 +787,16 @@ diff --git a/onnxruntime/core/session/provider_registration.cc b/onnxruntime/cor
 index db8b97f6d2..f43e8c5fd7 100644
 --- a/onnxruntime/core/session/provider_registration.cc
 +++ b/onnxruntime/core/session/provider_registration.cc
-@@ -147,11 +147,17 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
-     options->provider_factories.push_back(JsProviderFactoryCreator::Create(provider_options, &(options->value)));
- #else
-     status = create_not_supported_status();
-+#endif
+@@ -147,10 +147,16 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
+ #endif
+   } else if (strcmp(provider_name, "VitisAI") == 0) {
+     status = OrtApis::SessionOptionsAppendExecutionProvider_VitisAI(options, provider_options_keys, provider_options_values, num_keys);
 +  } else if (strcmp(provider_name, "ETGLOW") == 0) {
 +#if defined(USE_ETGLOW)
 +    options->provider_factories.push_back(EtGlowProviderFactoryCreator::Create(&provider_options, &(options->value)));
 +#else
 +    status = create_not_supported_status();
- #endif
++#endif
    } else {
      ORT_UNUSED_PARAMETER(options);
      status = OrtApis::CreateStatus(ORT_INVALID_ARGUMENT,
