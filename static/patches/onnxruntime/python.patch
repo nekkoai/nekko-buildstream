@@ -1,0 +1,414 @@
+diff --git a/onnxruntime/python/onnxruntime_inference_collection.py b/onnxruntime/python/onnxruntime_inference_collection.py
+index c3cfe2c97a..6d7d6f1f41 100644
+--- a/onnxruntime/python/onnxruntime_inference_collection.py
++++ b/onnxruntime/python/onnxruntime_inference_collection.py
+@@ -26,6 +26,8 @@ def get_ort_device_type(device_type: str, device_index) -> C.OrtDevice:
+         return C.OrtDevice.cpu()
+     elif device_type == "dml":
+         return C.OrtDevice.dml()
++    elif device_type == "et":
++        return C.OrtDevice.et()
+     elif device_type == "ort":
+         return C.get_ort_device(device_index).device_type()
+     else:
+diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
+index 8fdac25729..8af80687ba 100644
+--- a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
++++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
+@@ -13,6 +13,7 @@
+ #include "core/framework/tensor_shape.h"
+ #include "core/framework/tensor.h"
+ #include "core/framework/allocator.h"
++#include "core/framework/arena_extend_strategy.h"
+ #include "core/framework/TensorSeq.h"
+ #include "core/framework/data_types.h"
+ #include "core/framework/onnxruntime_typeinfo.h"
+@@ -396,6 +397,55 @@ AllocatorPtr GetRocmAllocator(OrtDevice::DeviceId id) {
+ 
+ #endif
+ 
++#ifdef USE_ETGLOW
++void CpuToEtGlowMemCpy(int dst_device_id, void* dst, const void* src, size_t num_bytes) {
++  GetProviderInfo_EtGlow().etrtMemcpy_HostToDevice(dst_device_id, dst, src, num_bytes);
++}
++
++void EtGlowToCpuMemCpy(int src_device_id, void* dst, const void* src, size_t num_bytes) {
++  GetProviderInfo_EtGlow().etrtMemcpy_DeviceToHost(src_device_id, dst, src, num_bytes);
++}
++
++const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id) {
++  static std::unordered_map<OrtDevice::DeviceType, MemCpyFunc> map{
++      {OrtDevice::GPU, [device_id](void* dst, const void* src, size_t num_bytes) {
++         EtGlowToCpuMemCpy(device_id, dst, src, num_bytes);
++       }}};
++  return &map;
++}
++
++bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id) {
++  int num_devices = GetProviderInfo_EtGlow().etrtGetDeviceCount();
++
++  if (0 == num_devices) {
++    LOGS(logger, WARNING) << "your system does not have a EtSoC capable device.";
++    return false;
++  }
++
++  if (id < 0 || id >= num_devices) {
++    LOGS(logger, WARNING) << "etsoc_device=" << id << " is invalid, must choose device ID between 0 and " << num_devices - 1;
++    return false;
++  }
++
++  return true;
++}
++
++AllocatorPtr GetEtGlowAllocator(OrtDevice::DeviceId id) {
++  size_t mem_limit = std::numeric_limits<size_t>::max();
++  onnxruntime::ArenaExtendStrategy arena_extend_strategy = onnxruntime::ArenaExtendStrategy::kSameAsRequested;
++
++  static auto* id_to_allocator_map = std::make_unique<std::unordered_map<OrtDevice::DeviceId, AllocatorPtr>>().release();
++
++  auto it = id_to_allocator_map->find(id);
++  if (it == id_to_allocator_map->end()) {
++    it = id_to_allocator_map->emplace(id, GetProviderInfo_EtGlow().CreateEtGlowAllocator(id, mem_limit, arena_extend_strategy)).first;
++  }
++
++  return it->second;
++}
++
++#endif
++
+ int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type) {
+   static std::map<MLDataType, int> type_map{
+       {DataTypeImpl::GetType<bool>(), NPY_BOOL},
+diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.h b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
+index c76292040b..6353b9ee54 100644
+--- a/onnxruntime/python/onnxruntime_pybind_mlvalue.h
++++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
+@@ -40,7 +40,7 @@ int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type);
+ 
+ MLDataType NumpyTypeToOnnxRuntimeTensorType(int numpy_type);
+ 
+-using MemCpyFunc = void (*)(void*, const void*, size_t);
++using MemCpyFunc = std::function<void(void*, const void*, size_t)>;
+ 
+ using DataTransferAlternative = std::variant<const DataTransferManager*, MemCpyFunc>;
+ 
+@@ -117,6 +117,20 @@ const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetRocmToHostMemCpy
+ 
+ #endif
+ 
++#ifdef USE_ETGLOW
++
++void CpuToEtGlowMemCpy(int dst_device_id, void* dst, const void* src, size_t num_bytes);
++
++void EtGlowToCpuMemCpy(int src_device_id, void* dst, const void* src, size_t num_bytes);
++
++const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id);
++
++bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);
++
++AllocatorPtr GetEtGlowAllocator(OrtDevice::DeviceId id);
++
++#endif
++
+ void CreateGenericMLValue(const onnxruntime::InputDefList* input_def_list, const AllocatorPtr& alloc,
+                           const std::string& name_input, const pybind11::object& value, OrtValue* p_mlvalue,
+                           bool accept_only_numpy_array = false, bool use_numpy_data_memory = true, MemCpyFunc mem_cpy_to_device = CpuToCpuMemCpy);
+diff --git a/onnxruntime/python/onnxruntime_pybind_ortvalue.cc b/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
+index d76b9032af..86a3b6867f 100644
+--- a/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
++++ b/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
+@@ -66,6 +66,12 @@ void addOrtValueMethods(pybind11::module& m) {
+       // TODO: Add check to ensure that string arrays are not passed - we currently don't support string tensors in DML
+       CreateGenericMLValue(
+         nullptr, GetDmlAllocator(device.Id()), "", array_on_cpu, ml_value.get(), true, false, CpuToDmlMemCpy);
++#elif USE_ETGLOW
++          if (!IsEtGlowDeviceIdValid(logging::LoggingManager::DefaultLogger(), device.Id())) {
++            throw std::runtime_error("The provided device id doesn't match any available EtSoC on the machine.");
++          }
++          CreateGenericMLValue(nullptr, GetEtGlowAllocator(device.Id()), "", array_on_cpu, ml_value.get(), true, false,
++                               [device_id = device.Id()](void* dst, const void* src, size_t num_bytes) { CpuToEtGlowMemCpy(device_id, dst, src, num_bytes); });
+ #else
+       throw std::runtime_error(
+           "Can't allocate memory on the CUDA device using this package of OnnxRuntime. "
+@@ -134,6 +140,15 @@ void addOrtValueMethods(pybind11::module& m) {
+             values_type,
+             *(ml_value->GetMutable<Tensor>()),
+             CpuToDmlMemCpy);
++#elif USE_ETGLOW
++          if (!IsEtGlowDeviceIdValid(logging::LoggingManager::DefaultLogger(), device.Id())) {
++            throw std::runtime_error("The provided device id doesn't match any available EtSoCs on the machine.");
++          }
++          onnxruntime::python::CopyDataToTensor(
++              py_values,
++              values_type,
++              *(ml_value->GetMutable<Tensor>()),
++              [device_id = device.Id()](void* dst, const void* src, size_t num_bytes) { CpuToEtGlowMemCpy(device_id, dst, src, num_bytes); });
+ #else
+         throw std::runtime_error(
+             "Unsupported GPU device: Cannot find the supported GPU device.");
+@@ -178,6 +193,14 @@ void addOrtValueMethods(pybind11::module& m) {
+           throw std::runtime_error(
+               "Can't allocate memory on the DirectML device using this package of OnnxRuntime. "
+               "Please use the DirectML package of OnnxRuntime to use this feature.");
++#endif
++        } else if (strcmp(GetDeviceName(device), ET) == 0) {
++#if USE_ETGLOW
++          allocator = GetEtGlowAllocator(device.Id());
++#else
++          throw std::runtime_error(
++              "Can't allocate memory on the ETSOC device using this package of OnnxRuntime. "
++              "Please use the ETSOC package of OnnxRuntime to use this feature.");
+ #endif
+         } else {
+           throw std::runtime_error("Unsupported device: Cannot place the OrtValue on this device");
+@@ -296,6 +319,9 @@ void addOrtValueMethods(pybind11::module& m) {
+         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetCannToHostMemCpyFunction());
+ #elif USE_DML
+         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetDmlToHostMemCpyFunction());
++#elif USE_ETGLOW
++        const auto& tensor = ml_value->Get<Tensor>();
++        py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetEtGlowToHostMemCpyFunction(tensor.Location().device.Id()));
+ #else
+         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, nullptr);
+ #endif
+diff --git a/onnxruntime/python/onnxruntime_pybind_state.cc b/onnxruntime/python/onnxruntime_pybind_state.cc
+index ffcd339c0c..0c369b2e00 100644
+--- a/onnxruntime/python/onnxruntime_pybind_state.cc
++++ b/onnxruntime/python/onnxruntime_pybind_state.cc
+@@ -44,6 +44,10 @@
+ #include "core/providers/coreml/coreml_provider_factory.h"
+ #endif
+ 
++#if defined(USE_ETGLOW)
++#include "core/providers/etglow/etglow_execution_provider_info.h"
++#endif
++
+ #include <pybind11/functional.h>
+ 
+ // Explicitly provide a definition for the static const var 'GPU' in the OrtDevice struct,
+@@ -273,6 +277,8 @@ const char* GetDeviceName(const OrtDevice& device) {
+     case OrtDevice::GPU:
+ #ifdef USE_DML
+       return DML;
++#elif USE_ETGLOW
++      return ET;
+ #else
+       return CUDA;
+ #endif
+@@ -1217,6 +1223,141 @@ std::unique_ptr<IExecutionProvider> CreateExecutionProviderInstance(
+     return onnxruntime::QNNProviderFactoryCreator::Create(
+                cit == provider_options_map.end() ? ProviderOptions{} : cit->second, &session_options)
+         ->CreateProvider();
++#endif
++  } else if (type == kEtGlowExecutionProvider) {
++#ifdef USE_ETGLOW
++
++    std::string etglow_onnx_symbols;
++    std::string etglow_glow_api_params;
++    std::string etglow_bundle_cache_prefix;
++    std::string etglow_export_bundle_path;
++    std::string etglow_traces_prefix;
++
++    OrtEtGlowProviderOptions etglow_options;
++
++    auto it = provider_options_map.find(type);
++    if (it != provider_options_map.end()) {
++      // parser for str -> boolean
++      auto get_boolean_or_throw = [](const auto& value, std::string error_msg) {
++        if (value == "true" || value == "True" || value == "1") {
++          return 1;
++        } else if (value == "false" || value == "False" || value == "0") {
++          return 0;
++        } else {
++          ORT_THROW(error_msg);
++        }
++      };
++
++      for (auto [key, value] : it->second) {
++        if (key == onnxruntime::etglow::provider_option_names::kDeviceId) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for the key '" + key + "' should be a number.\n");
++          }
++          etglow_options.device_id = std::stoi(value);
++        } else if (key == onnxruntime::etglow::provider_option_names::kDeviceMemLimit) {
++          if (value.empty()) {
++            ORT_THROW(("[ERROR] [ETGLOW] The value for key '" + key + "' should be a number."));
++          }
++          etglow_options.device_mem_limit = std::stoull(value);
++        } else if (key == onnxruntime::etglow::provider_option_names::kArenaExtendStrategy) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for key '" + key + "' should be a number");
++          }
++          etglow_options.arena_extend_strategy = std::stoi(value);
++        } else if (key == onnxruntime::etglow::provider_option_names::kCompileOnly) {
++          etglow_options.et_compile_only = get_boolean_or_throw(value, "[ERROR] [ETGLOW] The value for the key '" + key + "' should be a boolean i.e. true or false. Default value is false. Found " + value + "\n");
++        } else if (key == onnxruntime::etglow::provider_option_names::kDumpSubgraphs) {
++          etglow_options.et_dump_subgraphs = get_boolean_or_throw(value, "[ERROR] [ETGLOW] The value for the key '" + key + "'  should be a boolean i.e. true or false. Default value is false. Found: " + value + "\n");
++        } else if (key == onnxruntime::etglow::provider_option_names::kGreedy) {
++          etglow_options.et_greedy = get_boolean_or_throw(value, "[ERROR] [ETGLOW] The value for the key '" + key + "' should be a boolean i.e. true or false. Default value is false. Found: " + value + "\n");
++        } else if (key == onnxruntime::etglow::provider_option_names::kOfflineMode) {
++          etglow_options.et_offline_mode = get_boolean_or_throw(value, "[ERROR] [ETGLOW] The value for the key '" + key + "' should be a boolean i.e. true or false. Default value is false. Found: " + value + "\n");
++        } else if (key == onnxruntime::etglow::provider_option_names::kFailIfCannotRunWholeGraph) {
++          etglow_options.et_fail_if_cannot_run_whole_graph = get_boolean_or_throw(value, "[ERROR] [ETGLOW] The value for the key '" + key + "' should be a boolean i.e. true or false. Default value is false. Found: " + value + "\n");
++        } else if (key == onnxruntime::etglow::provider_option_names::kOnnxShapeParams) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for the key '" + key + "' is empty.\n");
++          }
++          std::stringstream ss(value);
++          std::string tmp;
++          std::vector<std::string> shape_params;
++          while (std::getline(ss, tmp, ';')) {
++            shape_params.emplace_back(tmp);
++          }
++
++          for (auto shape_param : shape_params) {
++            auto sep_pos = shape_param.find('=');
++            if (sep_pos == std::string::npos || sep_pos == 0 || sep_pos == shape_param.length()) {
++              ORT_THROW("[ERROR] [ETGLOW] The value for the keys in 'etglow_onnx_shape_params' should have '=' separator. Found: " + shape_param + "\n");
++            }
++            auto value_key = shape_param.substr(0, sep_pos);
++            auto value_value = shape_param.substr(sep_pos + 1);
++            if (!etglow_onnx_symbols.empty()) {
++              etglow_onnx_symbols += ";";
++            }
++            etglow_onnx_symbols += value_key;
++            etglow_onnx_symbols += "=";
++            etglow_onnx_symbols += value_value;
++          }
++          etglow_options.et_onnx_symbols = etglow_onnx_symbols.c_str();
++        } else if (key == onnxruntime::etglow::provider_option_names::kApiParams) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for the key '" + key + "' is empty.\n");
++          }
++          std::stringstream ss(value);
++          std::string tmp;
++          std::vector<std::string> api_params;
++          while (std::getline(ss, tmp, ';')) {
++            api_params.emplace_back(tmp);
++          }
++          for (auto api_param : api_params) {
++            auto sep_pos = api_param.find("=");
++            if (sep_pos == std::string::npos || sep_pos == 0 || sep_pos == api_param.length()) {
++              ORT_THROW("[ERROR][EtGlow] The value for keys in `etglow_api_params` should have `=` separator. Found: " + api_param + "\n");
++            }
++            auto value_key = api_param.substr(0, sep_pos);
++            auto value_value = api_param.substr(sep_pos + 1);
++            if (!etglow_glow_api_params.empty()) {
++              etglow_glow_api_params += ";";
++            }
++            etglow_glow_api_params += value_key;
++            etglow_glow_api_params += "=";
++            etglow_glow_api_params += value_value;
++          }
++          etglow_options.et_glow_api_params = etglow_glow_api_params.c_str();
++        } else if (key == onnxruntime::etglow::provider_option_names::kBundleCachePrefix) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for the key '" + key + "' should be a non-empty path.");
++          }
++          etglow_bundle_cache_prefix = value;
++          etglow_options.et_bundle_cache_prefix = etglow_bundle_cache_prefix.c_str();
++        } else if (key == onnxruntime::etglow::provider_option_names::kExportBundlePath) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for the key '" + key + "' should be a non-empty path.");
++          }
++          etglow_export_bundle_path = value;
++          etglow_options.et_export_bundle_path = etglow_export_bundle_path.c_str();
++        } else if (key == onnxruntime::etglow::provider_option_names::kTracesPrefix) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for the key '" + key + "' should be a non-empty path.");
++          }
++          etglow_traces_prefix = value;
++          etglow_options.et_traces_prefix = etglow_traces_prefix.c_str();
++        } else if (key == onnxruntime::etglow::provider_option_names::kTracesFlags) {
++          if (value.empty()) {
++            ORT_THROW("[ERROR] [ETGLOW] The value for '" + key + "' should be a number. It's empty.");
++          }
++          etglow_options.et_traces_flags = std::stoi(value);
++        } else {
++          ORT_THROW("[ERROR] [EtGlow] wrong key: " + key +
++                    " type entered. Choose from the following runtime key options"
++                    " that are available for EtGlow. ['device_id', 'etglow_onnx_shape_params', 'etglow_api_params',"
++                    " 'etglow_compile_only', 'etglow_dump_subgraphs', 'etglow_export_bundle_path'] \n");
++        }
++      }
++    }
++
++    return onnxruntime::EtGlowProviderFactoryCreator::Create(&etglow_options)->CreateProvider();
+ #endif
+   } else {
+     // check whether it is a dynamic load EP:
+@@ -1537,6 +1678,7 @@ void addObjectMethods(py::module& m, ExecutionProviderRegistrationFn ep_registra
+       .def_static("fpga", []() { return OrtDevice::FPGA; })
+       .def_static("npu", []() { return OrtDevice::NPU; })
+       .def_static("dml", []() { return OrtDevice::GPU; })
++      .def_static("et", []() { return OrtDevice::GPU; })
+       .def_static("default_memory", []() { return OrtDevice::MemType::DEFAULT; });
+ 
+   py::class_<OrtArenaCfg> ort_arena_cfg_binding(m, "OrtArenaCfg");
+diff --git a/onnxruntime/python/onnxruntime_pybind_state_common.h b/onnxruntime/python/onnxruntime_pybind_state_common.h
+index 4d6e411def..7fac2c32b3 100644
+--- a/onnxruntime/python/onnxruntime_pybind_state_common.h
++++ b/onnxruntime/python/onnxruntime_pybind_state_common.h
+@@ -23,7 +23,7 @@ struct OrtStatus {
+   char msg[1];  // a null-terminated string
+ };
+ 
+-#define BACKEND_DEVICE BACKEND_PROC BACKEND_DNNL BACKEND_OPENVINO BACKEND_TVM BACKEND_OPENBLAS BACKEND_MIGRAPHX BACKEND_ACL BACKEND_ARMNN BACKEND_DML BACKEND_CANN
++#define BACKEND_DEVICE BACKEND_PROC BACKEND_DNNL BACKEND_OPENVINO BACKEND_TVM BACKEND_OPENBLAS BACKEND_MIGRAPHX BACKEND_ACL BACKEND_ARMNN BACKEND_DML BACKEND_CANN BACKEND_ETGLOW
+ #include "core/session/onnxruntime_cxx_api.h"
+ #include "core/providers/providers.h"
+ #include "core/providers/provider_factory_creators.h"
+@@ -110,6 +110,12 @@ struct OrtStatus {
+ #define BACKEND_CANN ""
+ #endif
+ 
++#if USE_ETGLOW
++#define BACKEND_ETGLOW "-ETGLOW"
++#else
++#define BACKEND_ETGLOW ""
++#endif
++
+ #ifdef USE_CUDA
+ #include "core/providers/cuda/cuda_provider_factory.h"
+ #include "core/providers/cuda/cuda_execution_provider_info.h"
+@@ -150,6 +156,9 @@ extern std::string openvino_device_type;
+ #include "core/providers/cann/cann_provider_factory.h"
+ #include "core/providers/cann/cann_execution_provider_info.h"
+ #endif
++#ifdef USE_ETGLOW
++#include "core/providers/etglow/etglow_provider_factory.h"
++#endif
+ 
+ #ifdef USE_CUDA
+ namespace onnxruntime {
+@@ -199,6 +208,13 @@ extern onnxruntime::ArenaExtendStrategy arena_extend_strategy;
+ }  // namespace onnxruntime
+ #endif
+ 
++#ifdef USE_ETGLOW
++namespace onnxruntime {
++ProviderInfo_EtGlow* TryGetProviderInfo_EtGlow();
++ProviderInfo_EtGlow& GetProviderInfo_EtGlow();
++}  // namespace onnxruntime
++#endif
++
+ #include "core/providers/dnnl/dnnl_provider_factory.h"
+ #include "core/providers/shared_library/provider_host_api.h"
+ 
+diff --git a/onnxruntime/python/providers/etglow/trace_flags.py b/onnxruntime/python/providers/etglow/trace_flags.py
+new file mode 100644
+index 0000000000..e0b757dd13
+--- /dev/null
++++ b/onnxruntime/python/providers/etglow/trace_flags.py
+@@ -0,0 +1,11 @@
++from enum import IntEnum
++
++class OrtEtGlowTraceFlags(IntEnum):
++    ETGLOW_TRACE_NONE = 0
++    ETGLOW_TRACE_GLOW = 1
++    ETGLOW_TRACE_NEURALIZER = 2
++    ETGLOW_TRACE_RUNTIME = 4
++    ETGLOW_TRACE_DEVICE_KERNEL_NODES = 8
++    ETGLOW_TRACE_DEVICE_KERNEL_INST = 16
++    ETGLOW_TRACE_DEFAULT = ETGLOW_TRACE_GLOW + ETGLOW_TRACE_NEURALIZER + ETGLOW_TRACE_RUNTIME
++    ETGLOW_TRACE_ALL = ETGLOW_TRACE_DEFAULT + ETGLOW_TRACE_DEVICE_KERNEL_NODES + ETGLOW_TRACE_DEVICE_KERNEL_INST

@@ -1,0 +1,814 @@
+diff --git a/include/onnxruntime/core/common/profiler_common.h b/include/onnxruntime/core/common/profiler_common.h
+index 0074d5e74a..a5215a8c6d 100644
+--- a/include/onnxruntime/core/common/profiler_common.h
++++ b/include/onnxruntime/core/common/profiler_common.h
+@@ -11,6 +11,13 @@
+ namespace onnxruntime {
+ namespace profiling {
+ 
++enum EventType {
++  Complete,
++  Instant,
++  Counter,
++  Metadata,
++};
++
+ enum EventCategory {
+   SESSION_EVENT = 0,
+   NODE_EVENT,
+@@ -35,29 +42,33 @@ struct EventRecord {
+               std::string&& event_name,
+               long long time_stamp,
+               long long duration,
+-              std::unordered_map<std::string, std::string>&& event_args)
++              std::unordered_map<std::string, std::string>&& event_args,
++              EventType type = EventType::Complete)
+       : cat(category),
+         pid(process_id),
+         tid(thread_id),
+         name(std::move(event_name)),
+         ts(time_stamp),
+         dur(duration),
+-        args(std::move(event_args)) {}
++        args(std::move(event_args)),
++        type(type) {}
+ 
+   EventRecord(EventCategory category,
+               int process_id,
+               int thread_id,
+               const std::string& event_name,
+               long long time_stamp,
+-              long long duration,
+-              const std::unordered_map<std::string, std::string>& event_args)
++              double duration,
++              const std::unordered_map<std::string, std::string>& event_args,
++              EventType type = EventType::Complete)
+       : cat(category),
+         pid(process_id),
+         tid(thread_id),
+         name(event_name),
+         ts(time_stamp),
+         dur(duration),
+-        args(event_args) {}
++        args(event_args),
++        type(type) {}
+ 
+   EventRecord(const EventRecord& other) = default;
+   EventRecord(EventRecord&& other) noexcept = default;
+@@ -71,6 +82,7 @@ struct EventRecord {
+   long long ts = 0;
+   long long dur = 0;
+   std::unordered_map<std::string, std::string> args{};
++  EventType type = EventType::Complete;
+ };
+ 
+ using Events = std::vector<EventRecord>;
+diff --git a/include/onnxruntime/core/framework/allocator.h b/include/onnxruntime/core/framework/allocator.h
+index 097873c5e3..0033fa1865 100644
+--- a/include/onnxruntime/core/framework/allocator.h
++++ b/include/onnxruntime/core/framework/allocator.h
+@@ -48,6 +48,7 @@ constexpr const char* CANN_PINNED = "CannPinned";
+ constexpr const char* DML = "DML";
+ constexpr const char* HIP = "Hip";
+ constexpr const char* HIP_PINNED = "HipPinned";
++constexpr const char* ET = "ET";
+ constexpr const char* OpenVINO_CPU = "OpenVINO_CPU";
+ constexpr const char* OpenVINO_GPU = "OpenVINO_GPU";
+ constexpr const char* WEBGPU_BUFFER = "WebGPU_Buffer";
+diff --git a/include/onnxruntime/core/graph/constants.h b/include/onnxruntime/core/graph/constants.h
+index 39acb6b4f2..20d40e3c37 100644
+--- a/include/onnxruntime/core/graph/constants.h
++++ b/include/onnxruntime/core/graph/constants.h
+@@ -33,6 +33,7 @@ constexpr const char* kCpuExecutionProvider = "CPUExecutionProvider";
+ constexpr const char* kCudaExecutionProvider = "CUDAExecutionProvider";
+ constexpr const char* kCudaNHWCExecutionProvider = "CUDANHWCExecutionProvider";
+ constexpr const char* kDnnlExecutionProvider = "DnnlExecutionProvider";
++constexpr const char* kEtGlowExecutionProvider = "EtGlowExecutionProvider";
+ constexpr const char* kOpenVINOExecutionProvider = "OpenVINOExecutionProvider";
+ constexpr const char* kVitisAIExecutionProvider = "VitisAIExecutionProvider";
+ constexpr const char* kTensorrtExecutionProvider = "TensorrtExecutionProvider";
+diff --git a/include/onnxruntime/core/session/onnxruntime_c_api.h b/include/onnxruntime/core/session/onnxruntime_c_api.h
+index 5aafdd149e..cbcd680bec 100644
+--- a/include/onnxruntime/core/session/onnxruntime_c_api.h
++++ b/include/onnxruntime/core/session/onnxruntime_c_api.h
+@@ -300,6 +300,7 @@ ORT_RUNTIME_CLASS(TensorRTProviderOptionsV2);
+ ORT_RUNTIME_CLASS(CUDAProviderOptionsV2);
+ ORT_RUNTIME_CLASS(CANNProviderOptions);
+ ORT_RUNTIME_CLASS(DnnlProviderOptions);
++ORT_RUNTIME_CLASS(EtGlowProviderOptions);
+ ORT_RUNTIME_CLASS(Op);
+ ORT_RUNTIME_CLASS(OpAttr);
+ ORT_RUNTIME_CLASS(Logger);
+@@ -4666,6 +4667,65 @@ struct OrtApi {
+                   _In_reads_(num_external_initializer_files) char* const* external_initializer_file_buffer_array,
+                   _In_reads_(num_external_initializer_files) const size_t* external_initializer_file_lengths,
+                   size_t num_external_initializer_files);
++
++  /// \name OrtEtGlowProviderOptions
++  /// @{
++
++  /** \brief Append EtGlow provider to session options
++   *
++   * If EtGlow is not available (due to a non EtGlow enabled build, or if EtGlow is not installed on the system), this function will return failure.
++   *
++   * \param[in] options
++   * \param[in] etglow_options
++   *
++   * \since Version 1.18.
++   */
++  ORT_API2_STATUS(SessionOptionsAppendExecutionProvider_EtGlow,
++                  _In_ OrtSessionOptions* options, _In_ const OrtEtGlowProviderOptions* etglow_options);
++
++  /** \brief Create an OrtEtGlowProviderOptions
++   *
++   * \param[out] out created ::OrtEtGlowProviderOptions. Must be released with OrtApi::ReleaseEtGlowProviderOptions
++   *
++   * \snippet{doc} snippets.dox OrtStatus Return Value
++   *
++   * \since Version 1.19.
++   */
++  ORT_API2_STATUS(CreateEtGlowProviderOptions, _Outptr_ OrtEtGlowProviderOptions** out);
++
++  /** \brief Set options in a EtGlow Execution Provider.
++   *
++   * \param[in] etglow_options
++   *
++   * \since Version 1.19.
++   *
++   */
++  ORT_API2_STATUS(UpdateEtGlowProviderOptions, _Inout_ OrtEtGlowProviderOptions* etglow_options,
++                  _In_reads_(num_keys) const char* const* provider_options_keys,
++                  _In_reads_(num_keys) const char* const* provider_options_values,
++                  _In_ size_t num_keys);
++
++  /** \brief Get serialized EtGlow provider options string.
++   *
++   * \param[in] etglow_options OrtEtGlowProviderOptions instance
++   * \param[in] allocator a ptr to an instance of OrtAllocator obtained with CreateAllocator()
++   *                      or GetAllocatorWithDefaultOptions(), the specified allocator will be used to allocate
++   *                      continuous buffers for output strings and lengths.
++   * \param[out] ptr is a UTF-8 null terminated string allocated using 'allocator'.
++   *                 The caller is responsible for using the same allocator to free it.
++   *
++   * \since Version 1.19.
++   */
++  ORT_API2_STATUS(GetEtGlowProviderOptionsAsString, _In_ const OrtEtGlowProviderOptions* etglow_options,
++                  _Inout_ OrtAllocator* allocator, _Outptr_ char** ptr);
++
++  /** \brief Release an OrtEtGlowProviderOptions
++   *
++   * \param[in] the pointer of OrtEtGlowProviderOptions which will been deleted
++   *
++   * \since Version 1.19.
++   */
++  void(ORT_API_CALL* ReleaseEtGlowProviderOptions)(_Frees_ptr_opt_ OrtEtGlowProviderOptions* input);
+ };
+ 
+ /*
+diff --git a/include/onnxruntime/core/session/onnxruntime_cxx_api.h b/include/onnxruntime/core/session/onnxruntime_cxx_api.h
+index 29a229f427..f229d3633b 100644
+--- a/include/onnxruntime/core/session/onnxruntime_cxx_api.h
++++ b/include/onnxruntime/core/session/onnxruntime_cxx_api.h
+@@ -890,6 +890,8 @@ struct SessionOptionsImpl : ConstSessionOptionsImpl<T> {
+   SessionOptionsImpl& AppendExecutionProvider_CANN(const OrtCANNProviderOptions& provider_options);
+   ///< Wraps OrtApi::SessionOptionsAppendExecutionProvider_Dnnl
+   SessionOptionsImpl& AppendExecutionProvider_Dnnl(const OrtDnnlProviderOptions& provider_options);
++  /// Wraps OrtApi::AppendExecutionProvider_EtGlow.
++  SessionOptionsImpl& AppendExecutionProvider_EtGlow(const OrtEtGlowProviderOptions& provider_options);  ///< Wraps OrtApi::SessionOptionsAppendExecutionProvider_EtGlow
+   /// Wraps OrtApi::SessionOptionsAppendExecutionProvider. Currently supports QNN, SNPE and XNNPACK.
+   SessionOptionsImpl& AppendExecutionProvider(const std::string& provider_name,
+                                               const std::unordered_map<std::string, std::string>& provider_options = {});
+diff --git a/include/onnxruntime/core/session/onnxruntime_cxx_inline.h b/include/onnxruntime/core/session/onnxruntime_cxx_inline.h
+index 9b9dd81a74..28f56375cb 100644
+--- a/include/onnxruntime/core/session/onnxruntime_cxx_inline.h
++++ b/include/onnxruntime/core/session/onnxruntime_cxx_inline.h
+@@ -850,6 +850,12 @@ inline SessionOptionsImpl<T>& SessionOptionsImpl<T>::AppendExecutionProvider_Dnn
+   return *this;
+ }
+ 
++template <typename T>
++inline SessionOptionsImpl<T>& SessionOptionsImpl<T>::AppendExecutionProvider_EtGlow(const OrtEtGlowProviderOptions& provider_options) {
++  ThrowOnError(GetApi().SessionOptionsAppendExecutionProvider_EtGlow(this->p_, &provider_options));
++  return *this;
++}
++
+ template <typename T>
+ inline SessionOptionsImpl<T>& SessionOptionsImpl<T>::AppendExecutionProvider(
+     const std::string& provider_name,
+diff --git a/onnxruntime/core/common/profiler.cc b/onnxruntime/core/common/profiler.cc
+index 71bca6ef3b..bcbfa90a30 100644
+--- a/onnxruntime/core/common/profiler.cc
++++ b/onnxruntime/core/common/profiler.cc
+@@ -2,6 +2,8 @@
+ // Licensed under the MIT License.
+ 
+ #include "profiler.h"
++#include <cmath>
++#include <iomanip>
+ 
+ namespace onnxruntime {
+ namespace profiling {
+@@ -124,13 +126,30 @@ std::string Profiler::EndProfiling() {
+ 
+   for (size_t i = 0; i < events_.size(); ++i) {
+     auto& rec = events_[i];
+-    profile_stream_ << R"({"cat" : ")" << event_category_names_[rec.cat] << "\",";
++    profile_stream_ << "{";
+     profile_stream_ << "\"pid\" :" << rec.pid << ",";
+     profile_stream_ << "\"tid\" :" << rec.tid << ",";
+-    profile_stream_ << "\"dur\" :" << rec.dur << ",";
+-    profile_stream_ << "\"ts\" :" << rec.ts << ",";
+-    profile_stream_ << R"("ph" : "X",)";
+     profile_stream_ << R"("name" :")" << rec.name << "\",";
++    switch (rec.type) {
++      case EventType::Complete:
++        profile_stream_ << R"("cat" : ")" << event_category_names_[rec.cat] << "\",";
++        profile_stream_ << "\"dur\" :" << rec.dur << ",";
++        profile_stream_ << "\"ts\" :" << rec.ts << ",";
++        profile_stream_ << R"("ph" : "X",)";
++        break;
++      case EventType::Instant:
++        profile_stream_ << R"("cat" : ")" << event_category_names_[rec.cat] << "\",";
++        profile_stream_ << "\"ts\" :" << rec.ts << ",";
++        profile_stream_ << R"("ph" : "i",)";
++        break;
++      case EventType::Counter:
++        profile_stream_ << "\"ts\" :" << rec.ts << ",";
++        profile_stream_ << R"("ph" : "C",)";
++        break;
++      case EventType::Metadata:
++        profile_stream_ << R"("ph" : "M",)";
++        break;
++    }
+     profile_stream_ << "\"args\" : {";
+     bool is_first_arg = true;
+     for (std::pair<std::string, std::string> event_arg : rec.args) {
+diff --git a/onnxruntime/core/framework/allocator.cc b/onnxruntime/core/framework/allocator.cc
+index c3e96e450c..d31f5c2fba 100644
+--- a/onnxruntime/core/framework/allocator.cc
++++ b/onnxruntime/core/framework/allocator.cc
+@@ -141,6 +141,7 @@ ORT_API_STATUS_IMPL(OrtApis::CreateMemoryInfo, _In_ const char* name1, enum OrtA
+              strcmp(name1, onnxruntime::OpenVINO_GPU) == 0 ||
+              strcmp(name1, onnxruntime::DML) == 0 ||
+              strcmp(name1, onnxruntime::HIP) == 0 ||
++             strcmp(name1, onnxruntime::ET) == 0 ||
+              strcmp(name1, onnxruntime::WEBGPU_BUFFER) == 0) {
+     *out = new OrtMemoryInfo(
+         name1, type, OrtDevice(OrtDevice::GPU, OrtDevice::MemType::DEFAULT, static_cast<OrtDevice::DeviceId>(id1)), id1,
+diff --git a/onnxruntime/core/graph/graph.cc b/onnxruntime/core/graph/graph.cc
+index e950d68947..3c1b379052 100644
+--- a/onnxruntime/core/graph/graph.cc
++++ b/onnxruntime/core/graph/graph.cc
+@@ -1250,10 +1250,12 @@ Graph::Graph(const Model& owning_model,
+ 
+     // Remove sparse_initializers from protobuf to save memory as they are converted to dense now
+     graph_proto_->mutable_sparse_initializer()->Clear();
++#if GOOGLE_PROTOBUF_VERSION < 5026000
+     const int sparse_num_cleared = graph_proto_->sparse_initializer().ClearedCount();
+     for (int i = 0; i < sparse_num_cleared; ++i) {
+       delete graph_proto_->mutable_sparse_initializer()->ReleaseCleared();
+     }
++#endif
+   }
+ #endif
+ 
+@@ -3602,10 +3604,12 @@ void Graph::CleanAllInitializedTensors() noexcept {
+   // and can be reused. Need to explicitly release the cleared objects and free the
+   // memory.
+   graph_proto_->mutable_initializer()->Clear();
++#if GOOGLE_PROTOBUF_VERSION < 5026000
+   const int num_cleared = graph_proto_->initializer().ClearedCount();
+   for (int i = 0; i < num_cleared; i++) {
+     delete graph_proto_->mutable_initializer()->ReleaseCleared();
+   }
++#endif
+ }
+ 
+ const ONNX_NAMESPACE::TensorProto* Graph::GetConstantInitializer(const std::string& initializer_name,
+diff --git a/onnxruntime/core/optimizer/graph_transformer_utils.cc b/onnxruntime/core/optimizer/graph_transformer_utils.cc
+index 54bd44ec2d..1ccdab4029 100644
+--- a/onnxruntime/core/optimizer/graph_transformer_utils.cc
++++ b/onnxruntime/core/optimizer/graph_transformer_utils.cc
+@@ -46,6 +46,7 @@
+ #include "core/optimizer/gemm_transpose_fusion.h"
+ #include "core/optimizer/identical_children_consolidation.h"
+ #include "core/optimizer/identity_elimination.h"
++#include "core/optimizer/initialized_tensor_elimination.h"
+ #include "core/optimizer/label_encoder_fusion.h"
+ #include "core/optimizer/layer_norm_fusion.h"
+ #include "core/optimizer/matmul_activation_fusion.h"
+@@ -234,7 +235,6 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
+       transformers.emplace_back(std::make_unique<ReshapeFusion>());
+       transformers.emplace_back(std::make_unique<FreeDimensionOverrideTransformer>(
+           session_options.free_dimension_overrides));
+-
+       if (!disable_quant_qdq) {
+         transformers.emplace_back(std::make_unique<QDQPropagationTransformer>());
+ 
+@@ -278,10 +278,19 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
+       const InlinedHashSet<std::string_view> cpu_cuda_rocm_eps = {onnxruntime::kCpuExecutionProvider,
+                                                                   onnxruntime::kCudaExecutionProvider,
+                                                                   onnxruntime::kRocmExecutionProvider};
++      const InlinedHashSet<std::string_view> cpu_cuda_rocm_et_eps = {onnxruntime::kCpuExecutionProvider,
++                                                                     onnxruntime::kCudaExecutionProvider,
++                                                                     onnxruntime::kRocmExecutionProvider,
++                                                                     onnxruntime::kEtGlowExecutionProvider};
+       const InlinedHashSet<std::string_view> cpu_cuda_dml_rocm_eps = {onnxruntime::kCpuExecutionProvider,
+                                                                       onnxruntime::kCudaExecutionProvider,
+                                                                       onnxruntime::kRocmExecutionProvider,
+                                                                       onnxruntime::kDmlExecutionProvider};
++      const InlinedHashSet<std::string_view> cpu_cuda_dml_rocm_et_eps = {onnxruntime::kCpuExecutionProvider,
++                                                                         onnxruntime::kCudaExecutionProvider,
++                                                                         onnxruntime::kRocmExecutionProvider,
++                                                                         onnxruntime::kDmlExecutionProvider,
++                                                                         onnxruntime::kEtGlowExecutionProvider};
+       const InlinedHashSet<std::string_view> cpu_cuda_rocm_acl_armnn_js_eps = {onnxruntime::kCpuExecutionProvider,
+                                                                                onnxruntime::kCudaExecutionProvider,
+                                                                                onnxruntime::kRocmExecutionProvider,
+@@ -321,8 +330,8 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
+       transformers.emplace_back(std::make_unique<ConvActivationFusion>(cpu_cuda_rocm_acl_armnn_js_eps));
+ 
+       transformers.emplace_back(std::make_unique<GeluFusion>(cpu_cuda_dml_rocm_eps));
+-      transformers.emplace_back(std::make_unique<LayerNormFusion>(cpu_cuda_dml_rocm_eps));
+-      transformers.emplace_back(std::make_unique<SimplifiedLayerNormFusion>(cpu_cuda_rocm_eps));
++      transformers.emplace_back(std::make_unique<LayerNormFusion>(cpu_cuda_dml_rocm_et_eps));
++      transformers.emplace_back(std::make_unique<SimplifiedLayerNormFusion>(cpu_cuda_rocm_et_eps));
+       transformers.emplace_back(std::make_unique<AttentionFusion>(cpu_cuda_dml_rocm_eps));
+       transformers.emplace_back(std::make_unique<EmbedLayerNormFusion>(cpu_cuda_dml_rocm_eps));
+       transformers.emplace_back(std::make_unique<GatherSliceToSplitFusion>(cpu_cuda_rocm_eps));
+@@ -377,6 +386,9 @@ InlinedVector<std::unique_ptr<GraphTransformer>> GenerateTransformers(
+       // fusions might be prevented if this one removes a Q/DQ node too early.
+       transformers.emplace_back(std::make_unique<QDQFinalCleanupTransformer>(enable_quant_qdq_cleanup));
+ 
++      const InlinedHashSet<std::string_view> etglow_eps = {onnxruntime::kEtGlowExecutionProvider};
++      transformers.emplace_back(std::make_unique<InitializedTensorElimination>(etglow_eps));
++
+     } break;
+ 
+     case TransformerLevel::Level3: {
+diff --git a/onnxruntime/core/optimizer/initialized_tensor_elimination.cc b/onnxruntime/core/optimizer/initialized_tensor_elimination.cc
+new file mode 100644
+index 0000000000..1c34aa3693
+--- /dev/null
++++ b/onnxruntime/core/optimizer/initialized_tensor_elimination.cc
+@@ -0,0 +1,55 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++#include "initialized_tensor_elimination.h"
++#include "core/optimizer/utils.h"
++#include "core/graph/graph_utils.h"
++#include "core/framework/tensorprotoutils.h"
++
++// This optimization pass will remove initialized tensors from the existing graph
++
++namespace onnxruntime {
++
++Status InitializedTensorElimination::ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const {
++  ORT_UNUSED_PARAMETER(graph_level);
++
++  auto AreAllNodesInMainGraphAssignedToOneEp = [this](const Graph& graph) {
++    std::string first_provider;
++    for (const auto& node : graph.Nodes()) {
++      if (!graph_utils::IsSupportedProvider(node, GetCompatibleExecutionProviders())) {
++        return false;
++      }
++      const auto& node_provider = node.GetExecutionProviderType();
++      if (first_provider.empty()) {
++        first_provider = node_provider;
++      }
++      if (node_provider != first_provider) {
++        return false;
++      }
++    }
++    return true;
++  };
++
++  if (AreAllNodesInMainGraphAssignedToOneEp(graph)) {
++    const auto& weights = graph.GetAllInitializedTensors();
++    InlinedVector<std::string> weights_to_remove;
++    weights_to_remove.reserve(weights.size());
++    for (const auto& [name, tensor_proto] : weights) {
++      ORT_UNUSED_PARAMETER(tensor_proto);
++      auto* node = graph.GetNodeArg(name);
++      if (graph.IsOutput(node) || graph.IsInputsIncludingInitializers(node)) {
++        LOGS(logger, INFO) << "Skiping weight: " << name << " removal, belongs to an in/out node!";
++      } else {
++        weights_to_remove.emplace_back(name);
++      }
++    }
++    for (const auto& name : weights_to_remove) {
++      LOGS(logger, INFO) << "Removing weight: " << name;
++      graph.RemoveInitializedTensor(name);
++      modified = true;
++    }
++  }
++  return Status::OK();
++}
++
++}  // namespace onnxruntime
+diff --git a/onnxruntime/core/optimizer/initialized_tensor_elimination.h b/onnxruntime/core/optimizer/initialized_tensor_elimination.h
+new file mode 100644
+index 0000000000..2f2c15c84c
+--- /dev/null
++++ b/onnxruntime/core/optimizer/initialized_tensor_elimination.h
+@@ -0,0 +1,25 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++#pragma once
++
++#include "core/optimizer/graph_transformer.h"
++
++namespace onnxruntime {
++
++/**
++@Class InitializedTensorElimination
++
++Transformer that eliminates Initialized Tensors (weights) of the whole graph (excluding in/out nodes) if all
++ nodes have been assigned to a single execution provider.
++
++*/
++class InitializedTensorElimination : public GraphTransformer {
++ public:
++  InitializedTensorElimination(const InlinedHashSet<std::string_view>& compatible_execution_providers = {}) noexcept
++      : GraphTransformer("InitializedTensorElimination", compatible_execution_providers) {
++  }
++
++  Status ApplyImpl(Graph& graph, bool& modified, int graph_level, const logging::Logger& logger) const override;
++};
++
++}  // namespace onnxruntime
+diff --git a/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc b/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
+index bdb6a44bdd..1b6a4e3539 100644
+--- a/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
++++ b/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
+@@ -11,6 +11,8 @@
+ #include <unordered_set>
+ #include <utility>
+ #include <vector>
++#include <cstdint>
++#include <cstring>
+ 
+ #include <gsl/gsl>
+ #include "core/common/make_string.h"
+diff --git a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
+index e7d2d32809..8892e3ddae 100644
+--- a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
++++ b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
+@@ -10,6 +10,7 @@
+ #include <string_view>
+ #include <unordered_map>
+ #include <unordered_set>
++#include <cstdint>
+ #include <vector>
+ 
+ namespace onnx_transpose_optimization {
+diff --git a/onnxruntime/core/providers/cpu/controlflow/loop.cc b/onnxruntime/core/providers/cpu/controlflow/loop.cc
+index c65dd2a04b..b33b1f1895 100644
+--- a/onnxruntime/core/providers/cpu/controlflow/loop.cc
++++ b/onnxruntime/core/providers/cpu/controlflow/loop.cc
+@@ -244,7 +244,7 @@ static Status ConcatenateCpuOutput(void* /*stream*/,
+ 
+   // we can't easily use a C++ template for the tensor element type,
+   // so use a span for some protection but work in bytes
+-  gsl::span<gsl::byte> output_span = gsl::make_span<gsl::byte>(static_cast<gsl::byte*>(output),
++  gsl::span<std::byte> output_span = gsl::make_span<std::byte>(static_cast<std::byte*>(output),
+                                                                output_size_in_bytes);
+ 
+   for (size_t i = 0, num_iterations = per_iteration_output.size(); i < num_iterations; ++i) {
+@@ -257,7 +257,7 @@ static Status ConcatenateCpuOutput(void* /*stream*/,
+                              " Expected:", per_iteration_shape, " Got:", iteration_data.Shape());
+     }
+ 
+-    auto src = gsl::make_span<const gsl::byte>(static_cast<const gsl::byte*>(iteration_data.DataRaw()),
++    auto src = gsl::make_span<const std::byte>(static_cast<const std::byte*>(iteration_data.DataRaw()),
+                                                bytes_per_iteration);
+     auto dst = output_span.subspan(i * bytes_per_iteration, bytes_per_iteration);
+     gsl::copy(src, dst);
+diff --git a/onnxruntime/core/providers/get_execution_providers.cc b/onnxruntime/core/providers/get_execution_providers.cc
+index 61c035bc29..541c7414c1 100644
+--- a/onnxruntime/core/providers/get_execution_providers.cc
++++ b/onnxruntime/core/providers/get_execution_providers.cc
+@@ -186,6 +186,14 @@ constexpr ProviderInfo kProvidersInPriorityOrder[] =
+             true,
+ #else
+             false,
++#endif
++        },
++        {
++            kEtGlowExecutionProvider,
++#ifdef USE_ETGLOW
++            true,
++#else
++            false,
+ #endif
+         },
+         {kCpuExecutionProvider, true},  // kCpuExecutionProvider is always last
+diff --git a/onnxruntime/core/providers/provider_factory_creators.h b/onnxruntime/core/providers/provider_factory_creators.h
+index 47d3f2f793..4cc3d540c0 100644
+--- a/onnxruntime/core/providers/provider_factory_creators.h
++++ b/onnxruntime/core/providers/provider_factory_creators.h
+@@ -101,3 +101,7 @@
+ #if defined(USE_AZURE)
+ #include "core/providers/azure/azure_provider_factory_creator.h"
+ #endif
++
++#if defined(USE_ETGLOW)
++#include "core/providers/etglow/etglow_provider_factory_creator.h"
++#endif
+diff --git a/onnxruntime/core/providers/shared_library/provider_api.h b/onnxruntime/core/providers/shared_library/provider_api.h
+index 2f54a04e15..dd0d0120cc 100644
+--- a/onnxruntime/core/providers/shared_library/provider_api.h
++++ b/onnxruntime/core/providers/shared_library/provider_api.h
+@@ -272,6 +272,7 @@ constexpr const char* kMIGraphXExecutionProvider = "MIGraphXExecutionProvider";
+ constexpr const char* kQnnExecutionProvider = "QNNExecutionProvider";
+ constexpr const char* kCpuExecutionProvider = "CPUExecutionProvider";
+ constexpr const char* kAzureExecutionProvider = "AzureExecutionProvider";
++constexpr const char* kEtGlowExecutionProvider = "EtGlowExecutionProvider";
+ 
+ template <typename T>
+ using IAllocatorUniquePtr = std::unique_ptr<T, std::function<void(T*)>>;
+diff --git a/onnxruntime/core/session/onnxruntime_c_api.cc b/onnxruntime/core/session/onnxruntime_c_api.cc
+index 5cf5ff9b3b..1fa65b61eb 100644
+--- a/onnxruntime/core/session/onnxruntime_c_api.cc
++++ b/onnxruntime/core/session/onnxruntime_c_api.cc
+@@ -73,6 +73,11 @@ ProviderInfo_Dnnl* TryGetProviderInfo_Dnnl();
+ const OrtDmlApi* GetOrtDmlApi(_In_ uint32_t version) NO_EXCEPTION;
+ #endif
+ 
++#ifdef USE_ETGLOW
++#include "core/providers/etglow/etglow_provider_factory.h"
++#include "core/providers/etglow/etglow_execution_provider_info.h"
++#endif
++
+ #ifdef ENABLE_EXTENSION_CUSTOM_OPS
+ #include "onnxruntime_extensions.h"
+ #endif
+@@ -2730,6 +2735,13 @@ static constexpr OrtApi ort_api_1_to_19 = {
+     &OrtApis::KernelInfoGetAllocator,
+     &OrtApis::AddExternalInitializersFromFilesInMemory,
+     // End of Version 18 - DO NOT MODIFY ABOVE (see above text for more information)
++
++    &OrtApis::SessionOptionsAppendExecutionProvider_ETGLOW,
++    &OrtApis::CreateEtGlowProviderOptions,
++    &OrtApis::UpdateEtGlowProviderOptions,
++    &OrtApis::GetEtGlowProviderOptionsAsString,
++    &OrtApis::ReleaseEtGlowProviderOptions
++
+ };
+ 
+ // OrtApiBase can never change as there is no way to know what version of OrtApiBase is returned by OrtGetApiBase.
+diff --git a/onnxruntime/core/session/ort_apis.h b/onnxruntime/core/session/ort_apis.h
+index fcae173e6c..72750f9fad 100644
+--- a/onnxruntime/core/session/ort_apis.h
++++ b/onnxruntime/core/session/ort_apis.h
+@@ -523,4 +523,16 @@ ORT_API_STATUS_IMPL(SessionOptionsAppendExecutionProvider_VitisAI, _In_ OrtSessi
+ ORT_API_STATUS_IMPL(KernelContext_GetScratchBuffer, _In_ const OrtKernelContext* context, _In_ const OrtMemoryInfo* mem_info, _In_ size_t count_or_bytes, _Outptr_ void** out);
+ 
+ ORT_API_STATUS_IMPL(KernelInfoGetAllocator, _In_ const OrtKernelInfo* info, _In_ OrtMemType mem_type, _Outptr_ OrtAllocator** out);
++
++ORT_API_STATUS_IMPL(SessionOptionsAppendExecutionProvider_ETGLOW,
++                    _In_ OrtSessionOptions* options, _In_ const OrtEtGlowProviderOptions* etglow_options);
++ORT_API_STATUS_IMPL(CreateEtGlowProviderOptions, _Outptr_ OrtEtGlowProviderOptions** out);
++ORT_API_STATUS_IMPL(UpdateEtGlowProviderOptions, _Inout_ OrtEtGlowProviderOptions* etglow_options,
++                    _In_reads_(num_keys) const char* const* provider_options_keys,
++                    _In_reads_(num_keys) const char* const* provider_options_values,
++                    size_t num_keys);
++ORT_API_STATUS_IMPL(GetEtGlowProviderOptionsAsString, _In_ const OrtEtGlowProviderOptions* etglow_options,
++                    _Inout_ OrtAllocator* allocator, _Outptr_ char** ptr);
++ORT_API(void, ReleaseEtGlowProviderOptions, _Frees_ptr_opt_ OrtEtGlowProviderOptions*);
++
+ }  // namespace OrtApis
+diff --git a/onnxruntime/core/session/provider_bridge_ort.cc b/onnxruntime/core/session/provider_bridge_ort.cc
+index 62e9cfe24c..85d7b2ec83 100644
+--- a/onnxruntime/core/session/provider_bridge_ort.cc
++++ b/onnxruntime/core/session/provider_bridge_ort.cc
+@@ -85,6 +85,7 @@ using IndexedSubGraph_SourceOfSchema = IndexedSubGraph::SourceOfSchema;
+ #include "core/providers/cann/cann_provider_factory_creator.h"
+ #include "core/providers/rocm/rocm_provider_factory_creator.h"
+ #include "core/providers/dnnl/dnnl_provider_factory_creator.h"
++#include "core/providers/etglow/etglow_provider_factory_creator.h"
+ #include "core/providers/migraphx/migraphx_provider_factory_creator.h"
+ #include "core/providers/openvino/openvino_provider_factory_creator.h"
+ #include "core/providers/tensorrt/tensorrt_provider_factory_creator.h"
+@@ -94,6 +95,7 @@ using IndexedSubGraph_SourceOfSchema = IndexedSubGraph::SourceOfSchema;
+ #include "core/providers/cann/cann_provider_factory.h"
+ #include "core/providers/rocm/rocm_provider_factory.h"
+ #include "core/providers/dnnl/dnnl_provider_factory.h"
++#include "core/providers/etglow/etglow_provider_factory.h"
+ #include "core/providers/migraphx/migraphx_provider_factory.h"
+ #include "core/providers/openvino/openvino_provider_factory.h"
+ #include "core/providers/tensorrt/tensorrt_provider_factory.h"
+@@ -137,6 +139,8 @@ ProviderInfo_ROCM& GetProviderInfo_ROCM();
+ ProviderHostCPU& GetProviderHostCPU();
+ ProviderInfo_MIGraphX* TryGetProviderInfo_MIGraphX();
+ ProviderInfo_MIGraphX& GetProviderInfo_MIGraphX();
++ProviderInfo_EtGlow* TryGetProviderInfo_EtGlow();
++ProviderInfo_EtGlow& GetProviderInfo_EtGlow();
+ ONNX_NAMESPACE::OpSchema CreateSchema(const std::string& domain, const std::vector<const OrtCustomOp*>& ops);
+ struct TensorShapeProto_Dimension_Iterator_Impl : TensorShapeProto_Dimension_Iterator {
+   TensorShapeProto_Dimension_Iterator_Impl(google::protobuf::internal::RepeatedPtrIterator<const onnx::TensorShapeProto_Dimension>&& v) : v_{std::move(v)} {}
+@@ -1712,6 +1716,8 @@ static ProviderLibrary s_library_vitisai(LIBRARY_PREFIX ORT_TSTR("onnxruntime_pr
+                                          false /* unload - On Linux if we unload the vitisai shared provider we crash */
+ #endif
+ );
++static ProviderLibrary s_library_etglow(LIBRARY_PREFIX ORT_TSTR("onnxruntime_providers_etglow") LIBRARY_EXTENSION);
++static ProviderLibrary s_library_etglow_test(LIBRARY_PREFIX ORT_TSTR("onnxruntime_providers_etglow_ut") LIBRARY_EXTENSION, false);
+ static ProviderLibrary s_library_openvino(LIBRARY_PREFIX ORT_TSTR("onnxruntime_providers_openvino") LIBRARY_EXTENSION);
+ static ProviderLibrary s_library_tensorrt(LIBRARY_PREFIX ORT_TSTR("onnxruntime_providers_tensorrt") LIBRARY_EXTENSION
+ #ifndef _WIN32
+@@ -1741,6 +1747,8 @@ static ProviderLibrary s_library_migraphx(LIBRARY_PREFIX ORT_TSTR("onnxruntime_p
+ void UnloadSharedProviders() {
+   s_library_dnnl.Unload();
+   s_library_vitisai.Unload();
++  s_library_etglow.Unload();
++  s_library_etglow_test.Unload();
+   s_library_openvino.Unload();
+   s_library_tensorrt.Unload();
+   s_library_cuda.Unload();
+@@ -1812,6 +1820,27 @@ std::shared_ptr<IExecutionProviderFactory> DnnlProviderFactoryCreator::Create(in
+   return s_library_dnnl.Get().CreateExecutionProviderFactory(use_arena);
+ }
+ 
++void ORTSessionOptionsToOrtEtGlowProviderOptions(ProviderOptions& etglow_options,
++                                                 const SessionOptions* session_options) {
++  /* todo */
++  bool disable_cpu_fallback = session_options->config_options.GetConfigOrDefault(
++                                  kOrtSessionOptionsDisableCPUEPFallback, "0") == "1";
++  if (disable_cpu_fallback)
++    etglow_options["disable_cpu_fallback"] = "true";
++}
++
++std::shared_ptr<IExecutionProviderFactory> EtGlowProviderFactoryCreator::Create(ProviderOptions* provider_options_map,
++                                                                                const SessionOptions* session_options) {  // Append session options applicable for EP to EP Provider options.
++  if (session_options) {
++    onnxruntime::ORTSessionOptionsToOrtEtGlowProviderOptions(*provider_options_map, session_options);
++  }
++  return s_library_etglow.Get().CreateExecutionProviderFactory(provider_options_map);
++}
++
++std::shared_ptr<IExecutionProviderFactory> EtGlowProviderFactoryCreator::Create(const OrtEtGlowProviderOptions* provider_options) {
++  return s_library_etglow.Get().CreateExecutionProviderFactory(provider_options);
++}
++
+ std::shared_ptr<IExecutionProviderFactory> MIGraphXProviderFactoryCreator::Create(int device_id) {
+   return s_library_migraphx.Get().CreateExecutionProviderFactory(device_id);
+ }
+@@ -2070,6 +2099,34 @@ ProviderInfo_MIGraphX& GetProviderInfo_MIGraphX() {
+   ORT_THROW("MIGraphX Provider not available, can't get interface for it");
+ }
+ 
++ProviderInfo_EtGlow* TryGetProviderInfo_EtGlow() try {
++  return reinterpret_cast<ProviderInfo_EtGlow*>(s_library_etglow.Get().GetInfo());
++} catch (const std::exception& exception) {
++  LOGS_DEFAULT(ERROR) << exception.what();
++  return nullptr;
++}
++
++ProviderInfo_EtGlow& GetProviderInfo_EtGlow() {
++  if (auto* info = TryGetProviderInfo_EtGlow())
++    return *info;
++
++  ORT_THROW("EtGlow Provider not available, can't get interface for it");
++}
++
++ProviderInfo_EtGlow* TryGetProviderInfo_EtGlow_Test() try {
++  return reinterpret_cast<ProviderInfo_EtGlow*>(s_library_etglow_test.Get().GetInfo());
++} catch (const std::exception& exception) {
++  LOGS_DEFAULT(ERROR) << exception.what();
++  return nullptr;
++}
++
++ProviderInfo_EtGlow& GetProviderInfo_EtGlow_Test() {
++  if (auto* info = TryGetProviderInfo_EtGlow_Test())
++    return *info;
++
++  ORT_THROW("EtGlow test Provider not available, can't get interface for it");
++}
++
+ void CopyGpuToCpu(
+     void* dst_ptr,
+     const void* src_ptr,
+@@ -2955,3 +3012,99 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider_VitisAI, _In_
+   return nullptr;
+   API_IMPL_END
+ }
++
++ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider_ETGLOW,
++                    _In_ OrtSessionOptions* options, _In_ const OrtEtGlowProviderOptions* etglow_options) {
++  API_IMPL_BEGIN
++  auto factory = onnxruntime::EtGlowProviderFactoryCreator::Create(etglow_options);
++  if (!factory) {
++    return OrtApis::CreateStatus(ORT_FAIL, "SessionOptionsAppendExecutionProvider_ETGLOW: Failed to load shared library");
++  }
++
++  options->provider_factories.push_back(factory);
++  return nullptr;
++  API_IMPL_END
++}
++
++ORT_API_STATUS_IMPL(OrtApis::CreateEtGlowProviderOptions, _Outptr_ OrtEtGlowProviderOptions** out) {
++  API_IMPL_BEGIN
++#ifdef USE_ETGLOW
++  auto options = std::make_unique<OrtEtGlowProviderOptions>();
++  *out = options.release();
++  return nullptr;
++#else
++  ORT_UNUSED_PARAMETER(out);
++  return CreateStatus(ORT_FAIL, "ETGLOW execution provider is not enabled in this build.");
++#endif
++  API_IMPL_END
++}
++
++ORT_API_STATUS_IMPL(OrtApis::UpdateEtGlowProviderOptions,
++                    _Inout_ OrtEtGlowProviderOptions* etglow_options,
++                    _In_reads_(num_keys) const char* const* provider_options_keys,
++                    _In_reads_(num_keys) const char* const* provider_options_values,
++                    size_t num_keys) {
++  API_IMPL_BEGIN
++#ifdef USE_ETGLOW
++  onnxruntime::ProviderOptions provider_options_map;
++  for (size_t i = 0; i != num_keys; ++i) {
++    if (provider_options_keys[i] == nullptr || provider_options_keys[i][0] == '\0' ||
++        provider_options_values[i] == nullptr || provider_options_values[i][0] == '\0') {
++      return OrtApis::CreateStatus(ORT_INVALID_ARGUMENT, "key/value cannot be empty");
++    }
++
++    provider_options_map[provider_options_keys[i]] = provider_options_values[i];
++  }
++
++  onnxruntime::s_library_etglow.Get().UpdateProviderOptions(reinterpret_cast<void*>(etglow_options), provider_options_map);
++  return nullptr;
++#else
++  ORT_UNUSED_PARAMETER(etglow_options);
++  ORT_UNUSED_PARAMETER(provider_options_keys);
++  ORT_UNUSED_PARAMETER(provider_options_values);
++  ORT_UNUSED_PARAMETER(num_keys);
++  return CreateStatus(ORT_FAIL, "ETGLOW execution provider is not enabled in this build.");
++#endif
++  API_IMPL_END
++}
++
++ORT_API_STATUS_IMPL(OrtApis::GetEtGlowProviderOptionsAsString,
++                    _In_ const OrtEtGlowProviderOptions* etglow_options, _Inout_ OrtAllocator* allocator,
++                    _Outptr_ char** ptr) {
++  API_IMPL_BEGIN
++#ifdef USE_ETGLOW
++  onnxruntime::ProviderOptions options =
++      onnxruntime::s_library_etglow.Get().GetProviderOptions(reinterpret_cast<const void*>(etglow_options));
++  auto it = options.begin();
++  std::string options_str;
++
++  while (it != options.end()) {
++    if (!it->second.empty()) {
++      if (!options_str.empty()) {
++        options_str += ";";
++      }
++      options_str += it->first;
++      options_str += "=";
++      options_str += it->second;
++    }
++    it++;
++  }
++
++  *ptr = onnxruntime::StrDup(options_str, allocator);
++  return nullptr;
++#else
++  ORT_UNUSED_PARAMETER(etglow_options);
++  ORT_UNUSED_PARAMETER(allocator);
++  ORT_UNUSED_PARAMETER(ptr);
++  return CreateStatus(ORT_FAIL, "ETGLOW execution provider is not enabled in this build.");
++#endif
++  API_IMPL_END
++}
++
++ORT_API(void, OrtApis::ReleaseEtGlowProviderOptions, _Frees_ptr_opt_ OrtEtGlowProviderOptions* ptr) {
++#ifdef USE_ETGLOW
++  std::unique_ptr<OrtEtGlowProviderOptions> p(ptr);
++#else
++  ORT_UNUSED_PARAMETER(ptr);
++#endif
++}
+diff --git a/onnxruntime/core/session/provider_registration.cc b/onnxruntime/core/session/provider_registration.cc
+index db8b97f6d2..f43e8c5fd7 100644
+--- a/onnxruntime/core/session/provider_registration.cc
++++ b/onnxruntime/core/session/provider_registration.cc
+@@ -147,11 +147,17 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
+     options->provider_factories.push_back(JsProviderFactoryCreator::Create(provider_options, &(options->value)));
+ #else
+     status = create_not_supported_status();
++#endif
++  } else if (strcmp(provider_name, "ETGLOW") == 0) {
++#if defined(USE_ETGLOW)
++    options->provider_factories.push_back(EtGlowProviderFactoryCreator::Create(&provider_options, &(options->value)));
++#else
++    status = create_not_supported_status();
+ #endif
+   } else {
+     ORT_UNUSED_PARAMETER(options);
+     status = OrtApis::CreateStatus(ORT_INVALID_ARGUMENT,
+-                                   "Unknown provider name. Currently supported values are 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
++                                   "Unknown provider name. Currently supported values are 'ETGLOW', 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
+   }
+ 
+   return status;

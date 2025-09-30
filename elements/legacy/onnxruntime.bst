@@ -35,7 +35,6 @@ depends:
 - legacy/glow.bst
 
 variables:
-  command-subdir: onnx/onnxruntime
   conf-root: cmake
   (@):
   - include/_private/legacy-toolchain.yml
@@ -59,8 +58,6 @@ config:
   - |
     patchelf --clear-execstack %{install-root}%{lib}/python*/site-packages/onnxruntime/capi/*.so
 
-#- kind: git_repo
-#  url: github:microsoft/onnxruntime
 #  track: v1.19.2
 #  ref: v1.19.2-0-gffceed9d44f2f3efb9dd69fa75fea51163c91d91
 #-kind: patch
@@ -72,10 +69,11 @@ config:
 #  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
 #-kind: patch
 #  path: static/patches/onnxruntime-cmake.patch
+
 sources:
 - kind: git_repo
-  url: github:nekkoai/atlantis
-  track: master
-  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
-- kind: patch
-  path: static/patches/onnxruntime-cmake.patch
+  url: github:microsoft/onnxruntime
+  track: v1.19.0
+  ref: v1.19.0-0-g26250ae74d2c9a3c6860625ba4a147ddfb936907
+- kind: patch_queue
+  path: static/patches/onnxruntime

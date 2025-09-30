@@ -1,0 +1,608 @@
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
+index d9dccd5c50..913dbf7e70 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Attribute.py
+@@ -279,7 +279,7 @@ def AddFloats(builder, floats):
+ def AttributeStartFloatsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartFloatsVector(builder, numElems: int) -> int:
++def StartFloatsVector(builder, numElems):
+     return AttributeStartFloatsVector(builder, numElems)
+ 
+ def AttributeAddInts(builder, ints):
+@@ -291,7 +291,7 @@ def AddInts(builder, ints):
+ def AttributeStartIntsVector(builder, numElems):
+     return builder.StartVector(8, numElems, 8)
+ 
+-def StartIntsVector(builder, numElems: int) -> int:
++def StartIntsVector(builder, numElems):
+     return AttributeStartIntsVector(builder, numElems)
+ 
+ def AttributeAddStrings(builder, strings):
+@@ -303,7 +303,7 @@ def AddStrings(builder, strings):
+ def AttributeStartStringsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartStringsVector(builder, numElems: int) -> int:
++def StartStringsVector(builder, numElems):
+     return AttributeStartStringsVector(builder, numElems)
+ 
+ def AttributeAddTensors(builder, tensors):
+@@ -315,7 +315,7 @@ def AddTensors(builder, tensors):
+ def AttributeStartTensorsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartTensorsVector(builder, numElems: int) -> int:
++def StartTensorsVector(builder, numElems):
+     return AttributeStartTensorsVector(builder, numElems)
+ 
+ def AttributeAddGraphs(builder, graphs):
+@@ -327,7 +327,7 @@ def AddGraphs(builder, graphs):
+ def AttributeStartGraphsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartGraphsVector(builder, numElems: int) -> int:
++def StartGraphsVector(builder, numElems):
+     return AttributeStartGraphsVector(builder, numElems)
+ 
+ def AttributeEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
+index 9d5f5febd4..9986bc1cab 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Checkpoint.py
+@@ -109,7 +109,7 @@ def AddOptimizerGroups(builder, optimizerGroups):
+ def CheckpointStartOptimizerGroupsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartOptimizerGroupsVector(builder, numElems: int) -> int:
++def StartOptimizerGroupsVector(builder, numElems):
+     return CheckpointStartOptimizerGroupsVector(builder, numElems)
+ 
+ def CheckpointAddPropertyBag(builder, propertyBag):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
+index 50bf8819e0..3293ed5d44 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedKernelCreateInfos.py
+@@ -98,7 +98,7 @@ def AddNodeIndices(builder, nodeIndices):
+ def DeprecatedKernelCreateInfosStartNodeIndicesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartNodeIndicesVector(builder, numElems: int) -> int:
++def StartNodeIndicesVector(builder, numElems):
+     return DeprecatedKernelCreateInfosStartNodeIndicesVector(builder, numElems)
+ 
+ def DeprecatedKernelCreateInfosAddKernelDefHashes(builder, kernelDefHashes):
+@@ -110,7 +110,7 @@ def AddKernelDefHashes(builder, kernelDefHashes):
+ def DeprecatedKernelCreateInfosStartKernelDefHashesVector(builder, numElems):
+     return builder.StartVector(8, numElems, 8)
+ 
+-def StartKernelDefHashesVector(builder, numElems: int) -> int:
++def StartKernelDefHashesVector(builder, numElems):
+     return DeprecatedKernelCreateInfosStartKernelDefHashesVector(builder, numElems)
+ 
+ def DeprecatedKernelCreateInfosEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
+index 485346f92f..52e28842a9 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/DeprecatedSessionState.py
+@@ -86,7 +86,7 @@ def AddSubGraphSessionStates(builder, subGraphSessionStates):
+ def DeprecatedSessionStateStartSubGraphSessionStatesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartSubGraphSessionStatesVector(builder, numElems: int) -> int:
++def StartSubGraphSessionStatesVector(builder, numElems):
+     return DeprecatedSessionStateStartSubGraphSessionStatesVector(builder, numElems)
+ 
+ def DeprecatedSessionStateEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
+index 98cac5edb3..086fea6349 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Graph.py
+@@ -226,7 +226,7 @@ def AddInitializers(builder, initializers):
+ def GraphStartInitializersVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartInitializersVector(builder, numElems: int) -> int:
++def StartInitializersVector(builder, numElems):
+     return GraphStartInitializersVector(builder, numElems)
+ 
+ def GraphAddNodeArgs(builder, nodeArgs):
+@@ -238,7 +238,7 @@ def AddNodeArgs(builder, nodeArgs):
+ def GraphStartNodeArgsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartNodeArgsVector(builder, numElems: int) -> int:
++def StartNodeArgsVector(builder, numElems):
+     return GraphStartNodeArgsVector(builder, numElems)
+ 
+ def GraphAddNodes(builder, nodes):
+@@ -250,7 +250,7 @@ def AddNodes(builder, nodes):
+ def GraphStartNodesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartNodesVector(builder, numElems: int) -> int:
++def StartNodesVector(builder, numElems):
+     return GraphStartNodesVector(builder, numElems)
+ 
+ def GraphAddMaxNodeIndex(builder, maxNodeIndex):
+@@ -268,7 +268,7 @@ def AddNodeEdges(builder, nodeEdges):
+ def GraphStartNodeEdgesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartNodeEdgesVector(builder, numElems: int) -> int:
++def StartNodeEdgesVector(builder, numElems):
+     return GraphStartNodeEdgesVector(builder, numElems)
+ 
+ def GraphAddInputs(builder, inputs):
+@@ -280,7 +280,7 @@ def AddInputs(builder, inputs):
+ def GraphStartInputsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartInputsVector(builder, numElems: int) -> int:
++def StartInputsVector(builder, numElems):
+     return GraphStartInputsVector(builder, numElems)
+ 
+ def GraphAddOutputs(builder, outputs):
+@@ -292,7 +292,7 @@ def AddOutputs(builder, outputs):
+ def GraphStartOutputsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartOutputsVector(builder, numElems: int) -> int:
++def StartOutputsVector(builder, numElems):
+     return GraphStartOutputsVector(builder, numElems)
+ 
+ def GraphAddSparseInitializers(builder, sparseInitializers):
+@@ -304,7 +304,7 @@ def AddSparseInitializers(builder, sparseInitializers):
+ def GraphStartSparseInitializersVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartSparseInitializersVector(builder, numElems: int) -> int:
++def StartSparseInitializersVector(builder, numElems):
+     return GraphStartSparseInitializersVector(builder, numElems)
+ 
+ def GraphAddRuntimeOptimizations(builder, runtimeOptimizations):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
+index 467102d24c..0c9f813030 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrArgsEntry.py
+@@ -81,7 +81,7 @@ def AddArgs(builder, args):
+ def KernelTypeStrArgsEntryStartArgsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartArgsVector(builder, numElems: int) -> int:
++def StartArgsVector(builder, numElems):
+     return KernelTypeStrArgsEntryStartArgsVector(builder, numElems)
+ 
+ def KernelTypeStrArgsEntryEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
+index ff98bf0d5f..428a99cdc8 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/KernelTypeStrResolver.py
+@@ -68,7 +68,7 @@ def AddOpKernelTypeStrArgs(builder, opKernelTypeStrArgs):
+ def KernelTypeStrResolverStartOpKernelTypeStrArgsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartOpKernelTypeStrArgsVector(builder, numElems: int) -> int:
++def StartOpKernelTypeStrArgsVector(builder, numElems):
+     return KernelTypeStrResolverStartOpKernelTypeStrArgsVector(builder, numElems)
+ 
+ def KernelTypeStrResolverEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
+index f414464090..be77c776df 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Model.py
+@@ -159,7 +159,7 @@ def AddOpsetImport(builder, opsetImport):
+ def ModelStartOpsetImportVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartOpsetImportVector(builder, numElems: int) -> int:
++def StartOpsetImportVector(builder, numElems):
+     return ModelStartOpsetImportVector(builder, numElems)
+ 
+ def ModelAddProducerName(builder, producerName):
+@@ -213,7 +213,7 @@ def AddMetadataProps(builder, metadataProps):
+ def ModelStartMetadataPropsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartMetadataPropsVector(builder, numElems: int) -> int:
++def StartMetadataPropsVector(builder, numElems):
+     return ModelStartMetadataPropsVector(builder, numElems)
+ 
+ def ModelEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
+index 6c997ef8c1..6e2b431543 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ModuleState.py
+@@ -107,7 +107,7 @@ def AddRequiresGradParams(builder, requiresGradParams):
+ def ModuleStateStartRequiresGradParamsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartRequiresGradParamsVector(builder, numElems: int) -> int:
++def StartRequiresGradParamsVector(builder, numElems):
+     return ModuleStateStartRequiresGradParamsVector(builder, numElems)
+ 
+ def ModuleStateAddFrozenParams(builder, frozenParams):
+@@ -119,7 +119,7 @@ def AddFrozenParams(builder, frozenParams):
+ def ModuleStateStartFrozenParamsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartFrozenParamsVector(builder, numElems: int) -> int:
++def StartFrozenParamsVector(builder, numElems):
+     return ModuleStateStartFrozenParamsVector(builder, numElems)
+ 
+ def ModuleStateAddIsNominalState(builder, isNominalState):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
+index 85ea3b5c91..705da50034 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Node.py
+@@ -259,7 +259,7 @@ def AddInputs(builder, inputs):
+ def NodeStartInputsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartInputsVector(builder, numElems: int) -> int:
++def StartInputsVector(builder, numElems):
+     return NodeStartInputsVector(builder, numElems)
+ 
+ def NodeAddOutputs(builder, outputs):
+@@ -271,7 +271,7 @@ def AddOutputs(builder, outputs):
+ def NodeStartOutputsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartOutputsVector(builder, numElems: int) -> int:
++def StartOutputsVector(builder, numElems):
+     return NodeStartOutputsVector(builder, numElems)
+ 
+ def NodeAddAttributes(builder, attributes):
+@@ -283,7 +283,7 @@ def AddAttributes(builder, attributes):
+ def NodeStartAttributesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartAttributesVector(builder, numElems: int) -> int:
++def StartAttributesVector(builder, numElems):
+     return NodeStartAttributesVector(builder, numElems)
+ 
+ def NodeAddInputArgCounts(builder, inputArgCounts):
+@@ -295,7 +295,7 @@ def AddInputArgCounts(builder, inputArgCounts):
+ def NodeStartInputArgCountsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartInputArgCountsVector(builder, numElems: int) -> int:
++def StartInputArgCountsVector(builder, numElems):
+     return NodeStartInputArgCountsVector(builder, numElems)
+ 
+ def NodeAddImplicitInputs(builder, implicitInputs):
+@@ -307,7 +307,7 @@ def AddImplicitInputs(builder, implicitInputs):
+ def NodeStartImplicitInputsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartImplicitInputsVector(builder, numElems: int) -> int:
++def StartImplicitInputsVector(builder, numElems):
+     return NodeStartImplicitInputsVector(builder, numElems)
+ 
+ def NodeEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
+index b2fa4a582d..68689a3e23 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodeEdge.py
+@@ -104,7 +104,7 @@ def AddInputEdges(builder, inputEdges):
+ def NodeEdgeStartInputEdgesVector(builder, numElems):
+     return builder.StartVector(12, numElems, 4)
+ 
+-def StartInputEdgesVector(builder, numElems: int) -> int:
++def StartInputEdgesVector(builder, numElems):
+     return NodeEdgeStartInputEdgesVector(builder, numElems)
+ 
+ def NodeEdgeAddOutputEdges(builder, outputEdges):
+@@ -116,7 +116,7 @@ def AddOutputEdges(builder, outputEdges):
+ def NodeEdgeStartOutputEdgesVector(builder, numElems):
+     return builder.StartVector(12, numElems, 4)
+ 
+-def StartOutputEdgesVector(builder, numElems: int) -> int:
++def StartOutputEdgesVector(builder, numElems):
+     return NodeEdgeStartOutputEdgesVector(builder, numElems)
+ 
+ def NodeEdgeEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
+index 00d9fe4dec..a4a498c3ea 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/NodesToOptimizeIndices.py
+@@ -114,7 +114,7 @@ def AddNodeIndices(builder, nodeIndices):
+ def NodesToOptimizeIndicesStartNodeIndicesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartNodeIndicesVector(builder, numElems: int) -> int:
++def StartNodeIndicesVector(builder, numElems):
+     return NodesToOptimizeIndicesStartNodeIndicesVector(builder, numElems)
+ 
+ def NodesToOptimizeIndicesAddNumInputs(builder, numInputs):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
+index 33c028d39e..10a0d0e250 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OpIdKernelTypeStrArgsEntry.py
+@@ -81,7 +81,7 @@ def AddKernelTypeStrArgs(builder, kernelTypeStrArgs):
+ def OpIdKernelTypeStrArgsEntryStartKernelTypeStrArgsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartKernelTypeStrArgsVector(builder, numElems: int) -> int:
++def StartKernelTypeStrArgsVector(builder, numElems):
+     return OpIdKernelTypeStrArgsEntryStartKernelTypeStrArgsVector(builder, numElems)
+ 
+ def OpIdKernelTypeStrArgsEntryEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
+index 70c8a6d009..c92e6c3827 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/OptimizerGroup.py
+@@ -107,7 +107,7 @@ def AddOptimizerStates(builder, optimizerStates):
+ def OptimizerGroupStartOptimizerStatesVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartOptimizerStatesVector(builder, numElems: int) -> int:
++def StartOptimizerStatesVector(builder, numElems):
+     return OptimizerGroupStartOptimizerStatesVector(builder, numElems)
+ 
+ def OptimizerGroupEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
+index f8a31ff92b..0cdde97a3a 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/ParameterOptimizerState.py
+@@ -81,7 +81,7 @@ def AddMomentums(builder, momentums):
+ def ParameterOptimizerStateStartMomentumsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartMomentumsVector(builder, numElems: int) -> int:
++def StartMomentumsVector(builder, numElems):
+     return ParameterOptimizerStateStartMomentumsVector(builder, numElems)
+ 
+ def ParameterOptimizerStateEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
+index adfb0785ad..bb93c62ef5 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/PropertyBag.py
+@@ -118,7 +118,7 @@ def AddInts(builder, ints):
+ def PropertyBagStartIntsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartIntsVector(builder, numElems: int) -> int:
++def StartIntsVector(builder, numElems):
+     return PropertyBagStartIntsVector(builder, numElems)
+ 
+ def PropertyBagAddFloats(builder, floats):
+@@ -130,7 +130,7 @@ def AddFloats(builder, floats):
+ def PropertyBagStartFloatsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartFloatsVector(builder, numElems: int) -> int:
++def StartFloatsVector(builder, numElems):
+     return PropertyBagStartFloatsVector(builder, numElems)
+ 
+ def PropertyBagAddStrings(builder, strings):
+@@ -142,7 +142,7 @@ def AddStrings(builder, strings):
+ def PropertyBagStartStringsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartStringsVector(builder, numElems: int) -> int:
++def StartStringsVector(builder, numElems):
+     return PropertyBagStartStringsVector(builder, numElems)
+ 
+ def PropertyBagEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
+index ecfaaf85e6..8a447f0dfd 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecord.py
+@@ -95,7 +95,7 @@ def AddProducedOpIds(builder, producedOpIds):
+ def RuntimeOptimizationRecordStartProducedOpIdsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartProducedOpIdsVector(builder, numElems: int) -> int:
++def StartProducedOpIdsVector(builder, numElems):
+     return RuntimeOptimizationRecordStartProducedOpIdsVector(builder, numElems)
+ 
+ def RuntimeOptimizationRecordEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
+index 01851121f4..e32f1847c0 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizationRecordContainerEntry.py
+@@ -81,7 +81,7 @@ def AddRuntimeOptimizationRecords(builder, runtimeOptimizationRecords):
+ def RuntimeOptimizationRecordContainerEntryStartRuntimeOptimizationRecordsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartRuntimeOptimizationRecordsVector(builder, numElems: int) -> int:
++def StartRuntimeOptimizationRecordsVector(builder, numElems):
+     return RuntimeOptimizationRecordContainerEntryStartRuntimeOptimizationRecordsVector(builder, numElems)
+ 
+ def RuntimeOptimizationRecordContainerEntryEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
+index 6f1591691a..4c8cff1d03 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/RuntimeOptimizations.py
+@@ -69,7 +69,7 @@ def AddRecords(builder, records):
+ def RuntimeOptimizationsStartRecordsVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartRecordsVector(builder, numElems: int) -> int:
++def StartRecordsVector(builder, numElems):
+     return RuntimeOptimizationsStartRecordsVector(builder, numElems)
+ 
+ def RuntimeOptimizationsEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
+index 0603ef3cd0..390b514fb4 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Shape.py
+@@ -68,7 +68,7 @@ def AddDim(builder, dim):
+ def ShapeStartDimVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartDimVector(builder, numElems: int) -> int:
++def StartDimVector(builder, numElems):
+     return ShapeStartDimVector(builder, numElems)
+ 
+ def ShapeEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
+index 48da36c9d9..4653cdd8f5 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/SparseTensor.py
+@@ -104,7 +104,7 @@ def AddDims(builder, dims):
+ def SparseTensorStartDimsVector(builder, numElems):
+     return builder.StartVector(8, numElems, 8)
+ 
+-def StartDimsVector(builder, numElems: int) -> int:
++def StartDimsVector(builder, numElems):
+     return SparseTensorStartDimsVector(builder, numElems)
+ 
+ def SparseTensorEnd(builder):
+diff --git a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
+index 6b745c2a67..691dc22402 100644
+--- a/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
++++ b/onnxruntime/core/flatbuffers/ort_flatbuffers_py/fbs/Tensor.py
+@@ -157,7 +157,7 @@ def AddDims(builder, dims):
+ def TensorStartDimsVector(builder, numElems):
+     return builder.StartVector(8, numElems, 8)
+ 
+-def StartDimsVector(builder, numElems: int) -> int:
++def StartDimsVector(builder, numElems):
+     return TensorStartDimsVector(builder, numElems)
+ 
+ def TensorAddDataType(builder, dataType):
+@@ -175,7 +175,7 @@ def AddRawData(builder, rawData):
+ def TensorStartRawDataVector(builder, numElems):
+     return builder.StartVector(1, numElems, 1)
+ 
+-def StartRawDataVector(builder, numElems: int) -> int:
++def StartRawDataVector(builder, numElems):
+     return TensorStartRawDataVector(builder, numElems)
+ 
+ def TensorAddStringData(builder, stringData):
+@@ -187,7 +187,7 @@ def AddStringData(builder, stringData):
+ def TensorStartStringDataVector(builder, numElems):
+     return builder.StartVector(4, numElems, 4)
+ 
+-def StartStringDataVector(builder, numElems: int) -> int:
++def StartStringDataVector(builder, numElems):
+     return TensorStartStringDataVector(builder, numElems)
+ 
+ def TensorAddExternalDataOffset(builder, externalDataOffset):
+diff --git a/onnxruntime/core/flatbuffers/schema/ort.fbs.h b/onnxruntime/core/flatbuffers/schema/ort.fbs.h
+index 50fc1db862..31dd7bf05f 100644
+--- a/onnxruntime/core/flatbuffers/schema/ort.fbs.h
++++ b/onnxruntime/core/flatbuffers/schema/ort.fbs.h
+@@ -4,13 +4,13 @@
+ #ifndef FLATBUFFERS_GENERATED_ORT_ONNXRUNTIME_FBS_H_
+ #define FLATBUFFERS_GENERATED_ORT_ONNXRUNTIME_FBS_H_
+ 
+-#include "core/common/flatbuffers.h"
++#include "flatbuffers/flatbuffers.h"
+ 
+ // Ensure the included flatbuffers.h is the same version as when this file was
+ // generated, otherwise it may not be compatible.
+-static_assert(FLATBUFFERS_VERSION_MAJOR == 23 &&
+-              FLATBUFFERS_VERSION_MINOR == 5 &&
+-              FLATBUFFERS_VERSION_REVISION == 26,
++static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
++              FLATBUFFERS_VERSION_MINOR == 2 &&
++              FLATBUFFERS_VERSION_REVISION == 10,
+              "Non-compatible flatbuffers version included");
+ 
+ namespace onnxruntime {
+@@ -2001,6 +2001,12 @@ struct RuntimeOptimizationRecordContainerEntry FLATBUFFERS_FINAL_CLASS : private
+   int KeyCompareWithValue(const char *_optimizer_name) const {
+     return strcmp(optimizer_name()->c_str(), _optimizer_name);
+   }
++  template<typename StringType>
++  int KeyCompareWithValue(const StringType& _optimizer_name) const {
++    if (optimizer_name()->c_str() < _optimizer_name) return -1;
++    if (_optimizer_name < optimizer_name()->c_str()) return 1;
++    return 0;
++  }
+   const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::RuntimeOptimizationRecord>> *runtime_optimization_records() const {
+     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::RuntimeOptimizationRecord>> *>(VT_RUNTIME_OPTIMIZATION_RECORDS);
+   }
+@@ -2600,6 +2606,12 @@ struct DeprecatedSubGraphSessionState FLATBUFFERS_FINAL_CLASS : private ::flatbu
+   int KeyCompareWithValue(const char *_graph_id) const {
+     return strcmp(graph_id()->c_str(), _graph_id);
+   }
++  template<typename StringType>
++  int KeyCompareWithValue(const StringType& _graph_id) const {
++    if (graph_id()->c_str() < _graph_id) return -1;
++    if (_graph_id < graph_id()->c_str()) return 1;
++    return 0;
++  }
+   const onnxruntime::fbs::DeprecatedSessionState *session_state() const {
+     return GetPointer<const onnxruntime::fbs::DeprecatedSessionState *>(VT_SESSION_STATE);
+   }
+@@ -2788,6 +2800,12 @@ struct KernelTypeStrArgsEntry FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::T
+   int KeyCompareWithValue(const char *_kernel_type_str) const {
+     return strcmp(kernel_type_str()->c_str(), _kernel_type_str);
+   }
++  template<typename StringType>
++  int KeyCompareWithValue(const StringType& _kernel_type_str) const {
++    if (kernel_type_str()->c_str() < _kernel_type_str) return -1;
++    if (_kernel_type_str < kernel_type_str()->c_str()) return 1;
++    return 0;
++  }
+   const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::ArgTypeAndIndex>> *args() const {
+     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::ArgTypeAndIndex>> *>(VT_ARGS);
+   }
+@@ -2861,6 +2879,12 @@ struct OpIdKernelTypeStrArgsEntry FLATBUFFERS_FINAL_CLASS : private ::flatbuffer
+   int KeyCompareWithValue(const char *_op_id) const {
+     return strcmp(op_id()->c_str(), _op_id);
+   }
++  template<typename StringType>
++  int KeyCompareWithValue(const StringType& _op_id) const {
++    if (op_id()->c_str() < _op_id) return -1;
++    if (_op_id < op_id()->c_str()) return 1;
++    return 0;
++  }
+   const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::KernelTypeStrArgsEntry>> *kernel_type_str_args() const {
+     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<onnxruntime::fbs::KernelTypeStrArgsEntry>> *>(VT_KERNEL_TYPE_STR_ARGS);
+   }
+diff --git a/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h b/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
+index 4b2c950d03..aea14b6aaf 100644
+--- a/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
++++ b/onnxruntime/core/flatbuffers/schema/ort_training_checkpoint.fbs.h
+@@ -4,13 +4,13 @@
+ #ifndef FLATBUFFERS_GENERATED_ORTTRAININGCHECKPOINT_ONNXRUNTIME_FBS_H_
+ #define FLATBUFFERS_GENERATED_ORTTRAININGCHECKPOINT_ONNXRUNTIME_FBS_H_
+ 
+-#include "core/common/flatbuffers.h"
++#include "flatbuffers/flatbuffers.h"
+ 
+ // Ensure the included flatbuffers.h is the same version as when this file was
+ // generated, otherwise it may not be compatible.
+-static_assert(FLATBUFFERS_VERSION_MAJOR == 23 &&
+-              FLATBUFFERS_VERSION_MINOR == 5 &&
+-              FLATBUFFERS_VERSION_REVISION == 26,
++static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
++              FLATBUFFERS_VERSION_MINOR == 2 &&
++              FLATBUFFERS_VERSION_REVISION == 10,
+              "Non-compatible flatbuffers version included");
+ 
+ #include "ort.fbs.h"
+diff --git a/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h b/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
+index 0c8e89a80e..7ad3eb1783 100644
+--- a/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
++++ b/onnxruntime/test/flatbuffers/flatbuffers_utils_test.fbs.h
+@@ -4,18 +4,16 @@
+ #ifndef FLATBUFFERS_GENERATED_FLATBUFFERSUTILSTEST_ONNXRUNTIME_FBS_TEST_H_
+ #define FLATBUFFERS_GENERATED_FLATBUFFERSUTILSTEST_ONNXRUNTIME_FBS_TEST_H_
+ 
+-// manual edit to use wrapper in core/common
+-#include "core/common/flatbuffers.h"
++#include "flatbuffers/flatbuffers.h"
+ 
+ // Ensure the included flatbuffers.h is the same version as when this file was
+ // generated, otherwise it may not be compatible.
+-static_assert(FLATBUFFERS_VERSION_MAJOR == 23 &&
+-              FLATBUFFERS_VERSION_MINOR == 5 &&
+-              FLATBUFFERS_VERSION_REVISION == 26,
++static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
++              FLATBUFFERS_VERSION_MINOR == 2 &&
++              FLATBUFFERS_VERSION_REVISION == 10,
+              "Non-compatible flatbuffers version included");
+ 
+-// manual edit to set include path for this
+-#include "core/flatbuffers/schema/ort.fbs.h"
++#include "ort.fbs.h"
+ 
+ namespace onnxruntime {
+ namespace fbs {

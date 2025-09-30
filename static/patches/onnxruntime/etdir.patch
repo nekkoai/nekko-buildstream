@@ -1,0 +1,891 @@
+diff --git a/.et/CHANGELOG.md b/.et/CHANGELOG.md
+new file mode 100644
+index 0000000000..1b125e4ab5
+--- /dev/null
++++ b/.et/CHANGELOG.md
+@@ -0,0 +1,262 @@
++# Changelog
++All notable changes to this project will be documented in this file.
++
++The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
++and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
++
++[[_TOC_]]
++
++## [Unreleased]
++### Added
++### Changed
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++## [1.19.0.5] - 2025-01-16
++### Added
++### Changed
++- [SW-22090] Consistent thread ids in traces
++- [SW-22144] Introduce InitializedTensorElimination optimization pass to remove weights loaded by glow
++- Skip tests affected by neura::ETensor::haveMutualOverlay bug
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++## [1.19.0.4] - 2024-11-28
++### Added
++### Changed
++- [SW-22051] Improve onnxruntime-samples CI coverage
++- [SW-22051] Pin artifacts_mgr_client version
++- Runtime now creates multiple streams per device and rotates assignment
++- [SW-22108] Improve CreateEtGlowAllocator
++- [SW-22045] Remove syncrhonization in DoInference
++- [SW-22108] Expose device_mem_limit and arena_extend_strategy to user through ProviderOptions
++- [SW-22108] Add TestArenaShrinkageAfterRun test
++- [SW-22108] Catch rt::Exception in EtGlowDeviceAllocator::Alloc and return nullptr to let the allocator react
++- [SW-22108] Handle OrtEtGlowProviderOptions default initialization with constructor
++- [SW-22108] Change default ArenaExtendStrategy to kSameAsRequested
++- Add test_prelu XFAILs (default mode)
++- [SW-22151] Add support for perfetto Counter events
++- [SW-22108] Reduce IOBindings device memory allocator greedyness
++### Deprecated
++### Removed
++### Fixed
++- [SW-22048] Fix async mismatches
++- [SW-22138] Include onnxruntime.providers.etglow in package wheel
++- [SW-22108] Fixup CreateExecutionProviderFactory
++### Security
++
++## [1.19.0.3] - 2024-09-31
++### Added
++- [SW-22023] Expose tracing options in OrtEtGlowProviderOptions
++### Changed
++### Deprecated
++### Removed
++### Fixed
++- Revert "ETGLOW EP now creates multiple streams per device and rotates assignment" to mitigate SW-22048
++### Security
++
++## [1.19.0.2] - 2024-09-18
++### Added
++- [SW-21578] Implement IO-Binding for ETGLOW EP
++### Changed
++- (Conan) Depend on glow/0.15.1 and runtime/0.16.0
++- [SW-21579] Let user-provided implicit-placeholders define implicit-placeholders
++- ETGLOW EP now creates multiple streams per device and rotates assignment
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++## [1.19.0.1] - 2024-09-04
++### Added
++### Changed
++- Rebased ETGLOW EP over v1.19.0
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++## [1.17.1.4] - 2024-08-27
++### Added
++- [SW-20342] Integrate trace infra into ETGLOW EP (EtGlowProfiler) 
++### Changed
++- Bump glow to 0.15.0
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++## [1.17.1.3] - 2024-07-30
++### Added
++### Changed
++- [SW-20388] Remove XFAILs for onnx Clip operator tests
++- [SW-20927][SW-21126] Enable model optimization in offline mode for ETGLOW EP + LayerNormFusion Graph Optimization
++- [SW-21363] Enable SimplifiedLayerNormalization fusion for ETGLOW EP
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++## [1.17.1.2] - 2024-07-03
++### Added
++- (ci) Protect vertical-ai bundle generation adding a CI silicon job
++- (ci) Protect onnx-model-zoo models executions adding a silicon CI silicon job
++- (ci) Protect onnxruntime-samples execution adding a CI silicon job
++- (ci) Protect onnxruntime_perf_test tool adding a Ci silicon job
++- [SW-20344] Add QuantizeLinear support checks
++### Changed
++- [SW-20596] Implement EtGlowDataTransfer/EtGlowDeviceAllocator/EtGlowStream to allow ORT handle copies from/to the device
++   * (ep) This enables partitioning models between CPU and ETGLOW EP(s)
++   * (ep) Transformed ETGLOW EP registration form a CPU EP kind to a GPU EP kind
++   * (node checks) Added EtGlowReduceNodeCompatibility to report when a Reduce{Sum/Mean/Min/Prod/SumSquare} op is supported
++   * (node checks) Added EtGlowSqueezeNodeCapability to check if Squeeze/Unsqueeze are supported
++   * (node checks) Refactored Node compatibility checks to report the reason why a node is not supported
++   * (node checks) EtGlowRangeNodeCapability must discard nodes whose start/limit/delta are not constants
++   * (node checks) Add EtGlowUpsampleNodeCapability 
++   * (node checks) Add EtGlowConvTransposeNodeCapability
++   * (node checks) Do not accept type_uint8 for Idendity
++   * (tests) Added RunMnist in etglow_basic_tests
++   * (tests) Borrow internal tests flow implemented in CUDA EP to be able to write unit tests for ETGLOW internal classes
++   * (ep) Separate production public interface (etglow_provider_interface.cc) from the rest of the EP implementation
++   * (tests) Added libonnxruntime_providers_etglow_ut.so which contains a dummy EP loaded at runtime when testing
++   * (ep) Provide 'modelName' to glow via GlowAPI::LoadOptions to avoid problems registering models
++- [SW-20366] **Breaking Change** Change ETGLOW EP defaults
++   * (ep) Change default initialization from 'greedy' mode to non-greedy. Enables EP to report the true capabilities to ORT.
++      ORT will partition graphs based on that information.
++   * (api) Expose new knobs in OrtEtGlowProviderOptions/EtGlowExecutionProviderInfo:
++     * 'et_greedy': knob to control the greedy behavior (0 disabled, non-zero enabled)
++     * 'et_fail_if_cannot_run_whole_graph': knob to force a failure if ETGLOW detects nodes that are not supported (and cannot run the whole graph). Useful in non-greedy mode to ensure there is not partitioning or CPU EP.
++   * (api) Added default values to OrtEtGlowProviderOption
++   * (tests) Adapted tests
++     * Add EtGlowReshapeNodeCapability and EtGlow_Op_TensorOpTes
++- [SW-20344] Define envvar with same semantics as other ETGLOW envvars. 0 disabled, 1 enabled
++- [SW-20344] Remove any previously generated bundle before saving CompiledModel into bundle
++- [SW-20984] Update device-placeholders registration
++- (ep) Pass all ONNX symbols to the GlowAPI
++- (new feature) Add RelWithDebInfo target with checkpoints support
++- (tests) Remove Skips related to SW-20984
++- [SW-20841] (node checks) Relax node checks to avoid partitioning networks that we fully support
++- [SW-20841] Improve GetCapability checks for bert
++### Deprecated
++### Removed
++### Fixed
++- [SW-20826] (Conan) Fix package usage as a C/C++ library
++- [SW-20573] Fix GetOutputNamesAndShapes when outputs have parametric shapes
++- [SW-20573] Fix EtGlowDefaultNodeCapability::IsDimensionSupported when parametric shape replacements are provided
++- [SW-21334] Fix invalid access to nullptr Shape in EtGlowConvNodeCapability
++### Security
++
++## [1.17.1.1] - 2024-04-15
++### Added
++- [SW-20369] Added .et/CHANGELOG.md file
++### Changed
++- [SW-20369] Bump conanfile requirements to released components (glow/1.11.0, neuralizer/0.11.0, runtime/0.14.0, sw-sysemu/0.16.0)
++- [SW-20326] Add ETGLOW provider over v1.17.1
++- [SW-20414] Improved parameter forwarding to glow/neuralizer
++### Deprecated
++### Removed
++### Fixed
++- [SW-20553] Fix et-onnxruntime python bindings install location
++### Security
++
++## [1.16.3.2] - 2024-04-13
++### Added
++### Changed
++- (CI) Improve CI
++- (CI) Fixed clang-tidy warnings
++- [SW-20362] Fetch onnx protos from conan package and not submodule
++- [SW-20362] Fix cloning submodules
++- [SW-20362] (CI) Install onnx pip package in virtualenv and detect ONNX_BACKEND_TEST_FOLDER
++- [SW-20334] Create pytest regression to run onnx_test_runner over a list of operators
++- [SW-20427] Copy .et/regressions into package and define ORT_ET_REGRESSIONS_DIR envvar
++- [SW-20427] Fix onnx_dir detection from sw-platform
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++
++## [1.16.3.1] - 2024-01-26
++### Added
++- [SW-19987] Add ETGLOW provider over v1.16.3
++### Changed
++### Deprecated
++### Removed
++### Fixed
++- (CI) Fix clang-format job
++### Security
++
++
++## [1.15.1.5] - 2023-09-18
++### Added
++### Changed
++### Deprecated
++### Removed
++### Fixed
++- Do not fail BundleAbi hash generation if AttributeProto is of type TENSOR, GRAPH, GRAPS or SPARSE variants
++### Security
++
++## [1.15.1.4] - 2023-09-13
++### Added
++- [SW-18477] Add the ability to execute onnx_backend_test_series.py with ETSOC and pytest
++- [SW-18478] Classify failing tests between skip and xfails
++- [SW-18480] (CI) Add sonarqube and C++ coverage report
++### Changed
++### Deprecated
++### Removed
++### Fixed
++- Fix Bundle ABI
++### Security
++
++
++## [1.15.1.3] - 2023-09-05
++### Added
++- [SW-18402] Support exporting bundle to user provided path
++### Changed
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++
++## [1.15.1.2] - 2023-08-30
++### Added
++- Experimental support for running inferences with ETGLOW EP
++### Changed
++### Deprecated
++### Removed
++### Fixed
++- Fixes for loading vicuna-7b
++### Security
++
++
++## [1.15.1.1] - 2023-08-23
++### Added
++- Added ETGLOW EP with capability of compiling models and generating bundles over upstream v1.15.1
++### Changed
++### Deprecated
++### Removed
++### Fixed
++### Security
++
++
++[Unreleased]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.19.0.4...esperanto/devel/v1.19.0
++[1.19.0.4]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.19.0.3...1.19.0.4
++[1.19.0.3]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.19.0.2...1.19.0.3
++[1.19.0.2]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.19.0.1...1.19.0.2
++[1.19.0.1]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/v1.19.0...1.19.0.1
++[1.17.1.4]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.17.1.3...1.17.1.4
++[1.17.1.3]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.17.1.2...1.17.1.3
++[1.17.1.2]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.17.1.1...1.17.1.2
++[1.17.1.1]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/v1.17.1...1.17.1.1
++[1.16.3.2]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.16.3.1...1.16.3.2
++[1.16.3.1]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/v1.16.3...1.16.3.1
++[1.15.1.5]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.15.1.4...1.15.1.5
++[1.15.1.4]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.15.1.3...1.15.1.4
++[1.15.1.3]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.15.1.2...1.15.1.3
++[1.15.1.2]: https://gitlab.com/esperantotech/software/onnxruntime/-/compare/1.15.1.1...1.15.1.2
++[1.15.1.1]: https://gitlab.com/esperantotech/software/onnxruntime/-/tags/1.15.1.1
+diff --git a/.et/onnx_tests_by_opset.py b/.et/onnx_tests_by_opset.py
+new file mode 100644
+index 0000000000..7d99c9a25f
+--- /dev/null
++++ b/.et/onnx_tests_by_opset.py
+@@ -0,0 +1,128 @@
++#!/usr/bin/env python
++
++import os
++import argparse
++from collections import Counter, OrderedDict
++import re
++import onnx
++import shutil
++import tarfile
++from collections import defaultdict
++
++def get_opset_version(model_path, silent):
++    try:
++        model = onnx.load_model(model_path)
++        opset_import = model.opset_import
++        if opset_import:
++            return opset_import[0].version
++    except Exception as e:
++        if not silent:
++            print(f"Error loading model at {model_path}: {e}")
++    return None
++
++
++def strip_extension(fn: str, extensions=[".tar.bz2", ".tar.gz"]):
++    for ext in extensions:
++        if fn.endswith(ext):
++            return fn[: -len(ext)]
++    raise ValueError(f"Unexpected extension for filename: {fn}")
++
++
++def classify_models(input_folder, output_folder, clean_output, copy, unpack_archives, from_archive, verbose):
++    # Clean output folder if specified
++    if clean_output and os.path.exists(output_folder):
++        shutil.rmtree(output_folder)
++
++    # Create output folder if it doesn't exist
++    if not os.path.exists(output_folder):
++        os.makedirs(output_folder)
++
++    # Dictionary to store statistics
++    stats = Counter(defaultdict(int))
++
++    # Walk through the input folder
++    for root, dirs, files in os.walk(input_folder):
++        for file in files:
++            file_path = os.path.join(root, file)
++            if unpack_archives:
++                if file.endswith(".tar.gz") and tarfile.is_tarfile(file_path):
++                    tarfile_name = strip_extension(os.path.basename(file_path))
++                    tarfile_dest = os.path.join(root, tarfile_name)
++                    # Decompress the tar.gz file
++                    with tarfile.open(file_path, "r:gz") as tar:
++                        if verbose:
++                            print(f"Decompress {file_path} into {tarfile_dest}")
++                        tar.extractall(path=tarfile_dest)
++                    # Launch a new search on the decompressed files
++                    if verbose:
++                        print(f"Launch a new search on the decompressed files")
++                    stats += classify_models(tarfile_dest, output_folder, clean_output=False, copy=True, \
++                                             unpack_archives=False, from_archive=tarfile_name, verbose=verbose)
++                    # Remove the decompressed folder
++                    if verbose:
++                        print(f"Remove the decompressed folder: {tarfile_dest}")
++                    shutil.rmtree(tarfile_dest)
++                    if verbose:
++                        print(f"Files removed")
++                    continue  # Skip further processing of this tar.gz file
++            if file.endswith(".onnx"):
++                model_path = file_path
++                opset_version = get_opset_version(model_path, silent=unpack_archives)
++                if opset_version:
++                    if verbose:
++                        print(f"Found model {model_path} with opset_version {opset_version}")
++                    # Create opset folder if it doesn't exist
++                    opset_folder = os.path.join(output_folder, f"opset{opset_version}")
++                    if not os.path.exists(opset_folder):
++                        os.makedirs(opset_folder)
++                    # Determine whether to create a symbolic link or copy the directory
++                    if copy:
++                        # Copy the full directory to the opset folder
++                        dest_name = from_archive if from_archive else os.path.basename(root)
++                        dest_folder = os.path.join(opset_folder, dest_name)
++                        if not os.path.exists(dest_folder):
++                            if verbose:
++                                print(f"Copying files from: {root} to {dest_folder}")
++                            shutil.copytree(root, dest_folder)
++                    else:
++                        # Create a symbolic link to the original directory in the opset folder
++                        test_case_name = os.path.basename(root)
++                        link_name = os.path.join(opset_folder, test_case_name)
++                        if not os.path.exists(link_name):
++                            if verbose:
++                                print(f"Adding symlink from: {root} to {link_name}")
++                            os.symlink(root, link_name)
++                    # Update statistics
++                    stats[opset_version] += 1
++    return stats
++
++
++def print_stats(stats):
++    if not stats:
++        return
++    ordered_stats = OrderedDict(sorted(stats.items(), key=lambda t: t[0]))
++    print("Tests found:")
++    for opset_version, count in ordered_stats.items():
++         print(f"Opset version {opset_version}: {count} tests")
++
++
++def main():
++    # Parse command-line arguments
++    parser = argparse.ArgumentParser(description="Classify ONNX models by opset")
++    parser.add_argument("input_folder", help="Path to the folder containing the ONNX models or ONNX Model Zoo files")
++    parser.add_argument("-o", "--output_folder", default="./output", help="Path to the output folder")
++    parser.add_argument("--clean", action="store_true", help="Remove output folder before starting")
++    parser.add_argument("--stats", action="store_true", help="Show statistics")
++    parser.add_argument("--copy", action="store_true", help="Copy the full directory instead of creating symbolic links")
++    parser.add_argument("--zoo", action="store_true", help="Search for ONNX Model Zoo files (.tar.gz)")
++    parser.add_argument("--verbose", action="store_true", help="Show more info")
++    args = parser.parse_args()
++
++    # Call classify_models function with provided arguments
++    stats = classify_models(args.input_folder, args.output_folder, args.clean, args.copy, args.zoo, None, args.verbose)
++    if args.stats:
++        print_stats(stats)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/.et/regressions/conftest.py b/.et/regressions/conftest.py
+new file mode 100644
+index 0000000000..87c16d71d5
+--- /dev/null
++++ b/.et/regressions/conftest.py
+@@ -0,0 +1,181 @@
++import os
++import shutil
++import pytest
++from tabulate import tabulate
++from utils import get_onnx_dir, get_onnx_operators_list
++from colorama import Fore, Style
++
++
++# Custom configuration parameter for filtering tests
++def pytest_addoption(parser):
++    parser.addoption("--test-filter", action="store", default="", help="Filter tests by specifying a folder name")
++    parser.addoption("--onnx-test-runner-options", action="store", default="-j 1 -c 1 -v",
++                     help="Additional options to pass to onnx_test_runner (Defaults to '-j 1 -c 1 -v')")
++    parser.addoption("--operators",   action="append", default=[], help="List of operators to test")
++    parser.addoption("--xfail-operators", action="store", default="", help="List of operators to XFAIL, separated by comma")
++    parser.addoption("--skip-operators", action="store", default="", help="List of operators to SKIP, separated by comma")
++
++# Create a folder structure for the test run
++def create_folder_structure():
++    if os.path.exists("regression_run"):
++        shutil.rmtree("regression_run")
++    os.makedirs("regression_run")
++
++
++def rotate_reports_file():
++    if os.path.exists("onnx_reports.json"):
++        os.rename("onnx_reports.json", "onnx_reports_backup.json")
++    if os.path.exists("onnx_reports_sorted.json"):
++        os.rename("onnx_reports_sorted.json", "onnx_reports_sorted_backup.json")
++
++
++# Update the fixture to copy the test data for each operator
++def copy_test_data_for_each_operator():
++    # Get the list of operators
++    operators = get_onnx_operators_list()
++
++    # Copy the test data for each operator to the respective location
++    for op_type in operators:
++        data_src_root = f'{get_onnx_dir()}/backend/test/data'
++        data_dst_dir = os.path.join("regression_run", op_type, "data")
++        if os.path.exists(data_dst_dir):
++            shutil.rmtree(data_dst_dir)
++        shutil.copytree(data_src_root, data_dst_dir)
++
++
++def pytest_configure(config):
++    def configure_folders():
++        create_folder_structure()
++        rotate_reports_file()
++        copy_test_data_for_each_operator()
++
++    import re
++    worker_id = os.environ.get("PYTEST_XDIST_WORKER")
++    if worker_id and re.match(r'^gw(\d+)$', worker_id):
++        worker_number = int(re.search(r'\d+', worker_id).group())
++        if worker_number == 1:
++            configure_folders()
++    else:
++        configure_folders()
++
++
++# Hook to cleanup after test run
++def pytest_unconfigure(config):
++    pass
++
++
++def pytest_report_header(config):
++    onnx_dir = get_onnx_dir()
++    data_dir = os.path.join(onnx_dir, "backend", "test", "data")
++    import onnx
++    report = f"ONNX version: {onnx.__version__}\n"
++    report += f"ONNX IR version: {onnx.IR_VERSION}\n"
++    report += f"ONNX backend tests directory: {data_dir}\n"
++    report += "Environment Variables:\n"
++    filter_criteria = ["HOME", "PWD", "PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "ORT_", "ET_", "NEURALIZER_", "GLOW_"]
++    filtered_vars = {var: os.getenv(var) for var in os.environ if any(var.startswith(prefix) for prefix in filter_criteria)}
++    for var, value in filtered_vars.items():
++        report += f"  {var}: {value}\n"
++    return report
++
++
++def pytest_sessionfinish(session, exitstatus):
++    reports = read_reports_from_file()
++    if reports:
++        print("\nONNX Operators Report:")
++        headers = ['Operator', '#Models', '#Tests', '#Success', '#Not implemented', '#Failures', 'Failures Info']
++        rows = []
++        supported_ops = []
++        partially_supported_ops = []
++        not_supported_ops = []
++        unknown_support_ops = []
++        for report in reports:
++            op_type = report['operator']
++            status = report['status']
++            failures_info = ""
++            if status['failed'] > 0:
++                failure_reasons = report['status']['failure_reasons']
++                failure_reason_str = ''
++                for key, value in failure_reasons.items():
++                    if key == "failed_test_cases":
++                        continue  # Skip adding failed_test_cases to failure_reason_str
++                    if isinstance(value, list):
++                        failure_reason_str += f"  {key.capitalize().replace('_', ' ')}: {', '.join(value)} "
++                    elif value > 0:
++                        failure_reason_str += f"  {key.capitalize().replace('_', ' ')}: {value} "
++                failures_info = f"Reasons:\n{failure_reason_str.strip()}\nFailed Test Cases:\n"
++                failures_info += '  \n'.join(failure_reasons.get('failed_test_cases', []))
++            row = [op_type, status['models'], status['total_cases'], status['succeeded'], status['not_implemented'], status['failed'], failures_info]
++            rows.append(row)
++
++            if status['total_cases'] == 0:
++                unknown_support_ops.append(op_type)
++            elif status['succeeded'] == status['total_cases']:
++                supported_ops.append(op_type)
++            elif status['succeeded'] > 0:
++                partially_supported_ops.append(op_type)
++            else:
++                not_supported_ops.append(op_type)
++
++        colored_rows = []
++        for row in rows:
++            op_name = row[0]
++            # Convert values to integers or keep them as they are
++            try:
++                success_count = int(row[3])
++                not_implemented_count = int(row[4])
++                failed_count = int(row[5])
++            except ValueError:
++                success_count = row[3]
++                not_implemented_count = row[4]
++                failed_count = row[5]
++            if isinstance(success_count, int) and success_count > 0:  # If there are success cases
++                row[3] = f"{Fore.GREEN}{success_count}{Style.RESET_ALL}"
++                row[0] = f"{Fore.GREEN}{op_name}{Style.RESET_ALL}"
++            if isinstance(not_implemented_count, int) and not_implemented_count > 0:  # If there are non-implemented cases
++                row[4] = f"{Fore.YELLOW}{not_implemented_count}{Style.RESET_ALL}"
++                row[0] = f"{Fore.YELLOW}{op_name}{Style.RESET_ALL}"
++            if isinstance(failed_count, int) and failed_count > 0:  # If there are failures
++                row[5] = f"{Fore.RED}{failed_count}{Style.RESET_ALL}"
++                row[0] = f"{Fore.RED}{op_name}{Style.RESET_ALL}"
++            colored_rows.append(row)
++        print(tabulate(colored_rows, headers=headers, tablefmt='rounded_grid'))
++
++        # Summary of supported operators
++
++        def chunk_list(lst, n):
++            return [lst[i:i+n] for i in range(0, len(lst), n)]
++
++        supported_ops_chunks = chunk_list(supported_ops, 5)
++        partially_supported_ops_chunks = chunk_list(partially_supported_ops, 5)
++        not_supported_ops_chunks = chunk_list(not_supported_ops, 5)
++        unknown_support_ops_chunks = chunk_list(unknown_support_ops, 5)
++
++        def get_str_from_chunk_list(lst):
++            return '\n'.join([', '.join(chunk) for chunk in lst])
++
++        supported_summary = [[f'{Fore.GREEN}Fully{Style.RESET_ALL} Supported', len(supported_ops), get_str_from_chunk_list(supported_ops_chunks)],
++                             [f'{Fore.YELLOW}Partially{Style.RESET_ALL} Supported', len(partially_supported_ops), get_str_from_chunk_list(partially_supported_ops_chunks)],
++                             [f'{Fore.RED}Not{Style.RESET_ALL} Supported', len(not_supported_ops), get_str_from_chunk_list(not_supported_ops_chunks)],
++                             [f'Unknown support', len(unknown_support_ops),  get_str_from_chunk_list(unknown_support_ops_chunks)],
++                             [f'Total', len(reports), ""]]
++        print("\nSummary of Supported Operators:")
++        print(tabulate(supported_summary, headers=['Status', '#Operators', 'Operators'], tablefmt='rounded_grid'))
++    else:
++        print("No ONNX operators report found.")
++
++
++def read_reports_from_file():
++    import json
++    from operator import itemgetter
++    try:
++        with open("onnx_reports.json", "r") as file:
++            reports = [json.loads(line) for line in file]
++            sorted_reports = sorted(reports, key=lambda x: x.get('operator', ''))
++        with open('onnx_reports_sorted.json', "w") as fout:
++            for operator in sorted_reports:
++                fout.write(json.dumps(operator))
++                fout.write('\n')
++        return sorted_reports
++    except FileNotFoundError:
++        return None
+diff --git a/.et/regressions/pytest.ini b/.et/regressions/pytest.ini
+new file mode 100644
+index 0000000000..bbd083ac1f
+--- /dev/null
++++ b/.et/regressions/pytest.ini
+@@ -0,0 +1,2 @@
++[pytest]
++addopts = --tb=short
+diff --git a/.et/regressions/requirements.txt b/.et/regressions/requirements.txt
+new file mode 100644
+index 0000000000..10409e25a9
+--- /dev/null
++++ b/.et/regressions/requirements.txt
+@@ -0,0 +1,6 @@
++pytest==8.0.2
++pytest-cov==4.1.0
++pytest-cpp==2.5.0
++pytest-xdist==3.5.0
++colorama==0.4.6
++tabulate==0.9.0
+diff --git a/.et/regressions/test_onnx_operators.py b/.et/regressions/test_onnx_operators.py
+new file mode 100644
+index 0000000000..5d5080bd0c
+--- /dev/null
++++ b/.et/regressions/test_onnx_operators.py
+@@ -0,0 +1,204 @@
++from utils import get_onnx_dir, get_onnx_operators_list
++import subprocess
++import pytest
++import shutil
++import site
++import os
++import re
++
++
++def generate_test_data(op_type, data_dir):
++    # Run backend-test-tools generate-data command to generate test data
++    cmd = ['backend-test-tools', 'generate-data', '-o', data_dir, '-t', op_type, '--clean']
++    subprocess.run(cmd, check=True)
++
++
++def run_onnx_test_runner(op_type, test_filter="", test_runner_options=""):
++    # Create the folder for the operator if it doesn't exist
++    output_dir = os.path.join("regression_run", op_type, "data")
++    os.makedirs(output_dir, exist_ok=True)
++    # Generate test data for the given operator
++    generate_test_data(op_type, output_dir)
++
++    # Run onnx_test_runner with the generated test data
++    onnx_test_runner_path = 'onnx_test_runner'
++    data_root = os.path.join("regression_run", op_type, "data")
++
++    # If test_filter is provided, filter directories based on the regex pattern
++    if test_filter:
++        filtered_dirs = []
++        for root, dirs, files in os.walk(data_root):
++            for d in dirs:
++                candidate = os.path.join(root, d)
++                if re.search(test_filter, candidate):
++                    filtered_dirs.append(candidate)
++                    dirs.clear()  # Clear dirs to stop searching in subdirectories
++                    break  # Stop searching in subdirectories
++        if not filtered_dirs:
++            pytest.skip(f"No tests found for operator {op_type} with test filter '{test_filter}'")
++
++        # Remove unwanted tests from the data directory
++        for root, dirs, files in os.walk(data_root):
++            for d in dirs:
++                candidate_to_remove = os.path.join(root, d)
++                remove_candidate = True
++                for filtered_dir in filtered_dirs:
++                    if candidate_to_remove.startswith(filtered_dir):
++                        remove_candidate = False
++                        break
++                if remove_candidate:
++                    shutil.rmtree(candidate_to_remove)
++
++        data_root = os.path.commonpath(filtered_dirs)
++
++    cmd = [onnx_test_runner_path, data_root]
++
++    # You can add any additional options you need for onnx_test_runner here
++    if test_runner_options:
++        cmd.extend(test_runner_options.split())
++
++    # Run onnx_test_runner and capture the result
++    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
++    try:
++        stdout_data = result.stdout.decode('utf-8')
++    except UnicodeDecodeError:
++        stdout_data = result.stdout.decode('latin-1')
++    try:
++        stderr_data = result.stderr.decode('utf-8')
++    except UnicodeDecodeError:
++        stderr_data = result.stderr.decode('latin-1')
++
++    # write stdout/stderr first to file in case there is any issue parsing output
++    write_output_to_file(op_type, stdout_data, stderr_data)
++
++    # Parse the output to extract relevant information
++    report = parse_onnx_test_runner_output(data_root, stdout_data)
++
++    # Write report values to onnx_reports.json before deciding if to fail the test
++    export_reports({"operator": op_type, "status": report})
++
++    # Check the return code of the subprocess
++    if result.returncode != 0:
++        command_str = ' '.join(cmd)
++        pytest.fail(f"onnx_test_runner failed ({result.returncode}). Reproduce with: {command_str}")
++
++    return report
++
++
++def write_output_to_file(op_type, stdout_data, stderr_data):
++    # Create the folder if it doesn't exist
++    os.makedirs(f"regression_run/{op_type}", exist_ok=True)
++
++    # Write stdout and stderr to files
++    stdout_log = f"regression_run/{op_type}/stdout.log"
++    stderr_log = f"regression_run/{op_type}/stderr.log"
++    with open(stdout_log, "w") as stdout_file:
++        stdout_file.write(stdout_data)
++    with open(stderr_log, "w") as stderr_file:
++        stderr_file.write(stderr_data)
++
++
++def parse_onnx_test_runner_output(data_root, output):
++    try:
++        # Parse the output to extract relevant information
++        models_pattern = re.compile(r"Models: (\d+)")
++        total_cases_pattern = re.compile(r"Total test cases: (\d+)")
++        succeeded_pattern = re.compile(r"Succeeded: (\d+)")
++        not_implemented_pattern = re.compile(r"Not implemented: (\d+)")
++        failed_pattern = re.compile(r"Failed: (\d+)")
++        invalid_graph_pattern = re.compile(r"Graph is invalid: (\d+)")
++        load_model_failed_pattern = re.compile(r"Got exception while loading model: (\d+)")
++        throwed_exception_pattern = re.compile(r"Got exception while running: (\d+)")
++        result_differs_pattern = re.compile(r"Result differs: (\d+)")
++        other_reason_failed_pattern = re.compile(r"Other reason: (\d+)")
++        failed_test_cases_pattern = re.compile(r"Failed Test Cases:(.*?)\n", re.DOTALL)
++
++        models = int(models_pattern.search(output).group(1))
++        total_cases = int(total_cases_pattern.search(output).group(1))
++        succeeded = int(succeeded_pattern.search(output).group(1))
++        not_implemented = int(not_implemented_pattern.search(output).group(1))
++        failed = int(failed_pattern.search(output).group(1))
++        invalid_graph = int(invalid_graph_pattern.search(output).group(1)) if invalid_graph_pattern.search(output) else 0
++        load_model_failed = int(load_model_failed_pattern.search(output).group(1)) if load_model_failed_pattern.search(output) else 0
++        throwed_exception = int(throwed_exception_pattern.search(output).group(1)) if throwed_exception_pattern.search(output) else 0
++        result_differs = int(result_differs_pattern.search(output).group(1)) if result_differs_pattern.search(output) else 0
++        other_reason_failed = int(other_reason_failed_pattern.search(output).group(1)) if other_reason_failed_pattern.search(output) else 0
++        failed_test_cases = failed_test_cases_pattern.search(output)
++        failed_test_cases = failed_test_cases.group(1).strip().split(', ') if failed_test_cases else []
++
++        return {
++            'models': models,
++            'total_cases': total_cases,
++            'succeeded': succeeded,
++            'not_implemented': not_implemented,
++            'failed': failed,
++            'failure_reasons': {
++                'invalid_graph': invalid_graph,
++                'load_model_failed': load_model_failed,
++                'throwed_exception': throwed_exception,
++                'result_differs': result_differs,
++                'other_reason_failed': other_reason_failed,
++                'failed_test_cases': failed_test_cases
++            }
++        }
++    except AttributeError:
++        failed_tests = sum(os.path.isdir(os.path.join(data_root, d)) for d in os.listdir(data_root))
++        # Return an empty report if parsing fails
++        return {
++            'models': 0,
++            'total_cases': failed_tests,
++            'succeeded': 0,
++            'not_implemented': 0,
++            'failed': failed_tests,
++            'failure_reasons': {
++                'invalid_graph': 0,
++                'load_model_failed': 0,
++                'throwed_exception': 0,
++                'result_differs': 0,
++                'other_reason_failed': 0,
++                'failed_test_cases': []
++            }
++        }
++
++
++def generate_test_params():
++    operators_list = get_onnx_operators_list()
++
++    # Generate test params using pytest.param
++    for op_type in operators_list:
++        yield pytest.param(op_type, id=op_type)
++
++
++@pytest.mark.parametrize("op_type", generate_test_params())
++def test_onnx_operator(op_type, request):
++    # Access the provided operators list
++    operators_list = request.config.getoption("--operators")
++    # Check if the current operator is in the provided list
++    skip_operators = request.config.getoption("--skip-operators")
++    if op_type in skip_operators or operators_list and op_type not in operators_list:
++        pytest.skip(f"Skipping {op_type} operator as it's not in the provided operators list")
++    xfail_operators = request.config.getoption("--xfail-operators")
++    if op_type in xfail_operators:
++        request.applymarker(pytest.mark.xfail)
++        #pytest.xfail(f"XFailing {op_type} operator as it's been set via --xfail-operators param")
++
++    # Run onnx_test_runner and capture the report
++    test_filter = request.config.getoption("--test-filter")
++    test_runner_options = request.config.getoption("--onnx-test-runner-options")
++    report = run_onnx_test_runner(op_type, test_filter, test_runner_options)
++
++    # Print the report for this operator (only visible if --capture=no)
++    print(f"\nOperator {op_type}:")
++    print(f"  Models: {report['models']}")
++    print(f"  Total test cases: {report['total_cases']}")
++    print(f"    Succeeded: {report['succeeded']}")
++    print(f"    Not implemented: {report['not_implemented']}")
++    print(f"    Failed: {report['failed']}\n")
++
++
++# Export reports for conftest.py
++def export_reports(report):
++    import json
++    with open("onnx_reports.json", "a+") as file:
++        json.dump(report, file)
++        file.write('\n')
+diff --git a/.et/regressions/utils.py b/.et/regressions/utils.py
+new file mode 100644
+index 0000000000..736798fb68
+--- /dev/null
++++ b/.et/regressions/utils.py
+@@ -0,0 +1,37 @@
++import os
++import site
++import onnx
++
++
++def get_onnx_dir():
++    import onnx as _onnx_
++    onnx_dir = _onnx_.__path__[0]
++    if os.path.exists(onnx_dir):
++        return onnx_dir
++
++    for sitepackage in site.getsitepackages():
++        onnx_dir = os.path.join(sitepackage, "onnx")
++        if os.path.exists(onnx_dir):
++            return onnx_dir
++    return None
++
++
++def get_onnx_operators_list():
++    # Get all schemas
++    all_schemas = onnx.defs.get_all_schemas()
++
++    # Create a set to store unique operator names
++    operators_set = set()
++
++    # Iterate over all schemas and extract operator names
++    for schema in all_schemas:
++        op_type = schema.name
++        domain = schema.domain
++        # Construct the full operator name including the domain if it's not the default domain
++        full_op_type = op_type if domain == "" else f"{domain}.{op_type}"
++        # Add the full operator name to the set
++        operators_set.add(full_op_type)
++
++    # Sort the operator names
++    operators_list = sorted(list(operators_set))
++    return operators_list
+diff --git a/.et/test_package/test_package.py b/.et/test_package/test_package.py
+new file mode 100644
+index 0000000000..ba01ef2e0f
+--- /dev/null
++++ b/.et/test_package/test_package.py
+@@ -0,0 +1,23 @@
++#!/usr/bin/env python3
++import onnxruntime as ort
++import os
++
++print(ort.get_available_providers())
++
++log_severity_verbose = 0
++log_severity_warning = 2
++ort.set_default_logger_severity(log_severity_verbose)
++
++# Load the model and create InferenceSession
++model = os.path.join(os.path.dirname(__file__), '../../onnxruntime/test/testdata/mnist.onnx')
++sess_options = ort.SessionOptions()
++sess_options.log_severity_level = log_severity_warning
++session = ort.InferenceSession(model,
++                               sess_options=sess_options,
++                               providers=['EtGlowExecutionProvider'],
++                               provider_options=[{"etglow_compile_only": "true",
++                                                  "etglow_onnx_shape_params": "N=2;batch_size=8",
++                                                  "etglow_api_params": "useFP16=0;device-type=fake;runDir=/tmp/foo;glow-threads=2;extra-etsoc-params='compileOnly=1|dumpNeura=1|dev=\"--logDisableGraphBits=-1 --logDisableCodeGenBits=-1\"'"}])
++
++print(f"Registered providers: {session.get_providers()}")
++print(f"Registered provider options: {session.get_provider_options()}")
