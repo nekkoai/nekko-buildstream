@@ -1,0 +1,25 @@
+diff --git a/device-management-application/include/render.hpp b/device-management-application/include/render.hpp
+index fd879e59..47314046 100644
+--- a/device-management-application/include/render.hpp
++++ b/device-management-application/include/render.hpp
+@@ -86,7 +86,7 @@ public:
+   ExitComponent(ScreenInteractive& screen)
+     : screen_(screen) {
+   }
+-  Element Render() override {
++  Element Render() {
+     screen_.ExitLoopClosure()();
+     return text("");
+   }
+diff --git a/device-management-application/src/dev_mngt_service.cc b/device-management-application/src/dev_mngt_service.cc
+index ce0cc01e..228f587c 100644
+--- a/device-management-application/src/dev_mngt_service.cc
++++ b/device-management-application/src/dev_mngt_service.cc
+@@ -35,6 +35,7 @@ namespace filesystem = std::experimental::filesystem;
+ 
+ #include <fcntl.h>
+ #include <fmt/format.h>
++#include <fmt/ranges.h>
+ #include <fstream>
+ #include <getopt.h>
+ #include <glog/logging.h>

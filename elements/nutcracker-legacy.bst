@@ -2,6 +2,7 @@ kind: stack
 
 depends:
 - platform/platformsw-base.bst
+- legacy/device-management-application.bst
 - legacy/llvm.bst
 - legacy/neuralizer.bst
 - legacy/glow.bst
