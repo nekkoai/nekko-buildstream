@@ -33,4 +33,4 @@ sources:
   track: v0.3.0
   ref: b93ee595a3a5144499890c237d1e23e1e4549c5b20786928f0beebe72fbaf769
 config:
-  target: /opt/toolchain/gnu
+  target: /opt/toolchain
