@@ -4,31 +4,23 @@ COPY . /src/nutcracker-legacy
 
 WORKDIR /src/nutcracker-legacy
 
-# install packages
-RUN apt-get update -y && apt-get install -y bubblewrap lzip apparmor-profiles
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -y && apt-get install -y bubblewrap lzip apparmor-profiles git gcc python3 python3-venv python3-dev
 # Setup apparmor for bubblewrap
 RUN ln -s /usr/share/apparmor/extra-profiles/bwrap-userns-restrict /etc/apparmor.d/ && systemctl reload apparmor
 
-# connect to tailnet
-RUN curl -fsSL https://pkgs.tailscale.com/stable/debian/stable.gpg | gpg --dearmor -o /usr/share/keyrings/tailscale-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian stable main" | tee /etc/apt/sources.list.d/tailscale.list && \
-    apt-get update && \
-    apt-get install -y tailscale --no-install-recommends
-
 # setup environment for buildstream
-RUN python -m venv myenv && \
+RUN python3 -m venv myenv && \
     source myenv/bin/activate && \
-    pip install buildstream buildstream-plugins dulwich tomlkit
+    pip install buildstream buildstream-plugins dulwich tomlkit requests && \
+    pip uninstall click -y && \
+    pip install 'click<8.1'   # compatibility issue with buildstream
 
-# run build with tailscale
-RUN --mount=type=secret,id=tsauth-key,env=TS_AUTHKEY tailscaled && \
-    sleep 3 && \
-    tailscale up --authkey=$TS_AUTHKEY --hostname=docker-build-node --advertise-exit-node=false --accept-routes=false && \
-    source myenv/bin/activate && \
-    bst build nutcracker-legacy.bst
-
-# export the image requirements
+# run build and export the artifact as a directory
 RUN source myenv/bin/activate && \
+    bst build nutcracker-legacy.bst && \
     mkdir /out && \
     bst artifact checkout nutcracker-legacy.bst --directory /out
 

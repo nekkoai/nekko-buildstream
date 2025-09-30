@@ -18,38 +18,23 @@ on etsoc devices.
 
 The final result of a build is an OCI image that can be run with Docker, Podman or in Kubernetes.
 
-You can build in one of two ways:
-
-* In Docker with `docker build`
-* Locally with installed tools
-
-### Build with Docker
-
-To build with docker, you need to have your tailscale auth key made available as a secret.  You can do that by exporting it as an environment variable or from a file.
-
-```sh
-# from environment variable
-% docker build --secret id=tsauth-key,env=TS_AUTHKEY -t ghcr.io/nekkoai/nutcracker-legacy:latest .
-# from file
-% docker build --secret id=tsauth-key,src=/path/to/authkey.txt -t ghcr.io/nekkoai/nutcracker-legacy:latest .
-```
-
-### Build locally
-
-To build the image locally, you will need to:
+The steps are:
 
 1. Clone this repository
 1. Ensure proper network connections and credentials access
-1. Install dependencies
-1. Execute the build
+1. Run the build
 
-#### Check out Nutcracker Buildstream repository
+**WARNING:** This build cannot take place on an arm64/aarch64 device, unless you run the build in an emulated environment.
+Given that there will be long compilations, that is not recommended. This is due to a bug in buildstream. 
+See [this issue](https://github.com/apache/buildstream/issues/1833).
+
+### Clone this repository
 
 ```sh
 % git clone ssh://git@github.com/nekkoai/nutcracker-legacy
 ```
 
-#### Network access and credentials
+### Ensure proper network access and credentials
 
 Until `github.com/nekkoai` repositories are public, you must use authenticated access to the private repositories.
 
@@ -65,9 +50,32 @@ Hi jerenkrantz! You've successfully authenticated, but GitHub does not provide s
 
 (Additionally, git LFS seems broken with atlantis ; but dulwich seems okay handling it...so we have to use `git_repo` source for now.)
 
-Some of the artifacts are not reproducible, and sit on a private server named `cassian`. To access the server, you need to be on the correct tailnet `nekkoai` tailnet. If you are not on the tailnet, request access. If you are, ensure it is connected.
+Some of the artifacts are not reproducible, and sit on a ghcr.io in a private OCI image `ghcr.io/nekkoai/et-gnu-toolchain`.
+For buildstream to access the OCI image, you need to have access to the `nekkoai` private repositories.
 
-#### Dependencies
+### Run the build
+
+You can build in one of two ways:
+
+* In Docker with `docker build`
+* Locally with installed tools
+
+#### Build with Docker
+
+```sh
+% docker build -t ghcr.io/nekkoai/nutcracker-legacy:latest .
+# or simply
+make build-docker
+```
+
+#### Build locally
+
+To build the image locally, you will need to:
+
+1. install all of the dependencies locally
+1. build
+1. Export the resulting artifact as a Docker-compatible tarball
+1. Import the resulting tarball into your local docker image cache
 
 At a minimum, you will need `bubblewrap` as that is the sandboxing tech used by `Buildstream`.  You will need a few other host utilities - as an example for `freedesktop-sdk`, some of the sources are bundled with `lzip`.
 
@@ -88,7 +96,7 @@ $ sudo ln -s /usr/share/apparmor/extra-profiles/bwrap-userns-restrict /etc/appar
 $ systemctl reload apparmor
 ```
 
-#### Build
+##### Run the local build
 
 ```sh
 % bst build nutcracker-legacy.bst
@@ -96,17 +104,13 @@ $ systemctl reload apparmor
 
 (N.B. Until we have a project caching server, your first set of builds are going to have to fetch a lot of dependencies.  Freedesktop SDK runs a caching server, so, Buildstream will fetch whatever artifacts it can from there ... but, you'll likely want to grab a coffee or tea depending upon your connectivity.)
 
-Once building is complete, export the resulting artifact as a Docker-compatible tarball.
+Once building is complete, export the resulting artifact as a Docker-compatible tarball and import it into your local docker
+image cache.
 
 ```sh
 % bst artifact checkout nutcracker-legacy.bst --tar nut-root.tar
 ```
 
-## Running
-
-With the extracted Docker image, you can import it into your local Docker daemon and run it.
-
-### Import Docker image
 
 ```sh
 % docker image import nut-root.tar ghcr.io/nekkoai/nutcracker-legacy:latest
@@ -118,7 +122,7 @@ With the extracted Docker image, you can import it into your local Docker daemon
 % docker run -it --rm --device=/dev/et0_mgmt --device=/dev/et0_ops --privileged -v /home/justin:/home/justin -v /home/justin/workspace:/workspace ghcr.io/nekkoai/nutcracker-legacy:latest
 ```
 
-### Run Commands within container
+#### Run Commands within container
 
 ```sh
 bash-5.3# python3
