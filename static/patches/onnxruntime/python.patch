@@ -253,7 +253,7 @@ index 0000000000..e0b757dd13
 +    ETGLOW_TRACE_DEFAULT = ETGLOW_TRACE_GLOW + ETGLOW_TRACE_NEURALIZER + ETGLOW_TRACE_RUNTIME
 +    ETGLOW_TRACE_ALL = ETGLOW_TRACE_DEFAULT + ETGLOW_TRACE_DEVICE_KERNEL_NODES + ETGLOW_TRACE_DEVICE_KERNEL_INST
 diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
-index ebb1a54..30e0add 100644
+index ebb1a54..48b51e4 100644
 --- a/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
 +++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.cc
 @@ -13,6 +13,7 @@
@@ -281,7 +281,7 @@ index ebb1a54..30e0add 100644
 +  GetProviderInfo_EtGlow().etrtMemcpy_DeviceToHost(src_device_id, dst, src, num_bytes);
 +}
 +
-+const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id) {
++const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction() {
 +  static std::unordered_map<OrtDevice::DeviceType, MemCpyFunc> map{
 +      {OrtDevice::GPU, EtGlowToCpuMemCpy}};
 +  return &map;
@@ -323,7 +323,7 @@ index ebb1a54..30e0add 100644
    static std::map<MLDataType, int> type_map{
        {DataTypeImpl::GetType<bool>(), NPY_BOOL},
 diff --git a/onnxruntime/python/onnxruntime_pybind_mlvalue.h b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
-index 78a5ea4..423b2a5 100644
+index 78a5ea4..eabba34 100644
 --- a/onnxruntime/python/onnxruntime_pybind_mlvalue.h
 +++ b/onnxruntime/python/onnxruntime_pybind_mlvalue.h
 @@ -42,7 +42,7 @@ MLDataType NumpyTypeToOnnxRuntimeTensorType(int numpy_type);
@@ -345,7 +345,7 @@ index 78a5ea4..423b2a5 100644
 +
 +void EtGlowToCpuMemCpy(void* dst, const void* src, size_t num_bytes);
 +
-+const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction(int device_id);
++const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction();
 +
 +bool IsEtGlowDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);
 +
@@ -356,3 +356,60 @@ index 78a5ea4..423b2a5 100644
  void CreateGenericMLValue(const onnxruntime::InputDefList* input_def_list, const AllocatorPtr& alloc,
                            const std::string& name_input, const pybind11::object& value, OrtValue* p_mlvalue,
                            bool accept_only_numpy_array = false, bool use_numpy_data_memory = true, MemCpyFunc mem_cpy_to_device = CpuToCpuMemCpy);
+diff --git a/onnxruntime/python/onnxruntime_pybind_ortvalue.cc b/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
+index 18785cd..18e7f0a 100644
+--- a/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
++++ b/onnxruntime/python/onnxruntime_pybind_ortvalue.cc
+@@ -46,6 +46,14 @@ std::unique_ptr<OrtValue> OrtValueFromShapeAndType(const std::vector<int64_t>& s
+     throw std::runtime_error(
+         "Can't allocate memory on the DirectML device using this package of OnnxRuntime. "
+         "Please use the DirectML package of OnnxRuntime to use this feature.");
++#endif
++  } else if (strcmp(GetDeviceName(device), ET) == 0) {
++#if USE_ETGLOW
++    allocator = GetEtGlowAllocator(device.Id());
++#else
++    throw std::runtime_error(
++        "Can't allocate memory on the EtGlow device using this package of OnnxRuntime. "
++        "Please use the EtGlow package of OnnxRuntime to use this feature.");
+ #endif
+   } else {
+     throw std::runtime_error("Unsupported device: Cannot place the OrtValue on this device");
+@@ -102,6 +110,15 @@ void addOrtValueMethods(pybind11::module& m) {
+       // TODO: Add check to ensure that string arrays are not passed - we currently don't support string tensors in DML
+       CreateGenericMLValue(
+         nullptr, GetDmlAllocator(device.Id()), "", array_on_cpu, ml_value.get(), true, false, CpuToDmlMemCpy);
++#elif USE_ETGLOW
++      if (!IsEtGlowDeviceIdValid(logging::LoggingManager::DefaultLogger(), device.Id())) {
++        throw std::runtime_error("The provided device id doesn't match any available GPUs on the machine.");
++      }
++
++      // InputDeflist is null because OrtValue creation is not tied to a specific model
++      // Likewise, there is no need to specify the name (as the name was previously used to lookup the def list)
++      // TODO: Add check to ensure that string arrays are not passed - we currently don't support string tensors in ETGLOW - is this true??
++      CreateGenericMLValue(nullptr, GetEtGlowAllocator(device.Id()), "", array_on_cpu, ml_value.get(), true, false, CpuToEtGlowMemCpy);
+ #else
+       throw std::runtime_error(
+           "Can't allocate memory on the CUDA device using this package of OnnxRuntime. "
+@@ -170,6 +187,12 @@ void addOrtValueMethods(pybind11::module& m) {
+             values_type,
+             *(ml_value->GetMutable<Tensor>()),
+             CpuToDmlMemCpy);
++#elif USE_ETGLOW
++          onnxruntime::python::CopyDataToTensor(
++            py_values,
++            values_type,
++            *(ml_value->GetMutable<Tensor>()),
++            CpuToEtGlowMemCpy);
+ #else
+         throw std::runtime_error(
+             "Unsupported GPU device: Cannot find the supported GPU device.");
+@@ -335,6 +358,8 @@ void addOrtValueMethods(pybind11::module& m) {
+         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetCannToHostMemCpyFunction());
+ #elif USE_DML
+         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetDmlToHostMemCpyFunction());
++#elif USE_ETGLOW
++        py::object obj = GetPyObjFromTensor(*ml_value, nullptr, GetEtGlowToHostMemCpyFunction());
+ #else
+         py::object obj = GetPyObjFromTensor(*ml_value, nullptr, nullptr);
+ #endif
