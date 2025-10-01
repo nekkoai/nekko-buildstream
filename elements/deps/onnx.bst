@@ -39,7 +39,7 @@ environment:
 sources:
 - kind: git_repo
   url: github:onnx/onnx
-  track: v1.16.2
-  ref: v1.16.2-0-g3bf92c03a9f27eba3bda1e5b9e63ea20ec213557
+  track: v1.17.0
+  ref: v1.17.0-0-gb8baa8446686496da4cc8fda09f2b6fe65c2a02c
 - kind: patch
   path: static/patches/onnx-python-cmake.patch
