@@ -15,7 +15,7 @@ depends:
 variables:
   command-subdir: device-management-application
   (@):
-  - include/_private/legacy-toolchain.yml
+  - include/_private/platform-host-toolchain.yml
   cmake-local: >-
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
     -D CMAKE_COMPILE_WARNING_AS_ERROR=off
@@ -28,5 +28,5 @@ sources:
   url: github:aifoundry-org/et-platformsw
   track: master
   ref: 62a29419873c2d5f910a2fb530d7dc0419e1e0e5
-- kind: patch
-  path: static/patches/device-management-application.patch
+- kind: patch_queue
+  path: static/patches/platformsw/device-management-application

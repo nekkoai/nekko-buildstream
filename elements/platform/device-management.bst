@@ -12,7 +12,7 @@ depends:
 variables:
   command-subdir: devicemanagement
   (@):
-  - include/_private/legacy-toolchain.yml
+  - include/_private/platform-host-toolchain.yml
   cmake-local: >-
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
     -D CMAKE_COMPILE_WARNING_AS_ERROR=off
