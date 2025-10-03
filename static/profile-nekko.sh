@@ -1,1 +1,1 @@
-export PATH=$PATH:/opt/toolchain/gnu/bin
+export PATH=$PATH:/opt/toolchain/gnu/bin:/opt/nekko/platform/bin:/opt/nekko/legacy/bin

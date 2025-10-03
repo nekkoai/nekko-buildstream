@@ -22,6 +22,7 @@ depends:
 - legacy/ldconfig-nekko.bst
 - base/freedesktop-sdk.bst:integration/ldconfig.bst
 - base/freedesktop-sdk.bst:integration/app-debug-link.bst
+- base/freedesktop-sdk.bst:integration/extrafs.bst
 - base/freedesktop-sdk.bst:components/bash-config.bst
 - legacy/bash-profile-nekko.bst
 - base/freedesktop-sdk.bst:components/patchelf.bst
