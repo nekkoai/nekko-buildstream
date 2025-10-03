@@ -5,28 +5,23 @@ build-depends:
 
 depends:
 - base/freedesktop-sdk.bst:components/fmtlib.bst
-- deps/ftxui.bst
 - platform/device-api.bst
 - platform/devicelayer.bst
 - legacy/et-driver.bst
-- legacy/device-management.bst
-- legacy/et-trace-utils.bst
 
 variables:
-  command-subdir: device-management-application
+  command-subdir: devicemanagement
   (@):
   - include/_private/legacy-toolchain.yml
   cmake-local: >-
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
     -D CMAKE_COMPILE_WARNING_AS_ERROR=off
     -D ENABLE_WARNINGS_AS_ERRORS=off
-    -D ENABLE_TESTS=off
-    -D ftxui_PROVIDER=find_package
+    -D BUILD_TESTS=off
+    -D BUILD_DOC=off
 
 sources:
-- kind: git_repo
-  url: github:nekkoai/atlantis
+- kind: git
+  url: github:aifoundry-org/et-platformsw
   track: master
-  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
-- kind: patch
-  path: static/patches/device-management-application.patch
+  ref: 62a29419873c2d5f910a2fb530d7dc0419e1e0e5

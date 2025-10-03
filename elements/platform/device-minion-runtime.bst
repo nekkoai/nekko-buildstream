@@ -18,13 +18,13 @@ variables:
   cmake-local: >-
     -D BUILD_DOC=OFF
     -D ENABLE_CMD_EXECUTION_TRACE=OFF
-    -D GIT_HASH_STRING=d08fcdcb37654f5ef4e9989c9dba4b9c07312038
-    -D GIT_HASH_ARRAY="{ 0xd0, 0x8f, 0xcd, 0xcb, 0x37, 0x65, 0x4f, 0x5e, 0xf4, 0xe9, 0x98, 0x9c, 0x9d, 0xba, 0x4b, 0x9c, 0x07, 0x31, 0x20, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }"
-    -D GIT_VERSION_STRING=d08fcdcb
-    -D GIT_VERSION_ARRAY="{ 'd', '0', '8', 'f', 'c', 'd', 'c', 'b', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }"
+    -D GIT_HASH_STRING=62a29419873c2d5f910a2fb530d7dc0419e1e0e5
+    -D GIT_HASH_ARRAY="{ 0x62, 0xa2, 0x94, 0x19, 0x87, 0x3c, 0x2d, 0x5f, 0x91, 0x0a, 0x2f, 0xb5, 0x30, 0xd7, 0xdc, 0x04, 0x19, 0xe1, 0xe0, 0xe5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }"
+    -D GIT_VERSION_STRING=62a29419
+    -D GIT_VERSION_ARRAY="{ '6', '2', 'a', '2', '9', '4', '1', '9', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }"
 
 sources:
 - kind: git
   url: github:aifoundry-org/et-platformsw
   track: master
-  ref: d08fcdcb37654f5ef4e9989c9dba4b9c07312038
+  ref: 62a29419873c2d5f910a2fb530d7dc0419e1e0e5
