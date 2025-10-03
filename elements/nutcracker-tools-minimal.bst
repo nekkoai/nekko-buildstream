@@ -7,3 +7,4 @@ config:
   exclude:
   - debug
   - doc
+  - devel

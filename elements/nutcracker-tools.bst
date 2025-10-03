@@ -7,3 +7,4 @@ depends:
 - legacy/ldconfig-nekko.bst
 - legacy/bash-profile-nekko.bst
 - base/freedesktop-sdk.bst:integration/ldconfig.bst
+- base/freedesktop-sdk.bst:components/less.bst

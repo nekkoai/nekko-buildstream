@@ -6,10 +6,11 @@ build-depends:
 depends:
 - base/freedesktop-sdk.bst:components/fmtlib.bst
 - deps/ftxui.bst
+- deps/nlohmann-json.bst
 - platform/device-api.bst
 - platform/devicelayer.bst
 - legacy/et-driver.bst
-- legacy/et-trace-utils.bst
+- platform/et-trace.bst
 - platform/device-management.bst
 
 variables:
