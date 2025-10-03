@@ -56,10 +56,10 @@ index 5605568eda..5efe520b60 100644
      meta = sess.get_modelmeta()
  
 diff --git a/onnxruntime/test/contrib_ops/layer_norm_op_test.cc b/onnxruntime/test/contrib_ops/layer_norm_op_test.cc
-index 655c4951f2..b2ded80263 100644
+index 4611dc9082..d24d0e673a 100644
 --- a/onnxruntime/test/contrib_ops/layer_norm_op_test.cc
 +++ b/onnxruntime/test/contrib_ops/layer_norm_op_test.cc
-@@ -95,7 +95,7 @@ TEST(LayerNormTest, LayerNorm_BFloat16Input) {
+@@ -123,7 +123,7 @@ TEST(LayerNormTest, LayerNorm_BFloat16Input) {
    // TRT, DNNL, OpenVINO and NNAPI, CoreML don't support this combination of datatypes
    test.Run(OpTester::ExpectResult::kExpectSuccess, "",
             {kTensorrtExecutionProvider, kDnnlExecutionProvider, kOpenVINOExecutionProvider,
@@ -68,56 +68,47 @@ index 655c4951f2..b2ded80263 100644
  }
  
  TEST(LayerNormTest, LayerNorm_Scale) {
-@@ -120,7 +120,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Float16Input) {
+@@ -148,7 +148,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Float16Input) {
    // TRT, DNNL, OpenVINO and NNAPI, CoreML don't support this combination of datatypes
    test.Run(OpTester::ExpectResult::kExpectSuccess, "",
             {kTensorrtExecutionProvider, kDnnlExecutionProvider, kOpenVINOExecutionProvider,
--            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider});
-+            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kEtGlowExecutionProvider});
+-            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider});
++            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider, kEtGlowExecutionProvider});
  }
  
  TEST(LayerNormTest, LayerNorm_Scale_Float16ScaleOutput) {
-@@ -134,7 +134,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Float16ScaleOutput) {
+@@ -162,7 +162,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Float16ScaleOutput) {
    // TRT, DNNL, OpenVINO and NNAPI, CoreML don't support this combination of datatypes
    test.Run(OpTester::ExpectResult::kExpectSuccess, "",
             {kTensorrtExecutionProvider, kDnnlExecutionProvider, kOpenVINOExecutionProvider,
--            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider});
-+            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kEtGlowExecutionProvider});
+-            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider});
++            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider, kEtGlowExecutionProvider});
  }
  
  TEST(LayerNormTest, LayerNorm_Scale_Float16InputScaleOutput) {
-@@ -178,7 +178,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Bias_Float16Input) {
+@@ -220,7 +220,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Bias_Float16Input) {
    // TRT, DNNL, OpenVINO and NNAPI, CoreML don't support this combination of datatypes
    test.Run(OpTester::ExpectResult::kExpectSuccess, "",
             {kTensorrtExecutionProvider, kDnnlExecutionProvider, kQnnExecutionProvider,
--            kOpenVINOExecutionProvider, kNnapiExecutionProvider, kCoreMLExecutionProvider});
-+            kOpenVINOExecutionProvider, kNnapiExecutionProvider, kCoreMLExecutionProvider, kEtGlowExecutionProvider});
+-            kOpenVINOExecutionProvider, kNnapiExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider});
++            kOpenVINOExecutionProvider, kNnapiExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider, kEtGlowExecutionProvider});
  }
  
  TEST(LayerNormTest, LayerNorm_Scale_Bias_Float16ScaleBiasOutput) {
-@@ -193,7 +193,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Bias_Float16ScaleBiasOutput) {
+@@ -235,7 +235,7 @@ TEST(LayerNormTest, LayerNorm_Scale_Bias_Float16ScaleBiasOutput) {
    // TRT, DNNL, OpenVINO and NNAPI, CoreML don't support this combination of datatypes
    test.Run(OpTester::ExpectResult::kExpectSuccess, "",
             {kTensorrtExecutionProvider, kDnnlExecutionProvider, kOpenVINOExecutionProvider,
--            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider});
-+            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kEtGlowExecutionProvider});
+-            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider});
++            kNnapiExecutionProvider, kQnnExecutionProvider, kCoreMLExecutionProvider, kWebGpuExecutionProvider, kEtGlowExecutionProvider});
  }
  
- TEST(LayerNormTest, LayerNorm_Scale_Bias_Float16InputScaleBiasOutput) {
-@@ -253,7 +253,7 @@ TEST(LayerNormTest, LayerNorm_InvalidScaleBias) {
-   // implementation for which we don't control the check or error message.
-   test.Run(OpTester::ExpectResult::kExpectFailure,
-            "Size of X.shape()[axis:] == 6. Size of scale and bias (if provided) must match this",
--           {kDnnlExecutionProvider, kDmlExecutionProvider, kTensorrtExecutionProvider});
-+           {kDnnlExecutionProvider, kDmlExecutionProvider, kTensorrtExecutionProvider, kEtGlowExecutionProvider});
- }
- 
- #if defined(USE_DNNL)
+ TEST(LayerNormTest, LayerNorm_Scale_Bias_NoBroadcast) {
 diff --git a/onnxruntime/test/onnx/main.cc b/onnxruntime/test/onnx/main.cc
-index 9886d98dcc..c1eb3837f4 100644
+index 99c3e44e13..a3627032c9 100644
 --- a/onnxruntime/test/onnx/main.cc
 +++ b/onnxruntime/test/onnx/main.cc
-@@ -46,7 +46,7 @@ void usage() {
+@@ -47,7 +47,7 @@ void usage() {
        "\t-r [repeat]: Specifies the number of times to repeat\n"
        "\t-v: verbose\n"
        "\t-n [test_case_name]: Specifies a single test case to run.\n"
@@ -126,7 +117,7 @@ index 9886d98dcc..c1eb3837f4 100644
        "'openvino', 'rocm', 'migraphx', 'acl', 'armnn', 'xnnpack', 'webgpu', 'nnapi', 'qnn', 'snpe' or 'coreml'. "
        "Default: 'cpu'.\n"
        "\t-p: Pause after launch, can attach debugger and continue\n"
-@@ -180,6 +180,7 @@ int real_main(int argc, char* argv[], Ort::Env& env) {
+@@ -220,6 +220,7 @@ int real_main(int argc, char* argv[], Ort::Env& env) {
    bool enable_migraphx = false;
    bool enable_webgpu = false;
    bool enable_xnnpack = false;
@@ -134,7 +125,7 @@ index 9886d98dcc..c1eb3837f4 100644
    bool override_tolerance = false;
    double atol = 1e-5;
    double rtol = 1e-5;
-@@ -269,6 +270,8 @@ int real_main(int argc, char* argv[], Ort::Env& env) {
+@@ -312,6 +313,8 @@ int real_main(int argc, char* argv[], Ort::Env& env) {
              enable_webgpu = true;
            } else if (!CompareCString(optarg, ORT_TSTR("xnnpack"))) {
              enable_xnnpack = true;
@@ -143,7 +134,7 @@ index 9886d98dcc..c1eb3837f4 100644
            } else {
              usage();
              return -1;
-@@ -696,6 +699,15 @@ select from 'TF8', 'TF16', 'UINT8', 'FLOAT', 'ITENSOR'. \n)");
+@@ -761,6 +764,15 @@ select from 'TF8', 'TF16', 'UINT8', 'FLOAT', 'ITENSOR'. \n)");
        return -1;
  #endif
      }
@@ -160,19 +151,19 @@ index 9886d98dcc..c1eb3837f4 100644
      if (user_graph_optimization_level_set) {
        sf.SetGraphOptimizationLevel(graph_optimization_level);
 diff --git a/onnxruntime/test/perftest/command_args_parser.cc b/onnxruntime/test/perftest/command_args_parser.cc
-index 84c3bc1634..93ed3e8a4e 100644
+index 5031d557ee..8441c297b3 100644
 --- a/onnxruntime/test/perftest/command_args_parser.cc
 +++ b/onnxruntime/test/perftest/command_args_parser.cc
-@@ -37,7 +37,7 @@ namespace perftest {
+@@ -39,7 +39,7 @@ namespace perftest {
        "\t-A: Disable memory arena\n"
-       "\t-I: Generate tensor input binding (Free dimensions are treated as 1.)\n"
+       "\t-I: Generate tensor input binding. Free dimensions are treated as 1 unless overridden using -f.\n"
        "\t-c [parallel runs]: Specifies the (max) number of runs to invoke simultaneously. Default:1.\n"
 -      "\t-e [cpu|cuda|dnnl|tensorrt|openvino|dml|acl|nnapi|coreml|qnn|snpe|rocm|migraphx|xnnpack|vitisai|webgpu]: Specifies the provider 'cpu','cuda','dnnl','tensorrt', "
 +      "\t-e [cpu|cuda|dnnl|etglow|tensorrt|openvino|dml|acl|nnapi|coreml|qnn|snpe|rocm|migraphx|xnnpack|vitisai|webgpu]: Specifies the provider 'cpu','cuda','dnnl','etglow','tensorrt', "
        "'openvino', 'dml', 'acl', 'nnapi', 'coreml', 'qnn', 'snpe', 'rocm', 'migraphx', 'xnnpack', 'vitisai' or 'webgpu'. "
        "Default:'cpu'.\n"
        "\t-b [tf|ort]: backend to use. Default:ort\n"
-@@ -133,8 +133,14 @@ namespace perftest {
+@@ -147,8 +147,14 @@ namespace perftest {
        "\t    [SNPE only] [priority]: execution priority, options: 'low', 'normal'. \n"
        "\t    [SNPE only] [buffer_type]: options: 'TF8', 'TF16', 'UINT8', 'FLOAT', 'ITENSOR'. default: ITENSOR'. \n"
        "\t    [SNPE only] [enable_init_cache]: enable SNPE init caching feature, set to 1 to enabled it. Disabled by default. \n"
@@ -189,7 +180,7 @@ index 84c3bc1634..93ed3e8a4e 100644
        "\t-T [Set intra op thread affinities]: Specify intra op thread affinity string\n"
        "\t [Example]: -T 1,2;3,4;5,6 or -T 1-2;3-4;5-6 \n"
        "\t\t Use semicolon to separate configuration between threads.\n"
-@@ -251,6 +257,8 @@ static bool ParseSessionConfigs(const std::string& configs_string,
+@@ -233,6 +239,8 @@ static bool ParseDimensionOverride(std::basic_string<ORTCHAR_T>& dim_identifier,
            test_config.machine_config.provider_type_name = onnxruntime::kCudaExecutionProvider;
          } else if (!CompareCString(optarg, ORT_TSTR("dnnl"))) {
            test_config.machine_config.provider_type_name = onnxruntime::kDnnlExecutionProvider;
@@ -199,10 +190,10 @@ index 84c3bc1634..93ed3e8a4e 100644
            test_config.machine_config.provider_type_name = onnxruntime::kOpenVINOExecutionProvider;
          } else if (!CompareCString(optarg, ORT_TSTR("tensorrt"))) {
 diff --git a/onnxruntime/test/perftest/ort_test_session.cc b/onnxruntime/test/perftest/ort_test_session.cc
-index fc1bdb10d7..13b5cea4b7 100644
+index a8ba0964e9..ef47387cca 100644
 --- a/onnxruntime/test/perftest/ort_test_session.cc
 +++ b/onnxruntime/test/perftest/ort_test_session.cc
-@@ -22,6 +22,10 @@
+@@ -28,6 +28,10 @@
  #include "core/providers/dml/dml_session_options_config_keys.h"
  #endif
  
@@ -213,8 +204,8 @@ index fc1bdb10d7..13b5cea4b7 100644
  #ifdef _WIN32
  #define strdup _strdup
  #endif
-@@ -579,6 +583,138 @@ select from 'TF8', 'TF16', 'UINT8', 'FLOAT', 'ITENSOR'. \n)");
-     session_options.AppendExecutionProvider_VitisAI(vitisai_session_options);
+@@ -546,6 +550,138 @@ select from 'TF8', 'TF16', 'UINT8', 'FLOAT', 'ITENSOR'. \n)");
+     session_options.AppendExecutionProvider_VitisAI(provider_options);
  #else
      ORT_THROW("VitisAI is not supported in this build\n");
 +#endif
@@ -353,7 +344,7 @@ index fc1bdb10d7..13b5cea4b7 100644
    } else if (!provider_name_.empty() &&
               provider_name_ != onnxruntime::kCpuExecutionProvider &&
 diff --git a/onnxruntime/test/perftest/ort_test_session.h b/onnxruntime/test/perftest/ort_test_session.h
-index f1a4220ab3..b9f020599c 100644
+index d6580812da..4e10336ff0 100644
 --- a/onnxruntime/test/perftest/ort_test_session.h
 +++ b/onnxruntime/test/perftest/ort_test_session.h
 @@ -38,6 +38,15 @@ class OnnxRuntimeTestSession : public TestSession {
@@ -370,13 +361,13 @@ index f1a4220ab3..b9f020599c 100644
 +  std::vector<char const*> api_param_values_ptrs_;
 +
    OrtAllocator* allocator_ = Ort::AllocatorWithDefaultOptions();
-   std::unique_ptr<Ort::Allocator> custom_allocator_;
+   Ort::Allocator custom_allocator_{nullptr};
    std::vector<Ort::Value> outputs_;
 diff --git a/onnxruntime/test/providers/base_tester.cc b/onnxruntime/test/providers/base_tester.cc
-index 01de15e6f8..887718bf09 100644
+index 4c8bc278c0..ee2efee9c3 100644
 --- a/onnxruntime/test/providers/base_tester.cc
 +++ b/onnxruntime/test/providers/base_tester.cc
-@@ -432,7 +432,8 @@ bool SetEpsForAllNodes(Graph& graph,
+@@ -443,7 +443,8 @@ bool SetEpsForAllNodes(Graph& graph,
            provider_type == onnxruntime::kCoreMLExecutionProvider ||
            provider_type == onnxruntime::kDnnlExecutionProvider ||
            provider_type == onnxruntime::kQnnExecutionProvider ||
@@ -386,7 +377,7 @@ index 01de15e6f8..887718bf09 100644
          found = true;
          break;
        }
-@@ -657,6 +658,7 @@ void BaseTester::RunWithConfig(size_t* number_of_pre_packed_weights_counter,
+@@ -671,6 +672,7 @@ void BaseTester::RunWithConfig(size_t* number_of_pre_packed_weights_counter,
            kSnpeExecutionProvider,
            kXnnpackExecutionProvider,
            kWebGpuExecutionProvider,
@@ -394,7 +385,7 @@ index 01de15e6f8..887718bf09 100644
        };
  
        // need to special case any synthetic EP names in the exclude list
-@@ -712,6 +714,8 @@ void BaseTester::RunWithConfig(size_t* number_of_pre_packed_weights_counter,
+@@ -728,6 +730,8 @@ void BaseTester::RunWithConfig(size_t* number_of_pre_packed_weights_counter,
            execution_provider = DefaultDmlExecutionProvider();
          else if (provider_type == onnxruntime::kWebGpuExecutionProvider)
            execution_provider = DefaultWebGpuExecutionProvider();
@@ -404,10 +395,10 @@ index 01de15e6f8..887718bf09 100644
          // skip if execution provider is disabled
          if (execution_provider == nullptr)
 diff --git a/onnxruntime/test/providers/compare_provider_test_utils.cc b/onnxruntime/test/providers/compare_provider_test_utils.cc
-index 3ef74259e2..369e2194c7 100644
+index 386a5656d8..494f7f0230 100644
 --- a/onnxruntime/test/providers/compare_provider_test_utils.cc
 +++ b/onnxruntime/test/providers/compare_provider_test_utils.cc
-@@ -36,6 +36,8 @@ std::unique_ptr<IExecutionProvider> GetExecutionProvider(const std::string& prov
+@@ -38,6 +38,8 @@ std::unique_ptr<IExecutionProvider> GetExecutionProvider(const std::string& prov
      execution_provider = DefaultDmlExecutionProvider();
    else if (provider_type == onnxruntime::kWebGpuExecutionProvider)
      execution_provider = DefaultWebGpuExecutionProvider();
@@ -451,7 +442,7 @@ index 6bf2fc63ab..242fd2c94c 100644
    options.is_v8 = is_v8;
    options.include_dim_values_in_main_graph = false;
 diff --git a/onnxruntime/test/providers/cpu/generator/random_test.cc b/onnxruntime/test/providers/cpu/generator/random_test.cc
-index f42f32d63d..744ff4d355 100644
+index a923df2ceb..a78fb1e5b6 100644
 --- a/onnxruntime/test/providers/cpu/generator/random_test.cc
 +++ b/onnxruntime/test/providers/cpu/generator/random_test.cc
 @@ -178,7 +178,7 @@ TEST(Random, InvalidDType) {
@@ -491,7 +482,7 @@ index f42f32d63d..744ff4d355 100644
  }
  
 diff --git a/onnxruntime/test/providers/cpu/math/clip_test.cc b/onnxruntime/test/providers/cpu/math/clip_test.cc
-index 9948a6cc8a..0d06ce0025 100644
+index c1452ab686..1509238658 100644
 --- a/onnxruntime/test/providers/cpu/math/clip_test.cc
 +++ b/onnxruntime/test/providers/cpu/math/clip_test.cc
 @@ -85,6 +85,9 @@ TEST(MathOpTest, Clip_Default_int64) {
@@ -504,7 +495,7 @@ index 9948a6cc8a..0d06ce0025 100644
  
    OpTester test("Clip", 12);
  
-@@ -219,7 +222,8 @@ TEST(MathOpTest, Clip_Relu6) {
+@@ -262,7 +265,8 @@ TEST(MathOpTest, Clip_Relu6) {
                             0.0f, 2.0f, 6.0f});
  
      // TensorRT does not support Clip opset 11 yet.
@@ -514,7 +505,7 @@ index 9948a6cc8a..0d06ce0025 100644
    };
  
    run_test(false);
-@@ -270,7 +274,8 @@ TEST(MathOpTest, Clip_Relu1) {
+@@ -313,7 +317,8 @@ TEST(MathOpTest, Clip_Relu1) {
                             -1.0f, 1.0f, 1.0f});
  
      // TensorRT and Tensorrt does not support Clip opset 11 yet.
@@ -525,10 +516,10 @@ index 9948a6cc8a..0d06ce0025 100644
  
    run_test(false);
 diff --git a/onnxruntime/test/providers/cpu/math/element_wise_ops_test.cc b/onnxruntime/test/providers/cpu/math/element_wise_ops_test.cc
-index bd3d21d492..c850f350da 100644
+index d87ee86175..d95989745a 100644
 --- a/onnxruntime/test/providers/cpu/math/element_wise_ops_test.cc
 +++ b/onnxruntime/test/providers/cpu/math/element_wise_ops_test.cc
-@@ -1468,7 +1468,7 @@ TEST(MathOpTest, Min_6) {
+@@ -1806,7 +1806,7 @@ TEST(MathOpTest, Min_6) {
                          {1.0f, 0.0f, 1.0f,
                           -3.0f, 1.1f, -100.0f,
                           -5.4f, 0.01f, -10000.0f});
@@ -537,7 +528,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_8) {
-@@ -1490,7 +1490,7 @@ TEST(MathOpTest, Min_8) {
+@@ -1828,7 +1828,7 @@ TEST(MathOpTest, Min_8) {
                          {1.0f, 0.0f, 1.0f,
                           -3.0f, 1.1f, -100.0f,
                           -5.4f, 0.01f, -10000.0f});
@@ -546,7 +537,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_Float) {
-@@ -1507,7 +1507,7 @@ TEST(MathOpTest, Min_12_Float) {
+@@ -1845,7 +1845,7 @@ TEST(MathOpTest, Min_12_Float) {
                          {-1.0f, -1.0f, -1.0f,
                           1.0f, 2.0f, 3.0f,
                           -70.0f, -80.0f, -90.0f});
@@ -555,7 +546,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_Float_2_Input) {
-@@ -1608,7 +1608,7 @@ TEST(MathOpTest, Min_12_Double) {
+@@ -1946,7 +1946,7 @@ TEST(MathOpTest, Min_12_Double) {
                           {-1.0f, -1.0f, -1.0f,
                            1.0f, 2.0f, 3.0f,
                            -70.0f, -80.0f, -90.0f});
@@ -564,7 +555,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_Double_Nan) {
-@@ -1694,7 +1694,7 @@ TEST(MathOpTest, Min_12_Int32) {
+@@ -2032,7 +2032,7 @@ TEST(MathOpTest, Min_12_Int32) {
                            {-1, -1, -1,
                             1, 2, 3,
                             -70, -80, -90});
@@ -573,7 +564,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_Int64) {
-@@ -1711,7 +1711,7 @@ TEST(MathOpTest, Min_12_Int64) {
+@@ -2049,7 +2049,7 @@ TEST(MathOpTest, Min_12_Int64) {
                            {-1, -1, -1,
                             1, 2, 3,
                             -70, -80, -90});
@@ -582,7 +573,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_UInt32) {
-@@ -1745,7 +1745,7 @@ TEST(MathOpTest, Min_12_UInt64) {
+@@ -2083,7 +2083,7 @@ TEST(MathOpTest, Min_12_UInt64) {
                             {1, 1, 1,
                              1, 20, 20,
                              1, 20, 30});
@@ -591,7 +582,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_MLFloat16) {
-@@ -1758,7 +1758,7 @@ TEST(MathOpTest, Min_12_MLFloat16) {
+@@ -2096,7 +2096,7 @@ TEST(MathOpTest, Min_12_MLFloat16) {
                             MakeMLFloat16({3.f, 2.f, -3.f}));
    test.AddOutput<MLFloat16>("min", {1, 3},
                              MakeMLFloat16({1.f, -1.f, -3.f}));
@@ -600,7 +591,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Min_12_MLFloat16_Scalar0) {
-@@ -1784,7 +1784,7 @@ TEST(MathOpTest, Min_12_MLFloat16_Scalar1) {
+@@ -2122,7 +2122,7 @@ TEST(MathOpTest, Min_12_MLFloat16_Scalar1) {
                             MakeMLFloat16({3.f, 2.f, -3.f}));
    test.AddOutput<MLFloat16>("min", {1, 3},
                              MakeMLFloat16({-10.f, -10.f, -10.f}));
@@ -609,7 +600,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  void TestFloat16MinMax(
-@@ -1806,7 +1806,7 @@ TEST(MathOpTest, Max_6) {
+@@ -2228,7 +2228,7 @@ TEST(MathOpTest, Max_6) {
                          {1.0f, 0.0f, 3.0f,
                           -1.0f, 3.3f, 64.0f,
                           5.4f, 0.03f, 10000.0f});
@@ -618,7 +609,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Max_8_Float) {
-@@ -1823,7 +1823,7 @@ TEST(MathOpTest, Max_8_Float) {
+@@ -2245,7 +2245,7 @@ TEST(MathOpTest, Max_8_Float) {
                          {10.0f, 20.0f, 30.0f,
                           40.0f, 50.0f, 60.0f,
                           300.0f, 300.0f, 300.0f});
@@ -627,7 +618,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Max_8_Double) {
-@@ -1872,7 +1872,7 @@ TEST(MathOpTest, Max_12_Float) {
+@@ -2294,7 +2294,7 @@ TEST(MathOpTest, Max_12_Float) {
                          {10.0f, 20.0f, 30.0f,
                           40.0f, 50.0f, 60.0f,
                           300.0f, 300.0f, 300.0f});
@@ -636,7 +627,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Max_12_Float_Nan) {
-@@ -2044,7 +2044,7 @@ TEST(MathOpTest, Max_12_Int32) {
+@@ -2466,7 +2466,7 @@ TEST(MathOpTest, Max_12_Int32) {
                            {10, 20, 30,
                             40, 50, 60,
                             300, 300, 300});
@@ -645,7 +636,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Max_12_Int64) {
-@@ -2061,7 +2061,7 @@ TEST(MathOpTest, Max_12_Int64) {
+@@ -2483,7 +2483,7 @@ TEST(MathOpTest, Max_12_Int64) {
                            {10, 20, 30,
                             40, 50, 60,
                             300, 300, 300});
@@ -654,7 +645,7 @@ index bd3d21d492..c850f350da 100644
  }
  
  TEST(MathOpTest, Max_12_UInt32) {
-@@ -2902,6 +2902,9 @@ TEST(MathOpTest, Mean_6) {
+@@ -3662,6 +3662,9 @@ TEST(MathOpTest, Mean_6) {
  }
  
  TEST(MathOpTest, Mean_8) {
@@ -665,10 +656,10 @@ index bd3d21d492..c850f350da 100644
    test.AddInput<float>("data_0", {1}, {1.0f});
    test.AddInput<float>("data_1", {3, 1},
 diff --git a/onnxruntime/test/providers/cpu/math/gemm_test.cc b/onnxruntime/test/providers/cpu/math/gemm_test.cc
-index 7ec84d87b2..39f8808106 100644
+index d0069a0069..8ff312189d 100644
 --- a/onnxruntime/test/providers/cpu/math/gemm_test.cc
 +++ b/onnxruntime/test/providers/cpu/math/gemm_test.cc
-@@ -348,6 +348,9 @@ TYPED_TEST(GemmOpTypedTests, TestGemmFalseBroadcast) {
+@@ -454,6 +454,9 @@ TYPED_TEST(GemmOpTypedTests, TestGemmFalseBroadcast) {
  }
  
  TYPED_TEST(GemmOpTypedTests, TestGemmBroadcast) {
@@ -679,7 +670,7 @@ index 7ec84d87b2..39f8808106 100644
      OpTester test("Gemm");
  
 diff --git a/onnxruntime/test/providers/cpu/math/softmax_test.cc b/onnxruntime/test/providers/cpu/math/softmax_test.cc
-index 6eb72255bd..debad16fee 100644
+index 6f7930f722..bfd8d1a8ab 100644
 --- a/onnxruntime/test/providers/cpu/math/softmax_test.cc
 +++ b/onnxruntime/test/providers/cpu/math/softmax_test.cc
 @@ -208,6 +208,9 @@ TEST(SoftmaxOperator, ThreeAndFourDimsSecondLastAxis) {
@@ -693,10 +684,10 @@ index 6eb72255bd..debad16fee 100644
    // and we see different expected results for the same test input
  
 diff --git a/onnxruntime/test/providers/cpu/model_tests.cc b/onnxruntime/test/providers/cpu/model_tests.cc
-index cb9887314e..c9118278cb 100644
+index d5f6f1ddf7..2cf08c596d 100644
 --- a/onnxruntime/test/providers/cpu/model_tests.cc
 +++ b/onnxruntime/test/providers/cpu/model_tests.cc
-@@ -46,6 +46,10 @@
+@@ -47,6 +47,10 @@
  #include "core/providers/armnn/armnn_provider_factory.h"
  #endif
  
@@ -707,7 +698,7 @@ index cb9887314e..c9118278cb 100644
  #include "test/common/cuda_op_test_utils.h"
  
  // test infrastructure
-@@ -261,6 +265,13 @@ TEST_P(ModelTest, Run) {
+@@ -267,6 +271,13 @@ TEST_P(ModelTest, Run) {
        else if (provider_name == "xnnpack") {
          ortso.AppendExecutionProvider("XNNPACK");
        }
@@ -721,7 +712,7 @@ index cb9887314e..c9118278cb 100644
  #endif
        OrtSession* ort_session;
        OrtStatus* ort_st = OrtApis::CreateSession(*ort_env, model_path.c_str(), ortso, &ort_session);
-@@ -428,6 +439,9 @@ static constexpr ORT_STRING_VIEW provider_name_acl = ORT_TSTR("acl");
+@@ -435,6 +446,9 @@ static constexpr ORT_STRING_VIEW provider_name_armnn = ORT_TSTR("armnn");
  static constexpr ORT_STRING_VIEW provider_name_xnnpack = ORT_TSTR("xnnpack");
  #endif
  static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
@@ -731,7 +722,7 @@ index cb9887314e..c9118278cb 100644
  
  ::std::vector<::std::basic_string<ORTCHAR_T>> GetParameterStrings() {
    // Map key is provider name(CPU, CUDA, etc). Value is the ONNX node tests' opsets to run.
-@@ -474,6 +488,9 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
+@@ -484,6 +498,9 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
  #ifdef USE_XNNPACK
    provider_names[provider_name_xnnpack] = {opset12, opset13, opset14, opset15, opset16, opset17, opset18};
  #endif
@@ -741,7 +732,7 @@ index cb9887314e..c9118278cb 100644
  
  #if defined(ENABLE_TRAINING_CORE) && defined(USE_CUDA)
    // Removing the CPU EP tests from CUDA build for training as these tests are already run in the CPU pipelines.
-@@ -629,6 +646,18 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
+@@ -657,6 +674,18 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
        ORT_TSTR("size")                 // INVALID_ARGUMENT: Cannot find binding of given name: x
    };
    std::vector<std::filesystem::path> paths;
@@ -760,7 +751,7 @@ index cb9887314e..c9118278cb 100644
  
    for (std::pair<ORT_STRING_VIEW, std::vector<ORT_STRING_VIEW>> kvp : provider_names) {
      const ORT_STRING_VIEW provider_name = kvp.first;
-@@ -679,6 +708,8 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
+@@ -712,6 +741,8 @@ static constexpr ORT_STRING_VIEW provider_name_dml = ORT_TSTR("dml");
        // these models run but disabled tests to keep memory utilization low
        // This will be removed after LRU implementation
        all_disabled_tests.insert(std::begin(openvino_disabled_tests), std::end(openvino_disabled_tests));
@@ -770,7 +761,7 @@ index cb9887314e..c9118278cb 100644
  
  #if !defined(__amd64__) && !defined(_M_AMD64)
 diff --git a/onnxruntime/test/providers/cpu/nn/batch_norm_op_test.cc b/onnxruntime/test/providers/cpu/nn/batch_norm_op_test.cc
-index b0d97410ac..4fd5187ed8 100644
+index f8ebca5ff9..d3d2985150 100644
 --- a/onnxruntime/test/providers/cpu/nn/batch_norm_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/nn/batch_norm_op_test.cc
 @@ -94,6 +94,9 @@ TEST(BatchNormTest, PositiveTestCase) {
@@ -794,19 +785,18 @@ index b0d97410ac..4fd5187ed8 100644
    vector<float> X{0.329876f, -0.287158f, -0.411425f, 0.473621f, 0.18156f, -0.170596f, -0.329516f, -0.170733f, -0.121664f, 0.4372f,
                    -0.485668f, 0.218049f, -0.360263f, 0.107016f, 0.45358f, 0.325056f, 0.15995f, 0.098852f, -0.283453f, -0.373051f,
 diff --git a/onnxruntime/test/providers/cpu/nn/conv_op_test.cc b/onnxruntime/test/providers/cpu/nn/conv_op_test.cc
-index 2d885ee9d4..7f1c11b71e 100644
+index a3a3dd939c..b17300a7f7 100644
 --- a/onnxruntime/test/providers/cpu/nn/conv_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/nn/conv_op_test.cc
-@@ -3,6 +3,8 @@
- 
+@@ -3,6 +3,7 @@
+ #include "core/graph/constants.h"
  #include "gtest/gtest.h"
  #include "test/providers/provider_test_utils.h"
 +#include "default_providers.h"
-+
+ 
  using namespace std;
  namespace onnxruntime {
- namespace test {
-@@ -498,6 +500,9 @@ TEST(ConvTest, Conv3D_1) {
+@@ -519,6 +520,9 @@ TEST(ConvTest, Conv3D_1) {
  
  // Conv22
  TEST(ConvTest, Conv3D_2) {
@@ -816,7 +806,7 @@ index 2d885ee9d4..7f1c11b71e 100644
    ConvOpAndTestAttributes attrs = {
        "",                                 // auto_pad
        vector<int64_t>{1, 1, 1},           // dilations
-@@ -901,6 +906,7 @@ TEST(ConvTest, ConvDimWithZero) {
+@@ -927,6 +931,7 @@ TEST(ConvTest, ConvDimWithZero) {
  
    // not handled by ACL
    attrs.excluded_providers.insert(kAclExecutionProvider);
@@ -825,10 +815,10 @@ index 2d885ee9d4..7f1c11b71e 100644
    TestConvOp(attrs, {X, W}, {X_shape, W_shape}, {}, out_shape, false, optional<float>(),
               OpTester::ExpectResult::kExpectSuccess, "", 10);
 diff --git a/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc b/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc
-index 2bf53ce5b5..16d420d305 100644
+index 83b27f10fe..7b7ea1bb8a 100644
 --- a/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/nn/conv_transpose_op_test.cc
-@@ -1100,6 +1100,10 @@ TEST(ConvTransposeTest, ConvTranspose_1D_AutoPad_SameLower) {
+@@ -1143,6 +1143,10 @@ TEST(ConvTransposeTest, ConvTranspose_1D_AutoPad_SameLower) {
  }
  
  TEST(ConvTransposeTest, ConvTranspose_AutoPad_with_non_default_strides) {
@@ -840,10 +830,10 @@ index 2bf53ce5b5..16d420d305 100644
        vector<int64_t>{3, 3},  // kernel_shape
        {},                     // output_padding
 diff --git a/onnxruntime/test/providers/cpu/nn/pool_op_test.cc b/onnxruntime/test/providers/cpu/nn/pool_op_test.cc
-index 885fb11c6e..f24422fa03 100644
+index 24a8c8491b..85d3de3a84 100644
 --- a/onnxruntime/test/providers/cpu/nn/pool_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/nn/pool_op_test.cc
-@@ -179,6 +179,9 @@ TEST(PoolTest, MaxPool_8_With_Index) {
+@@ -188,6 +188,9 @@ TEST(PoolTest, MaxPool_8_With_Index) {
    if (DefaultDmlExecutionProvider().get() != nullptr) {
      GTEST_SKIP() << "Skipping because of the following error: MLOperatorAuthorImpl.cpp(2100): The parameter is incorrect.";
    }
@@ -853,7 +843,7 @@ index 885fb11c6e..f24422fa03 100644
  
    MaxPool_8_WithIndexTest(false);                      // row major
    MaxPool_8_WithIndexTest(true, 0 /*storage_order*/);  // row major
-@@ -469,6 +472,9 @@ TEST(PoolTest, MaxPool_10_Dilation_2d) {
+@@ -478,6 +481,9 @@ TEST(PoolTest, MaxPool_10_Dilation_2d) {
    if (DefaultDmlExecutionProvider().get() != nullptr) {
      GTEST_SKIP() << "Skipping because of the following error: MLOperatorAuthorImpl.cpp(2100): The parameter is incorrect.";
    }
@@ -863,7 +853,7 @@ index 885fb11c6e..f24422fa03 100644
  
    OpTester test("MaxPool", 10);
  
-@@ -497,6 +503,9 @@ TEST(PoolTest, MaxPool_10_Dilation_2d_int8) {
+@@ -506,6 +512,9 @@ TEST(PoolTest, MaxPool_10_Dilation_2d_int8) {
    if (DefaultDmlExecutionProvider().get() != nullptr) {
      GTEST_SKIP() << "Skipping because of the following error: MLOperatorAuthorImpl.cpp(2100): The parameter is incorrect.";
    }
@@ -873,7 +863,7 @@ index 885fb11c6e..f24422fa03 100644
  
    OpTester test("MaxPool", 12);
  
-@@ -521,6 +530,10 @@ TEST(PoolTest, MaxPool_10_Dilation_2d_int8) {
+@@ -530,6 +539,10 @@ TEST(PoolTest, MaxPool_10_Dilation_2d_int8) {
  }
  
  TEST(PoolTest, MaxPool_10_DilationPadding_2d) {
@@ -884,7 +874,7 @@ index 885fb11c6e..f24422fa03 100644
    OpTester test("MaxPool", 10);
  
    test.AddAttribute("auto_pad", "");
-@@ -553,6 +566,9 @@ TEST(PoolTest, MaxPool_10_Dilation_Ceil0_2d) {
+@@ -562,6 +575,9 @@ TEST(PoolTest, MaxPool_10_Dilation_Ceil0_2d) {
    if (DefaultDmlExecutionProvider().get() != nullptr) {
      GTEST_SKIP() << "Skipping because of the following error: MLOperatorAuthorImpl.cpp(2100): The parameter is incorrect.";
    }
@@ -894,7 +884,7 @@ index 885fb11c6e..f24422fa03 100644
  
    OpTester test("MaxPool", 10);
  
-@@ -582,6 +598,9 @@ TEST(PoolTest, MaxPool_12_Dilation_Ceil0_2d_int8) {
+@@ -591,6 +607,9 @@ TEST(PoolTest, MaxPool_12_Dilation_Ceil0_2d_int8) {
    if (DefaultDmlExecutionProvider().get() != nullptr) {
      GTEST_SKIP() << "Skipping because of the following error: MLOperatorAuthorImpl.cpp(2100): The parameter is incorrect.";
    }
@@ -904,7 +894,7 @@ index 885fb11c6e..f24422fa03 100644
  
    OpTester test("MaxPool", 12);
  
-@@ -611,6 +630,9 @@ TEST(PoolTest, MaxPool_10_Dilation_Ceil1_2d) {
+@@ -620,6 +639,9 @@ TEST(PoolTest, MaxPool_10_Dilation_Ceil1_2d) {
    if (DefaultDmlExecutionProvider().get() != nullptr) {
      GTEST_SKIP() << "Skipping because of the following error: MLOperatorAuthorImpl.cpp(2100): The parameter is incorrect.";
    }
@@ -914,7 +904,7 @@ index 885fb11c6e..f24422fa03 100644
  
    OpTester test("MaxPool", 10);
  
-@@ -932,6 +954,10 @@ TEST(PoolTest, AveragePool_IncludePadPixel) {
+@@ -963,6 +985,10 @@ TEST(PoolTest, AveragePool_IncludePadPixel) {
  
  // test 'strides' attribute not specified
  TEST(PoolTest, AveragePool_DefaultStrides) {
@@ -925,7 +915,7 @@ index 885fb11c6e..f24422fa03 100644
    OpTester test("AveragePool");
    test.AddAttribute("kernel_shape", vector<int64_t>{2});
    std::vector<float> x_vals = {0.f, 1.f, 2.f,
-@@ -950,6 +976,10 @@ TEST(PoolTest, AveragePool_DefaultStrides) {
+@@ -981,6 +1007,10 @@ TEST(PoolTest, AveragePool_DefaultStrides) {
  }
  
  TEST(PoolTest, AveragePool_10_ceil1_2d) {
@@ -936,7 +926,7 @@ index 885fb11c6e..f24422fa03 100644
    OpTester test("AveragePool", 10);
  
    test.AddAttribute("auto_pad", "");
-@@ -974,6 +1004,9 @@ TEST(PoolTest, AveragePool_10_ceil1_2d) {
+@@ -1005,6 +1035,9 @@ TEST(PoolTest, AveragePool_10_ceil1_2d) {
  }
  
  TEST(PoolTest, AveragePool_19_dilation_2d) {
@@ -947,10 +937,10 @@ index 885fb11c6e..f24422fa03 100644
  
    test.AddAttribute("auto_pad", "");
 diff --git a/onnxruntime/test/providers/cpu/reduction/reduction_ops_test.cc b/onnxruntime/test/providers/cpu/reduction/reduction_ops_test.cc
-index 98a65b8eff..33b292ac89 100644
+index 61a16d41e3..ce543e79a6 100644
 --- a/onnxruntime/test/providers/cpu/reduction/reduction_ops_test.cc
 +++ b/onnxruntime/test/providers/cpu/reduction/reduction_ops_test.cc
-@@ -54,6 +54,9 @@ void TestReduceOp(const std::string& op,
+@@ -55,6 +55,9 @@ void TestReduceOp(const std::string& op,
  //  machine in RelWithDebInfo build mode, but only 2 seconds on my local dev machine(4 cores).
  #ifdef NDEBUG
  TEST(ReductionOpTest, ReductionVariationTest) {
@@ -960,7 +950,7 @@ index 98a65b8eff..33b292ac89 100644
    const std::vector<float>& input_data = testcases.input_data;
    const std::vector<int64_t>& input_dims = testcases.input_dims;
    OpAttributesResultMap& opAttributesResultMap = testcases.map_op_attribute_expected;
-@@ -2142,6 +2145,9 @@ TEST(ReductionOpTest, ReduceMin_int64) {
+@@ -2212,6 +2215,9 @@ TEST(ReductionOpTest, ReduceMin_int64) {
  }
  
  TEST(ReductionOpTest, ReduceMin_int8) {
@@ -970,7 +960,7 @@ index 98a65b8eff..33b292ac89 100644
    OpTester test("ReduceMin", 12);
    test.AddAttribute("axes", std::vector<int64_t>{0, 2});
    test.AddAttribute("keepdims", (int64_t)1);
-@@ -2574,6 +2580,9 @@ TEST(ReductionOpTest, ReduceSum_int64) {
+@@ -2644,6 +2650,9 @@ TEST(ReductionOpTest, ReduceSum_int64) {
  }
  
  TEST(ReductionOpTest, ReduceSum_default_axes_keepdims) {
@@ -980,7 +970,7 @@ index 98a65b8eff..33b292ac89 100644
    OpTester test("ReduceSum");
    test.AddAttribute("keepdims", (int64_t)1);
    test.AddInput<float>("data", {3, 2, 2},
-@@ -2590,6 +2599,9 @@ TEST(ReductionOpTest, ReduceSum_default_axes_keepdims) {
+@@ -2660,6 +2669,9 @@ TEST(ReductionOpTest, ReduceSum_default_axes_keepdims) {
  }
  
  TEST(ReductionOpTest, ReduceSum_default_axes_do_not_keep_dims) {
@@ -990,7 +980,7 @@ index 98a65b8eff..33b292ac89 100644
    OpTester test("ReduceSum");
    test.AddAttribute("keepdims", static_cast<int64_t>(0));
    test.AddInput<float>("data", {3, 2, 2},
-@@ -3206,7 +3218,7 @@ TEST(ReductionOpTest, ArgMax_int32_last_index_dups) {
+@@ -3335,7 +3347,7 @@ TEST(ReductionOpTest, ArgMax_int32_last_index_dups) {
                            {1, 1,
                             0, 1,
                             1, 0});
@@ -998,14 +988,14 @@ index 98a65b8eff..33b292ac89 100644
 +  test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kTensorrtExecutionProvider, kEtGlowExecutionProvider});
  }
  
- TEST(ReductionOpTest, ArgMax_int32_neg_axis) {
-@@ -5425,7 +5437,8 @@ TEST(ReductionOpTest, ReduceSum_RK_parallel) {
+ TEST(ReductionOpTest, ArgMax_float_first_index_random) {
+@@ -5680,7 +5692,8 @@ TEST(ReductionOpTest, ReduceSum_RK_parallel) {
    test.AddOutput<float>("reduced", {32}, expected);
  
    // CoreML does not provide 1e-5 precision here (it's off by 1e-4)
--  test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kCoreMLExecutionProvider});
+-  test.Run(OpTester::ExpectResult::kExpectSuccess);
 +  // EtGlow does not provide 1e-5 precision here (it's off by 2.4e-4)
-+  test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kCoreMLExecutionProvider, kEtGlowExecutionProvider});
++  test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kEtGlowExecutionProvider});
  }
  
  TEST(ReductionOpTest, ReduceSum_RK_keepdims) {
@@ -1059,10 +1049,10 @@ index 1d9cd15f53..11541afc25 100644
    SessionOptions so;
    // Don't fail early on shape inference so that we can test the op's error handling.
 diff --git a/onnxruntime/test/providers/cpu/tensor/resize_op_test.cc b/onnxruntime/test/providers/cpu/tensor/resize_op_test.cc
-index 111520ef03..75a8fdec3f 100644
+index 84fb6157b8..03d1ed5b6c 100644
 --- a/onnxruntime/test/providers/cpu/tensor/resize_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/tensor/resize_op_test.cc
-@@ -798,7 +798,7 @@ TEST(ResizeOpTest, NhwcResizeOpLinearUpSampleTest_4DBilinear_asymmetric_int8) {
+@@ -805,7 +805,7 @@ TEST(ResizeOpTest, NhwcResizeOpLinearUpSampleTest_4DBilinear_asymmetric_int8) {
      test.AddOutput<int8_t>("Y", {N, static_cast<int64_t>(H * scales[1]), static_cast<int64_t>(W * scales[2]), C},
                             Y, false, .0f, 1.0f);
      // TensorRT: results mismatch
@@ -1247,10 +1237,10 @@ index 9fa3b6df7d..2b82d11508 100644
  
  }  // namespace test
 diff --git a/onnxruntime/test/providers/cpu/tensor/slice_op.test.cc b/onnxruntime/test/providers/cpu/tensor/slice_op.test.cc
-index 83b308b57f..efdb5fb4f3 100644
+index dcbb953a2e..87c94be77a 100644
 --- a/onnxruntime/test/providers/cpu/tensor/slice_op.test.cc
 +++ b/onnxruntime/test/providers/cpu/tensor/slice_op.test.cc
-@@ -232,7 +232,8 @@ TEST(SliceTest, Slice2D_DefaultAxes) {
+@@ -233,7 +233,8 @@ TEST(SliceTest, Slice2D_DefaultAxes) {
                        {},  // default axes
                        {},  // default steps
                        {1, 2},
@@ -1260,7 +1250,7 @@ index 83b308b57f..efdb5fb4f3 100644
  }
  
  TEST(SliceTest, Slice3D) {
-@@ -697,7 +698,7 @@ TEST(SliceTest, Slice5D_LargeStep) {
+@@ -737,7 +738,7 @@ TEST(SliceTest, Slice5D_LargeStep) {
                        {1.f, 2.f, 3.f, 4.f,
                         5.f, 6.f, 7.f, 8.f},
                        true,
@@ -1269,7 +1259,7 @@ index 83b308b57f..efdb5fb4f3 100644
  }
  
  TEST(SliceTest, Slice5D_CopyAxis2LargeBlock) {
-@@ -739,7 +740,9 @@ TEST(SliceTest, EmptyDim) {
+@@ -779,7 +780,9 @@ TEST(SliceTest, EmptyDim) {
                        {0},  // axes
                        {},   // steps
                        {0, 6},
@@ -1280,7 +1270,7 @@ index 83b308b57f..efdb5fb4f3 100644
  
    RunSliceTest<float>({0, 6},
                        {},
-@@ -748,7 +751,9 @@ TEST(SliceTest, EmptyDim) {
+@@ -788,7 +791,9 @@ TEST(SliceTest, EmptyDim) {
                        {0},   // axes
                        {-1},  // steps
                        {0, 6},
@@ -1314,7 +1304,7 @@ index df1f0989a9..88abdc29c1 100644
  
  }  // namespace test
 diff --git a/onnxruntime/test/providers/cpu/tensor/tile_op_test.cc b/onnxruntime/test/providers/cpu/tensor/tile_op_test.cc
-index b517b1a283..809c6c33a2 100644
+index 5902fbe3dd..055b5dada0 100644
 --- a/onnxruntime/test/providers/cpu/tensor/tile_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/tensor/tile_op_test.cc
 @@ -3,6 +3,7 @@
@@ -1374,10 +1364,10 @@ index b517b1a283..809c6c33a2 100644
  TEST(TensorOpTest, TileUint64Type) { RunTestWrapper<uint64_t>(); }
  
 diff --git a/onnxruntime/test/providers/cpu/tensor/transpose_test.cc b/onnxruntime/test/providers/cpu/tensor/transpose_test.cc
-index 01dba55ceb..9ddb5a3335 100644
+index 73a5bce768..9a124afd37 100644
 --- a/onnxruntime/test/providers/cpu/tensor/transpose_test.cc
 +++ b/onnxruntime/test/providers/cpu/tensor/transpose_test.cc
-@@ -600,7 +600,7 @@ static void NumericNHWC2NCHW() {
+@@ -605,7 +605,7 @@ static void NumericNHWC2NCHW() {
        14, 16};
  
    TransposeTest(input_shape, input_vals, &perm, expected_shape, expected_vals,
@@ -1387,10 +1377,10 @@ index 01dba55ceb..9ddb5a3335 100644
  
  TEST(TransposeOpTest, NHWC2NCHW) {
 diff --git a/onnxruntime/test/providers/cpu/tensor/unsqueeze_op_test.cc b/onnxruntime/test/providers/cpu/tensor/unsqueeze_op_test.cc
-index d2aa5dd428..030947c969 100644
+index d1910c89f7..5cf15a2b10 100644
 --- a/onnxruntime/test/providers/cpu/tensor/unsqueeze_op_test.cc
 +++ b/onnxruntime/test/providers/cpu/tensor/unsqueeze_op_test.cc
-@@ -165,7 +165,7 @@ TEST(TensorOpTest, UnsqueezeNegAxis_3) {
+@@ -165,7 +165,7 @@ TEST(UnsqueezeOpTest, UnsqueezeNegAxis_3) {
      test.AddOutput<float>("output", {1, 1, 1, 2, 3, 4}, std::vector<float>(2 * 3 * 4, 1.0f));
      // TensorRT does not support negative axis.
      // TODO: TensorRT, OpenVINO dont support "axes" input in opset 13, re-enable after
@@ -1399,6 +1389,669 @@ index d2aa5dd428..030947c969 100644
    };
    run_test(false);
    run_test(true);
+diff --git a/onnxruntime/test/python/onnx_backend_test_series.py b/onnxruntime/test/python/onnx_backend_test_series.py
+index 23f6d3e23e..475eae81e9 100644
+--- a/onnxruntime/test/python/onnx_backend_test_series.py
++++ b/onnxruntime/test/python/onnx_backend_test_series.py
+@@ -123,8 +123,10 @@ def create_backend_test(test_name=None):
+     if test_name:
+         backend_test.include(test_name + ".*")
+     else:
+-        filters = load_jsonc("onnx_backend_test_series_filters.jsonc")
++        etglow_filter = "onnx_backend_test_series_etglow_greedy_filters.jsonc" if os.getenv('ORT_ETGLOW_GREEDY', "0").lower() in ('true', '1', 't') else "onnx_backend_test_series_etglow_default_filters.jsonc"
++        filters = load_jsonc(etglow_filter) if backend.supports_device("ETGLOW") else load_jsonc("onnx_backend_test_series_filters.jsonc")
+         current_failing_tests = apply_filters(filters, "current_failing_tests")
++        current_xfail_tests = []
+ 
+         if platform.architecture()[0] == "32bit":
+             current_failing_tests += apply_filters(filters, "current_failing_tests_x86")
+@@ -154,6 +156,10 @@ def create_backend_test(test_name=None):
+         if backend.supports_device("WEBGPU"):
+             current_failing_tests += apply_filters(filters, "current_failing_tests_WEBGPU")
+ 
++        if backend.supports_device("ETGLOW"):
++            current_failing_tests += apply_filters(filters, "current_failing_tests_ETGLOW")
++            current_xfail_tests += apply_filters(filters, "current_xfail_tests_ETGLOW")
++
+         # Skip these tests for a "pure" DML onnxruntime python wheel. We keep these tests enabled for instances where both DML and CUDA
+         # EPs are available (Windows GPU CI pipeline has this config) - these test will pass because CUDA has higher precedence than DML
+         # and the nodes are assigned to only the CUDA EP (which supports these tests)
+@@ -171,6 +177,9 @@ def create_backend_test(test_name=None):
+         backend_test.exclude("(" + "|".join(filters) + ")")
+         print("excluded tests:", filters)
+ 
++        if current_xfail_tests:
++            backend_test.xfail("(" + "|".join(current_xfail_tests) + ")")
++
+         # exclude TRT EP temporarily and only test CUDA EP to retain previous behavior
+         os.environ["ORT_ONNX_BACKEND_EXCLUDE_PROVIDERS"] = "TensorrtExecutionProvider"
+ 
+@@ -205,8 +214,16 @@ def parse_args():
+     return parsed
+ 
+ 
+-if __name__ == "__main__":
++def unittest_main():
+     args = parse_args()
+-
+     create_backend_test(args.test_name)
+     unittest.main()
++
++def pytest_main():
++    test_name = None
++    create_backend_test(test_name)
++
++if __name__ == "__main__":
++    unittest_main()
++else:
++    pytest_main()
+diff --git a/onnxruntime/test/python/onnxruntime_test_python.py b/onnxruntime/test/python/onnxruntime_test_python.py
+index 3af6e8ccac..ab68ab2efa 100644
+--- a/onnxruntime/test/python/onnxruntime_test_python.py
++++ b/onnxruntime/test/python/onnxruntime_test_python.py
+@@ -273,6 +273,15 @@ class TestInferenceSession(unittest.TestCase):
+             # confirm only CPU Provider is registered now.
+             self.assertEqual(["CPUExecutionProvider"], sess.get_providers())
+ 
++        if "EtGlowExecutionProvider" in onnxrt.get_available_providers():
++            sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["EtGlowExecutionProvider"])
++            # confirm that ETGLOW Provider is in list of registered providers.
++            self.assertTrue("EtGlowExecutionProvider" in sess.get_providers())
++            # reset the session and register only CPU Provider.
++            sess.set_providers(["CPUExecutionProvider"])
++            # confirm only CPU Provider is registered now.
++            self.assertEqual(["CPUExecutionProvider"], sess.get_providers())
++
+     def test_set_providers_with_options(self):
+         if "TensorrtExecutionProvider" in onnxrt.get_available_providers():
+             sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["TensorrtExecutionProvider"])
+@@ -583,6 +592,32 @@ class TestInferenceSession(unittest.TestCase):
+ 
+             run_rocm_options_test()
+ 
++        if "EtGlowExecutionProvider" in onnxrt.get_available_providers():
++
++            def run_et_glow_options_test():  # noqa: N802
++                sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["EtGlowExecutionProvider"])
++                self.assertIn("EtGlowExecutionProvider", sess.get_providers())
++                options = sess.get_provider_options()
++
++                def test_get_and_set_option_with_values(option_name, option_values):
++                    provider_options = sess.get_provider_options()
++                    self.assertIn("EtGlowExecutionProvider", provider_options)
++                    etglow_options = options["EtGlowExecutionProvider"]
++                    self.assertIn(option_name, etglow_options)
++                    for option_value in option_values:
++                        etglow_options[option_name] = option_value
++                        sess.set_providers(["EtGlowExecutionProvider"], [etglow_options])
++                        new_provider_options = sess.get_provider_options()
++                        self.assertEqual(
++                            new_provider_options.get("EtGlowExecutionProvider", {}).get(option_name),
++                            str(option_value),
++                        )
++
++                test_get_and_set_option_with_values("etglow_compile_only", ["1", "0"])
++                test_get_and_set_option_with_values("etglow_dump_subgraphs", ["1", "0"])
++
++            run_et_glow_options_test()
++
+     def test_invalid_set_providers(self):
+         with self.assertRaises(RuntimeError) as context:
+             sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["CPUExecutionProvider"])
+@@ -595,6 +630,7 @@ class TestInferenceSession(unittest.TestCase):
+             sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["CPUExecutionProvider"])
+             self.assertEqual(["CPUExecutionProvider"], sess.get_providers())
+ 
++    @unittest.expectedFailure  # reason="unimplemented get_tuning_results for ETGLOW EP")
+     def test_get_and_set_tuning_results(self):
+         def get_tuning_results_for_ep(sess, ep):  # without the outer list
+             tuning_results = sess.get_tuning_results()
+@@ -678,6 +714,9 @@ class TestInferenceSession(unittest.TestCase):
+         if "ROCMExecutionProvider" in onnxrt.get_available_providers():
+             do_test_get_and_set_tuning_results("ROCMExecutionProvider")
+ 
++        if "EtGlowExecutionProvider" in onnxrt.get_available_providers():
++            do_test_get_and_set_tuning_results("EtGlowExecutionProvider")
++
+     def test_run_model_with_optional_sequence_input(self):
+         sess = onnxrt.InferenceSession(get_name("identity_opt.onnx"))
+         x = [np.array([1, 2, 3, 4, 5]).astype(np.float32)]
+@@ -1049,14 +1088,23 @@ class TestInferenceSession(unittest.TestCase):
+         sess.run([], {"X": x})
+         profile_file = sess.end_profiling()
+ 
+-        tags = ["pid", "dur", "ts", "ph", "X", "name", "args"]
++        event_tags = {
++            "X": ["pid", "tid", "ph", "name", "args", "ts", "cat", "dur"],
++            "i": ["pid", "tid", "ph", "name", "args", "ts", "cat"],
++            "C": ["pid", "tid", "ph", "name", "args", "ts"],
++            "M": ["pid", "tid", "ph", "name", "args"],
++        }
+         with open(profile_file) as f:
+             lines = f.readlines()
+             self.assertTrue("[" in lines[0])
+-            for i in range(1, len(lines) - 1):
+-                for tag in tags:
+-                    self.assertTrue(tag in lines[i])
+-            self.assertTrue("]" in lines[-1])
++            for i, line in enumerate(lines[1:-1], start=1):
++                for event_type, tags in event_tags.items():
++                    if f"\"{event_type}\"" in line:
++                        for tag in tags:
++                            self.assertIn(tag, line, f"Missing tag '{tag}' in line {i}: {line}")
++                        break
++                else:
++                    self.fail(f"Unhandled event type in line {i}: {line}")
+ 
+         os.remove(profile_file)
+ 
+diff --git a/onnxruntime/test/python/onnxruntime_test_python_iobinding.py b/onnxruntime/test/python/onnxruntime_test_python_iobinding.py
+index 77f9e6f5cf..da734a9f33 100644
+--- a/onnxruntime/test/python/onnxruntime_test_python_iobinding.py
++++ b/onnxruntime/test/python/onnxruntime_test_python_iobinding.py
+@@ -19,6 +19,7 @@ from onnxruntime.capi._pybind_state import OrtValueVector, SessionIOBinding
+ test_params = [
+     ("cuda", "CUDAExecutionProvider", C_OrtDevice.cuda),
+     ("dml", "DmlExecutionProvider", C_OrtDevice.dml),
++    ("et", "EtGlowExecutionProvider", C_OrtDevice.et),
+ ]
+ 
+ 
+@@ -72,7 +73,7 @@ class TestIOBinding(unittest.TestCase):
+     def test_bind_input_types(self):
+         for device, execution_provider, generate_device in test_params:
+             with self.subTest(execution_provider):
+-                if execution_provider not in onnxrt.get_available_providers():
++                if execution_provider not in onnxrt.get_available_providers(): # or execution_provider == "EtGlowExecutionProvider":
+                     self.skipTest(f"Skipping on {device.upper()}.")
+ 
+                 opset = onnx_opset_version()
+@@ -103,11 +104,14 @@ class TestIOBinding(unittest.TestCase):
+                         np.bool_,
+                     ]:
+                         with self.subTest(dtype=dtype, inner_device=str(inner_device)):
++                            if execution_provider == "EtGlowExecutionProvider" and dtype in [np.float64, np.uint64, np.uint16, np.uint32]:
++                                self.skipTest(f"Skipping on {device.upper()} due unsupported dtype: {dtype}")
++
+                             x = np.arange(8).reshape((-1, 2)).astype(dtype)
+                             proto_dtype = helper.np_dtype_to_tensor_dtype(x.dtype)
+ 
+-                            X = helper.make_tensor_value_info("X", proto_dtype, [None, x.shape[1]])  # noqa: N806
+-                            Y = helper.make_tensor_value_info("Y", proto_dtype, [None, x.shape[1]])  # noqa: N806
++                            X = helper.make_tensor_value_info("X", proto_dtype, ["N", x.shape[1]])  # noqa: N806
++                            Y = helper.make_tensor_value_info("Y", proto_dtype, ["N", x.shape[1]])  # noqa: N806
+ 
+                             # inference
+                             node_add = helper.make_node("Identity", ["X"], ["Y"])
+@@ -122,7 +126,9 @@ class TestIOBinding(unittest.TestCase):
+                                 opset_imports=[helper.make_operatorsetid("", opset)],
+                             )
+ 
+-                            sess = onnxrt.InferenceSession(model_def.SerializeToString(), providers=provider)
++                            provider_options = [{"etglow_onnx_shape_params": f"N={x.shape[0]}"}] if execution_provider == "EtGlowExecutionProvider" else None
++
++                            sess = onnxrt.InferenceSession(model_def.SerializeToString(), providers=provider, provider_options=provider_options)
+ 
+                             bind = SessionIOBinding(sess._sess)
+                             ort_value = C_OrtValue.ortvalue_from_numpy(x, inner_device)
+diff --git a/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc b/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc
+index e261d66a0d..70a80e2a39 100644
+--- a/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc
++++ b/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc
+@@ -751,6 +751,400 @@
+         "^test_reduce_min_empty_set_cpu",
+         "^test_resize_upsample_sizes_nearest_not_smaller_cpu"
+     ],
++    "current_xfail_tests_ETGLOW": [
++        "^test_abs_cpu",
++        "^test_acos_cpu",
++        "^test_acos_example_cpu",
++        "^test_acosh_cpu",
++        "^test_acosh_example_cpu",
++        "^test_adagrad_cpu",
++        "^test_adagrad_multiple_cpu",
++        "^test_adam_cpu",
++        "^test_adam_multiple_cpu",
++        "^test_add_uint8_cpu",
++        "^test_ai_onnx_ml_array_feature_extractor_cpu",
++        "^test_ai_onnx_ml_binarizer_cpu",
++        "^test_and2d_cpu",
++        "^test_and3d_cpu",
++        "^test_and4d_cpu",
++        "^test_and_bcast3v1d_cpu",
++        "^test_and_bcast3v2d_cpu",
++        "^test_and_bcast3v3d_cpu",
++        "^test_and_bcast3v4d_cpu",
++        "^test_and_bcast4v2d_cpu",
++        "^test_and_bcast4v3d_cpu",
++        "^test_and_bcast4v4d_cpu",
++        "^test_argmax_keepdims_example_select_last_index_cpu",
++        "^test_argmax_negative_axis_keepdims_example_select_last_index_cpu",
++        "^test_argmax_no_keepdims_example_select_last_index_cpu",
++        "^test_argmin*",
++        "^test_asin*",
++        "^test_atan*",
++        "^test_averagepool_2d_ceil_cpu",
++        "^test_averagepool_2d_dilations_cpu",
++        "^test_averagepool_3d_default_cpu",
++        "^test_basic_deform_conv_with_padding_cpu",
++        "^test_basic_deform_conv_without_padding_cpu",
++        "^test_batchnorm_epsilon_training_mode_cpu",
++        "^test_batchnorm_example_training_mode_cpu",
++        "^test_bernoulli*",
++        "^test_bitshift*",
++        "^test_bitwise_and*",
++        "^test_bitwise_not*",
++        "^test_bitwise_or*",
++        "^test_bitwise_xor*",
++        "^test_blackmanwindow*",
++        "^test_cast_*",
++        "^test_castlike_*",
++        "^test_ceil*",
++        "^test_celu*",
++        "^test_center*",
++        "^test_clip_cpu",
++        "^test_clip_default_inbounds_expanded_cpu",
++        "^test_clip_default_int8_max_cpu",
++        "^test_clip_default_int8_min_cpu",
++        "^test_clip_default_max_cpu",
++        "^test_clip_default_min_cpu",
++        "^test_clip_example_cpu",
++        "^test_clip_expanded_cpu",
++        "^test_clip_inbounds_cpu",
++        "^test_clip_outbounds_cpu",
++        "^test_clip_splitbounds_cpu",
++        "^test_col2im*",
++        "^test_compress*",
++        "^test_constant_pad*",
++        "^test_constantofshape*",
++        "^test_convinteger*",
++        "^test_convtranspose_1d_cpu",
++        "^test_convtranspose_3d_cpu",
++        "^test_convtranspose_autopad_same_cpu",
++        "^test_convtranspose_kernel_shape_cpu",
++        "^test_convtranspose_output_shape_cpu",
++        "^test_cosh_*",
++        "^test_cumsum_1d*",
++        "^test_cumsum_2d*",
++        "^test_deform*",
++        "^test_dequantizelinear*",
++        "^test_det*",
++        "^test_dft*",
++        "^test_div_uint8_cpu",
++        "^test_dropout_default_mask_cpu",
++        "^test_dropout_default_mask_ratio_cpu",
++        "^test_dynamicquantizelinear*",
++        "^test_edge_pad_cpu",
++        "^test_einsum*",
++        "^test_elu_*",
++        "^test_equal_string_broadcast_cpu",
++        "^test_equal_string_cpu",
++        "^test_expand_dim*",
++        "^test_eyelike_*",
++        "^test_floor_*",
++        "^test_gather_elements_0_cpu",
++        "^test_gather_elements_1_cpu",
++        "^test_gather_elements_negative_indices_cpu",
++        "^test_gathernd_e*",
++        "^test_gemm_all_attributes_cpu",
++        "^test_gemm_alpha_cpu",
++        "^test_gemm_beta_cpu",
++        "^test_gemm_default_scalar_bias_cpu",
++        "^test_gemm_default_single_elem_vector_bias_cpu",
++        "^test_gemm_default_vector_bias_cpu",
++        "^test_gemm_default_zero_bias_cpu",
++        "^test_gemm_transposeA_cpu",
++        "^test_gemm_transposeB_cpu",
++        "^test_globalmaxpool*",
++        "^test_greater_*",
++        "^test_gridsample_*",
++        "^test_group_normalization_*",
++        "^test_gru_batchwise_cpu",
++        "^test_gru_seq_length_cpu", // precission error
++        "^test_gru_with_initial_bias_cpu", // precission error
++        "^test_hammingwindow*",
++        "^test_hannwindow*",
++        "^test_hardmax*",
++        "^test_hardsigmoid_default_expanded_ver18_cpu",
++        "^test_hardsigmoid_example_expanded_ver18_cpu",
++        "^test_hardsigmoid_expanded_ver18_cpu",
++        "^test_hardswish_cpu",
++        "^test_identity_opt_cpu",
++        "^test_identity_sequence_cpu",
++        "^test_if_*",
++        "^test_isinf*",
++        "^test_isnan*",
++        "^test_layer_normalization_2d_axis0_cpu",
++        "^test_layer_normalization_2d_axis0_expanded_ver18_cpu",
++        "^test_layer_normalization_2d_axis1_cpu",
++        "^test_layer_normalization_2d_axis1_expanded_ver18_cpu",
++        "^test_layer_normalization_2d_axis_negative_1_cpu",
++        "^test_layer_normalization_2d_axis_negative_1_expanded_ver18_cpu",
++        "^test_layer_normalization_2d_axis_negative_2_cpu",
++        "^test_layer_normalization_2d_axis_negative_2_expanded_ver18_cpu",
++        "^test_layer_normalization_3d_axis0_epsilon_cpu",
++        "^test_layer_normalization_3d_axis0_epsilon_expanded_ver18_cpu",
++        "^test_layer_normalization_3d_axis1_epsilon_cpu",
++        "^test_layer_normalization_3d_axis1_epsilon_expanded_ver18_cpu",
++        "^test_layer_normalization_3d_axis2_epsilon_cpu",
++        "^test_layer_normalization_3d_axis2_epsilon_expanded_ver18_cpu",
++        "^test_layer_normalization_3d_axis_negative_1_epsilon_cpu",
++        "^test_layer_normalization_3d_axis_negative_1_epsilon_expanded_ver18_cpu",
++        "^test_layer_normalization_3d_axis_negative_2_epsilon_cpu",
++        "^test_layer_normalization_3d_axis_negative_2_epsilon_expanded_ver18_cpu",
++        "^test_layer_normalization_3d_axis_negative_3_epsilon_cpu",
++        "^test_layer_normalization_3d_axis_negative_3_epsilon_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis0_cpu",
++        "^test_layer_normalization_4d_axis0_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis1_cpu",
++        "^test_layer_normalization_4d_axis1_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis2_cpu",
++        "^test_layer_normalization_4d_axis2_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis3_cpu",
++        "^test_layer_normalization_4d_axis3_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis_negative_1_cpu",
++        "^test_layer_normalization_4d_axis_negative_1_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis_negative_2_cpu",
++        "^test_layer_normalization_4d_axis_negative_2_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis_negative_3_cpu",
++        "^test_layer_normalization_4d_axis_negative_3_expanded_ver18_cpu",
++        "^test_layer_normalization_4d_axis_negative_4_cpu",
++        "^test_layer_normalization_4d_axis_negative_4_expanded_ver18_cpu",
++        "^test_layer_normalization_default_axis_cpu",
++        "^test_layer_normalization_default_axis_expanded_ver18_cpu",
++        "^test_leakyrelu_default_expanded_cpu",
++        "^test_leakyrelu_example_expanded_cpu",
++        "^test_leakyrelu_expanded_cpu",
++        "^test_less_equal*",
++        "^test_logsoftmax_*",
++        "^test_loop11_cpu",
++        "^test_loop13_seq_cpu",
++        "^test_lppool_*",
++        "^test_matmulinteger_cpu",
++        "^test_max_example_cpu",
++        "^test_max_float64_cpu",
++        "^test_max_uint16_cpu",
++        "^test_max_uint32_cpu",
++        "^test_max_uint64_cpu",
++        "^test_max_uint8_cpu",
++        "^test_maxpool_2d_ceil_cpu",
++        "^test_maxpool_2d_dilations_cpu",
++        "^test_maxpool_2d_uint8_cpu",
++        "^test_maxpool_3d_default_cpu",
++        "^test_maxpool_with_argmax_2d_precomputed_strides_cpu",
++        "^test_maxunpool_*",
++        "^test_melweightmatrix_cpu",
++        "^test_min_example_cpu",
++        "^test_min_float64_cpu",
++        "^test_min_int16_cpu",
++        "^test_min_uint16_cpu",
++        "^test_min_uint32_cpu",
++        "^test_min_uint64_cpu",
++        "^test_min_uint8_cpu",
++        "^test_mish*",
++        "^test_mod*",
++        "^test_momentum*",
++        "^test_mul_uint8_cpu",
++        "^test_mvn*",
++        "^test_nesterov_momentum_cpu",
++        "^test_nonmaxsuppression*",
++        "^test_nonzero_example_cpu",
++        "^test_onehot*",
++        "^test_optional_get_element_optional_sequence_cpu",
++        "^test_optional_get_element_optional_tensor_cpu",
++        "^test_optional_get_element_sequence_cpu",
++        "^test_optional_get_element_tensor_cpu",
++        "^test_optional_has_element_empty_optional_input_cpu",
++        "^test_optional_has_element_optional_input_cpu",
++        "^test_optional_has_element_tensor_input_cpu",
++        "^test_or2d_cpu",
++        "^test_or3d_cpu",
++        "^test_or4d_cpu",
++        "^test_or_bcast*",
++        "^test_pow_types*",
++        "^test_prelu_broadcast_expanded_cpu",
++        "^test_prelu_example_expanded_cpu",
++        "^test_qlinearconv_cpu",
++        "^test_qlinearmatmul_2D_cpu",
++        "^test_qlinearmatmul_3D_cpu",
++        "^test_quantizelinear*",
++        "^test_range_*",
++        "^test_reduce_l1_*",
++        "^test_reduce_l2_default_axes_keepdims_example_expanded_cpu",
++        "^test_reduce_l2_default_axes_keepdims_random_expanded_cpu",
++        "^test_reduce_l2_do_not_keepdims_example_cpu",
++        "^test_reduce_l2_do_not_keepdims_example_expanded_cpu",
++        "^test_reduce_l2_do_not_keepdims_random_cpu",
++        "^test_reduce_l2_do_not_keepdims_random_expanded_cpu",
++        "^test_reduce_l2_keep_dims_example_cpu",
++        "^test_reduce_l2_keep_dims_example_expanded_cpu",
++        "^test_reduce_l2_keep_dims_random_cpu",
++        "^test_reduce_l2_keep_dims_random_expanded_cpu",
++        "^test_reduce_l2_negative_axes_keep_dims_example_cpu",
++        "^test_reduce_l2_negative_axes_keep_dims_example_expanded_cpu",
++        "^test_reduce_l2_negative_axes_keep_dims_random_cpu",
++        "^test_reduce_l2_negative_axes_keep_dims_random_expanded_cpu",
++        "^test_reduce_log_*",
++        "^test_reduce_max_*",
++        "^test_reduce_mean_*",
++        "^test_reduce_min_do_not_keepdims_example_cpu",
++        "^test_reduce_min_do_not_keepdims_random_cpu",
++        "^test_reduce_min_keepdims_example_cpu",
++        "^test_reduce_min_keepdims_random_cpu",
++        "^test_reduce_min_negative_axes_keepdims_example_cpu",
++        "^test_reduce_min_negative_axes_keepdims_random_cpu",
++        "^test_reduce_prod_*",
++        "^test_reduce_sum_*",
++        "^test_relu_expanded_ver18_cpu",
++        "^test_reversesequence_*",
++        "^test_rnn_seq_length_cpu",
++        "^test_round*",
++        "^test_scan*",
++        "^test_sce_NCd1*",
++        "^test_selu*",
++        "^test_sequence*",
++        "^test_shrink_*",
++        "^test_sign_cpu",
++        "^test_simple_rnn_defaults_cpu",
++        "^test_simple_rnn_with_initial_bias_cpu",
++        "^test_sinh_cpu",
++        "^test_sinh_example_cpu",
++        "^test_slice_*",
++        //"^test_softmax_*",
++        "^test_softmax_axis_0_cpu",
++        "^test_softmax_axis_0_expanded_cpu",
++        "^test_softmax_axis_0_expanded_ver18_cpu",
++        "^test_softmax_axis_1_cpu",
++        "^test_softmax_axis_1_expanded_cpu",
++        "^test_softmax_axis_1_expanded_ver18_cpu",
++        "^test_softmax_axis_2_cpu",
++        "^test_softmax_axis_2_expanded_cpu",
++        "^test_softmax_axis_2_expanded_ver18_cpu",
++        "^test_softmax_default_axis_cpu",
++        "^test_softmax_default_axis_expanded_cpu",
++        "^test_softmax_default_axis_expanded_ver18_cpu",
++        "^test_softmax_example_cpu",
++        "^test_softmax_example_expanded_cpu",
++        "^test_softmax_example_expanded_ver18_cpu",
++        "^test_softmax_large_number_cpu",
++        "^test_softmax_large_number_expanded_cpu",
++        "^test_softmax_large_number_expanded_ver18_cpu",
++        "^test_softmax_negative_axis_cpu",
++        "^test_softmax_negative_axis_expanded_cpu",
++        "^test_softmax_negative_axis_expanded_ver18_cpu",
++        "^test_softplus_*",
++        "^test_softsign_*",
++        "^test_squeeze_*",
++        "^test_stft_*",
++        "^test_strnormalizer_*",
++        "^test_tan_cpu",
++        "^test_tan_example_cpu",
++        "^test_tfidfvectorizer_*",
++        "^test_thresholdedrelu_*",
++        "^test_tile_*",
++        "^test_top_k_*",
++        "^test_tril_*",
++        "^test_triu_*",
++        "^test_unique_*",
++        "^test_unsqueeze_*",
++        "^test_upsample_nearest_cpu",
++        "^test_xor2d_cpu",
++        "^test_xor3d_cpu",
++        "^test_xor4d_cpu",
++        "^test_xor_*",
++
++        // pytorch-converted
++        "^test_ConvTranspose2d_cpu",
++        "^test_ConvTranspose2d_no_bias_cpu",
++        "^test_Conv3d_cpu",
++        "^test_Conv3d_dilated_cpu",
++        "^test_Conv3d_dilated_strided_cpu",
++        "^test_Conv3d_groups_cpu",
++        "^test_Conv3d_stride_cpu",
++        "^test_Conv3d_stride_padding_cpu",
++        "^test_ELU_*",
++        "^test_LogSoftmax_*",
++        "^test_MaxPool1d_stride_padding_dilation_cpu",
++        "^test_MaxPool3d_*",
++        "^test_MaxPool3d_*",
++        "^test_ReflectionPad2d_*",
++        "^test_ReplicationPad2d_*",
++        "^test_SELU_*",
++        "^test_Softplus_*",
++        "^test_log_softmax_dim3_cpu",
++        "^test_log_softmax_lastdim_cpu",
++
++        // pytorch-operator
++        "^test_operator_pad_cpu",
++        "^test_operator_selu_cpu",
++        "^test_operator_view_cpu",
++
++        // simple
++        "^test_expand_shape_model*",
++        "^test_sequence_model*",
++        "^test_shrink_cpu",
++        "^test_sign_model_cpu",
++        "^test_strnorm_model_*"
++    ],
++    "current_failing_tests_ETGLOW": [
++        "^test_clip_default_inbounds_expanded_cpu",
++        "^test_clip_default_int8_max_expanded_cpu",
++        "^test_clip_default_int8_min_expanded_cpu",
++        "^test_clip_default_max_expanded_cpu",
++        "^test_clip_default_min_expanded_cpu",
++        "^test_clip_example_expanded_cpu",
++        "^test_clip_expanded_cpu",
++        "^test_clip_inbounds_expanded_cpu",
++        "^test_clip_outbounds_expanded_cpu",
++        "^test_clip_splitbounds_expanded_cpu",
++        "^test_depthtospace_example_cpu",          // unexpected success if xfailed
++        "^test_depthtospace_crd_mode_example_cpu", // unexpected success if xfailed
++        "^test_convtranspose_pad_cpu",
++        "^test_elu_default_expanded_ver18_cpu", // crash
++        "^test_elu_example_expanded_ver18_cpu", // crash
++        "^test_elu_expanded_ver18_cpu", // crash
++        "^test_gather_negative_indices_cpu",
++        "^test_hardsigmoid_default_expanded_ver18_cpu", // crash
++        "^test_hardsigmoid_example_expanded_ver18_cpu", // crash
++        "^test_hardsigmoid_expanded_ver18_cpu", // crash
++        "^test_lstm_with_initial_bias_cpu",    // flaky test (if xfail, sometimes produces 'Unexpected pass')
++        "^test_leakyrelu_default_expanded",    // neuralizer crash
++        "^test_leakyrelu_example_expanded_cpu", // neuralizer crash
++        "^test_leakyrelu_expanded_cpu", // neuralizer crash
++        "^test_max_one_input_cpu",
++        "^test_min_one_input_cpu",
++        "^test_prelu_broadcast_expanded_cpu", // neuralizer crash
++        "^test_prelu_example_expanded_cpu", // neuralizer crash
++        "^test_pow_bcast_scalar_cpu",
++        "^test_pow_types_float32_int32_cpu", // glow crash (partitioner?)
++        "^test_pow_types_float32_int64_cpu", // glow crash
++        "^test_pow_types_int32_float32_cpu", // glow crash
++        "^test_pow_types_int32_int32_cpu", // glow crash
++        "^test_pow_types_int64_float32_cpu", // glow crash
++        "^test_pow_types_int64_int64_cpu", // glow crash
++        "^test_qlinearconv_cpu", // glow crash
++        "^test_qlinearmatmul_2D_cpu", // glow crash
++        "^test_qlinearmatmul_3D_cpu", // glow crash
++        "^test_rnn_seq_length_cpu", // glow crash
++        "^test_relu_expanded_ver18_cpu", // crash
++        "^test_scatternd_cpu",                 // flaky test (if xfail, sometimes produces 'Unexpected pass')
++        "^test_selu_default_expanded_ver18_cpu", // crash
++        "^test_selu_example_expanded_ver18_cpu" ,// crash
++        "^test_selu_expanded_ver18_cpu", // crash
++        "^test_shrink_hard_expanded_ver18_cpu", // crash
++        "^test_shrink_soft_expanded_ver18_cpu", // crash
++        "^test_softplus_example_expanded_ver18_cpu", // crash
++        "^test_softplus_expanded_ver18_cpu", // crash
++        "^test_softsign_example_expanded_ver18_cpu", // crash
++        "^test_softsign_expanded_ver18_cpu", // crash
++        "^test_softsign_expanded_ver18_cpu", // crash
++        "^test_thresholdedrelu_default_expanded_ver18_cpu", // crash
++        "^test_thresholdedrelu_default_expanded_ver18_cpu", // crash
++        "^test_thresholdedrelu_example_expanded_ver18_cpu", // crash
++        "^test_thresholdedrelu_expanded_ver18_cpu", // crash
++        // pytorch-converted
++        "^test_ConvTranspose2d_cpu",         // Fatal Python error: Aborted,
++        "^test_ConvTranspose2d_no_bias_cpu", // Fatal Python error: Aborted
++        // pytorch-operator
++        "^test_operator_convtranspose_cpu" // flaky test (if xfail, sometimes produces 'Unexpected pass')
++    ],
+     // ORT first supported opset 7, so models with nodes that require versions prior to opset 7 are not supported
+     "tests_with_pre_opset7_dependencies": [
+         "^test_AvgPool1d",
+diff --git a/onnxruntime/test/util/default_providers.cc b/onnxruntime/test/util/default_providers.cc
+index c1564997c4..8630e475f2 100644
+--- a/onnxruntime/test/util/default_providers.cc
++++ b/onnxruntime/test/util/default_providers.cc
+@@ -328,5 +328,24 @@ std::unique_ptr<IExecutionProvider> DefaultDmlExecutionProvider() {
+   return nullptr;
+ }
+ 
++std::unique_ptr<IExecutionProvider> DefaultEtGlowExecutionProvider() {
++#ifdef USE_ETGLOW
++  OrtEtGlowProviderOptions provider_options;
++  if (auto factory = EtGlowProviderFactoryCreator::Create(&provider_options))
++    return factory->CreateProvider();
++#endif
++  return nullptr;
++}
++
++std::unique_ptr<IExecutionProvider> EtGlowExecutionProviderWithOptions(const OrtEtGlowProviderOptions* params) {
++#ifdef USE_ETGLOW
++  if (auto factory = EtGlowProviderFactoryCreator::Create(params))
++    return factory->CreateProvider();
++#else
++  ORT_UNUSED_PARAMETER(params);
++#endif
++  return nullptr;
++}
++
+ }  // namespace test
+ }  // namespace onnxruntime
+diff --git a/onnxruntime/test/util/include/default_providers.h b/onnxruntime/test/util/include/default_providers.h
+index 9b44150d97..950a1da9c9 100644
+--- a/onnxruntime/test/util/include/default_providers.h
++++ b/onnxruntime/test/util/include/default_providers.h
+@@ -65,6 +65,8 @@ std::unique_ptr<IExecutionProvider> DefaultXnnpackExecutionProvider();
+ std::unique_ptr<IExecutionProvider> DefaultWebGpuExecutionProvider();
+ std::unique_ptr<IExecutionProvider> DefaultCannExecutionProvider();
+ std::unique_ptr<IExecutionProvider> DefaultDmlExecutionProvider();
++std::unique_ptr<IExecutionProvider> DefaultEtGlowExecutionProvider();
++std::unique_ptr<IExecutionProvider> EtGlowExecutionProviderWithOptions(const OrtEtGlowProviderOptions* params);
+ 
+ std::unique_ptr<IExecutionProvider> DefaultInternalTestingExecutionProvider(
+     const std::unordered_set<std::string>& supported_ops);
+diff --git a/onnxruntime/test/util/include/providers.h b/onnxruntime/test/util/include/providers.h
+index 01be1a4446..0e82475f95 100644
+--- a/onnxruntime/test/util/include/providers.h
++++ b/onnxruntime/test/util/include/providers.h
+@@ -37,3 +37,6 @@
+ #ifdef USE_CANN
+ #include "core/providers/cann/cann_provider_factory.h"
+ #endif
++#ifdef USE_ETGLOW
++#include "core/providers/etglow/etglow_provider_factory.h"
++#endif
 diff --git a/onnxruntime/test/providers/etglow/etglow_basic_test.cc b/onnxruntime/test/providers/etglow/etglow_basic_test.cc
 new file mode 100644
 index 0000000000..0c8ba6a832
@@ -3876,211 +4529,6 @@ index 0000000000..9ae51fd815
 +
 +}  // namespace test
 +}  // namespace onnxruntime
-diff --git a/onnxruntime/test/python/onnx_backend_test_series.py b/onnxruntime/test/python/onnx_backend_test_series.py
-index 9b1e87f6ec..c84255fcc5 100644
---- a/onnxruntime/test/python/onnx_backend_test_series.py
-+++ b/onnxruntime/test/python/onnx_backend_test_series.py
-@@ -124,8 +124,10 @@ def create_backend_test(test_name=None):
-     if test_name:
-         backend_test.include(test_name + ".*")
-     else:
--        filters = load_jsonc("onnx_backend_test_series_filters.jsonc")
-+        etglow_filter = "onnx_backend_test_series_etglow_greedy_filters.jsonc" if os.getenv('ORT_ETGLOW_GREEDY', "0").lower() in ('true', '1', 't') else "onnx_backend_test_series_etglow_default_filters.jsonc"
-+        filters = load_jsonc(etglow_filter) if backend.supports_device("ETGLOW") else load_jsonc("onnx_backend_test_series_filters.jsonc")
-         current_failing_tests = apply_filters(filters, "current_failing_tests")
-+        current_xfail_tests = []
- 
-         if platform.architecture()[0] == "32bit":
-             current_failing_tests += apply_filters(filters, "current_failing_tests_x86")
-@@ -152,6 +154,10 @@ def create_backend_test(test_name=None):
-         if backend.supports_device("MIGRAPHX"):
-             current_failing_tests += apply_filters(filters, "current_failing_tests_MIGRAPHX")
- 
-+        if backend.supports_device("ETGLOW"):
-+            current_failing_tests += apply_filters(filters, "current_failing_tests_ETGLOW")
-+            current_xfail_tests += apply_filters(filters, "current_xfail_tests_ETGLOW")
-+
-         # Skip these tests for a "pure" DML onnxruntime python wheel. We keep these tests enabled for instances where both DML and CUDA
-         # EPs are available (Windows GPU CI pipeline has this config) - these test will pass because CUDA has higher precedence than DML
-         # and the nodes are assigned to only the CUDA EP (which supports these tests)
-@@ -169,6 +175,9 @@ def create_backend_test(test_name=None):
-         backend_test.exclude("(" + "|".join(filters) + ")")
-         print("excluded tests:", filters)
- 
-+        if current_xfail_tests:
-+            backend_test.xfail("(" + "|".join(current_xfail_tests) + ")")
-+
-         # exclude TRT EP temporarily and only test CUDA EP to retain previous behavior
-         os.environ["ORT_ONNX_BACKEND_EXCLUDE_PROVIDERS"] = "TensorrtExecutionProvider"
- 
-@@ -203,8 +212,16 @@ def parse_args():
-     return parsed
- 
- 
--if __name__ == "__main__":
-+def unittest_main():
-     args = parse_args()
--
-     create_backend_test(args.test_name)
-     unittest.main()
-+
-+def pytest_main():
-+    test_name = None
-+    create_backend_test(test_name)
-+
-+if __name__ == "__main__":
-+    unittest_main()
-+else:
-+    pytest_main()
-diff --git a/onnxruntime/test/python/onnxruntime_test_python.py b/onnxruntime/test/python/onnxruntime_test_python.py
-index 32eac6f763..2022b68a5b 100644
---- a/onnxruntime/test/python/onnxruntime_test_python.py
-+++ b/onnxruntime/test/python/onnxruntime_test_python.py
-@@ -277,6 +277,15 @@ class TestInferenceSession(unittest.TestCase):
-             # confirm only CPU Provider is registered now.
-             self.assertEqual(["CPUExecutionProvider"], sess.get_providers())
- 
-+        if "EtGlowExecutionProvider" in onnxrt.get_available_providers():
-+            sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["EtGlowExecutionProvider"])
-+            # confirm that ETGLOW Provider is in list of registered providers.
-+            self.assertTrue("EtGlowExecutionProvider" in sess.get_providers())
-+            # reset the session and register only CPU Provider.
-+            sess.set_providers(["CPUExecutionProvider"])
-+            # confirm only CPU Provider is registered now.
-+            self.assertEqual(["CPUExecutionProvider"], sess.get_providers())
-+
-     def test_set_providers_with_options(self):
-         if "TensorrtExecutionProvider" in onnxrt.get_available_providers():
-             sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["TensorrtExecutionProvider"])
-@@ -589,6 +598,32 @@ class TestInferenceSession(unittest.TestCase):
- 
-             run_rocm_options_test()
- 
-+        if "EtGlowExecutionProvider" in onnxrt.get_available_providers():
-+
-+            def run_et_glow_options_test():  # noqa: N802
-+                sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["EtGlowExecutionProvider"])
-+                self.assertIn("EtGlowExecutionProvider", sess.get_providers())
-+                options = sess.get_provider_options()
-+
-+                def test_get_and_set_option_with_values(option_name, option_values):
-+                    provider_options = sess.get_provider_options()
-+                    self.assertIn("EtGlowExecutionProvider", provider_options)
-+                    etglow_options = options["EtGlowExecutionProvider"]
-+                    self.assertIn(option_name, etglow_options)
-+                    for option_value in option_values:
-+                        etglow_options[option_name] = option_value
-+                        sess.set_providers(["EtGlowExecutionProvider"], [etglow_options])
-+                        new_provider_options = sess.get_provider_options()
-+                        self.assertEqual(
-+                            new_provider_options.get("EtGlowExecutionProvider", {}).get(option_name),
-+                            str(option_value),
-+                        )
-+
-+                test_get_and_set_option_with_values("etglow_compile_only", ["1", "0"])
-+                test_get_and_set_option_with_values("etglow_dump_subgraphs", ["1", "0"])
-+
-+            run_et_glow_options_test()
-+
-     def test_invalid_set_providers(self):
-         with self.assertRaises(RuntimeError) as context:
-             sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["CPUExecutionProvider"])
-@@ -601,6 +636,7 @@ class TestInferenceSession(unittest.TestCase):
-             sess = onnxrt.InferenceSession(get_name("mul_1.onnx"), providers=["CPUExecutionProvider"])
-             self.assertEqual(["CPUExecutionProvider"], sess.get_providers())
- 
-+    @unittest.expectedFailure  # reason="unimplemented get_tuning_results for ETGLOW EP")
-     def test_get_and_set_tuning_results(self):
-         def get_tuning_results_for_ep(sess, ep):  # without the outer list
-             tuning_results = sess.get_tuning_results()
-@@ -684,6 +720,9 @@ class TestInferenceSession(unittest.TestCase):
-         if "ROCMExecutionProvider" in onnxrt.get_available_providers():
-             do_test_get_and_set_tuning_results("ROCMExecutionProvider")
- 
-+        if "EtGlowExecutionProvider" in onnxrt.get_available_providers():
-+            do_test_get_and_set_tuning_results("EtGlowExecutionProvider")
-+
-     def test_run_model_with_optional_sequence_input(self):
-         sess = onnxrt.InferenceSession(get_name("identity_opt.onnx"))
-         x = [np.array([1, 2, 3, 4, 5]).astype(np.float32)]
-@@ -1055,14 +1094,23 @@ class TestInferenceSession(unittest.TestCase):
-         sess.run([], {"X": x})
-         profile_file = sess.end_profiling()
- 
--        tags = ["pid", "dur", "ts", "ph", "X", "name", "args"]
-+        event_tags = {
-+            "X": ["pid", "tid", "ph", "name", "args", "ts", "cat", "dur"],
-+            "i": ["pid", "tid", "ph", "name", "args", "ts", "cat"],
-+            "C": ["pid", "tid", "ph", "name", "args", "ts"],
-+            "M": ["pid", "tid", "ph", "name", "args"],
-+        }
-         with open(profile_file) as f:
-             lines = f.readlines()
-             self.assertTrue("[" in lines[0])
--            for i in range(1, len(lines) - 1):
--                for tag in tags:
--                    self.assertTrue(tag in lines[i])
--            self.assertTrue("]" in lines[-1])
-+            for i, line in enumerate(lines[1:-1], start=1):
-+                for event_type, tags in event_tags.items():
-+                    if f"\"{event_type}\"" in line:
-+                        for tag in tags:
-+                            self.assertIn(tag, line, f"Missing tag '{tag}' in line {i}: {line}")
-+                        break
-+                else:
-+                    self.fail(f"Unhandled event type in line {i}: {line}")
- 
-         os.remove(profile_file)
- 
-diff --git a/onnxruntime/test/python/onnxruntime_test_python_iobinding.py b/onnxruntime/test/python/onnxruntime_test_python_iobinding.py
-index 56417f13fb..4358f5eda7 100644
---- a/onnxruntime/test/python/onnxruntime_test_python_iobinding.py
-+++ b/onnxruntime/test/python/onnxruntime_test_python_iobinding.py
-@@ -19,6 +19,7 @@ from onnxruntime.capi._pybind_state import OrtValueVector, SessionIOBinding
- test_params = [
-     ("cuda", "CUDAExecutionProvider", C_OrtDevice.cuda),
-     ("dml", "DmlExecutionProvider", C_OrtDevice.dml),
-+    ("et", "EtGlowExecutionProvider", C_OrtDevice.et),
- ]
- 
- 
-@@ -72,7 +73,7 @@ class TestIOBinding(unittest.TestCase):
-     def test_bind_input_types(self):
-         for device, execution_provider, generate_device in test_params:
-             with self.subTest(execution_provider):
--                if execution_provider not in onnxrt.get_available_providers():
-+                if execution_provider not in onnxrt.get_available_providers(): # or execution_provider == "EtGlowExecutionProvider":
-                     self.skipTest(f"Skipping on {device.upper()}.")
- 
-                 opset = onnx_opset_version()
-@@ -103,11 +104,14 @@ class TestIOBinding(unittest.TestCase):
-                         np.bool_,
-                     ]:
-                         with self.subTest(dtype=dtype, inner_device=str(inner_device)):
-+                            if execution_provider == "EtGlowExecutionProvider" and dtype in [np.float64, np.uint64, np.uint16, np.uint32]:
-+                                self.skipTest(f"Skipping on {device.upper()} due unsupported dtype: {dtype}")
-+
-                             x = np.arange(8).reshape((-1, 2)).astype(dtype)
-                             proto_dtype = helper.np_dtype_to_tensor_dtype(x.dtype)
- 
--                            X = helper.make_tensor_value_info("X", proto_dtype, [None, x.shape[1]])  # noqa: N806
--                            Y = helper.make_tensor_value_info("Y", proto_dtype, [None, x.shape[1]])  # noqa: N806
-+                            X = helper.make_tensor_value_info("X", proto_dtype, ["N", x.shape[1]])  # noqa: N806
-+                            Y = helper.make_tensor_value_info("Y", proto_dtype, ["N", x.shape[1]])  # noqa: N806
- 
-                             # inference
-                             node_add = helper.make_node("Identity", ["X"], ["Y"])
-@@ -122,7 +126,9 @@ class TestIOBinding(unittest.TestCase):
-                                 opset_imports=[helper.make_operatorsetid("", opset)],
-                             )
- 
--                            sess = onnxrt.InferenceSession(model_def.SerializeToString(), providers=provider)
-+                            provider_options = [{"etglow_onnx_shape_params": f"N={x.shape[0]}"}] if execution_provider == "EtGlowExecutionProvider" else None
-+
-+                            sess = onnxrt.InferenceSession(model_def.SerializeToString(), providers=provider, provider_options=provider_options)
- 
-                             bind = SessionIOBinding(sess._sess)
-                             ort_value = C_OrtValue.ortvalue_from_numpy(x, inner_device)
 diff --git a/onnxruntime/test/testdata/onnx_backend_test_series_etglow_default_filters.jsonc b/onnxruntime/test/testdata/onnx_backend_test_series_etglow_default_filters.jsonc
 new file mode 100644
 index 0000000000..915d0cca67
@@ -6115,461 +6563,3 @@ index 0000000000..4e31492c73
 +        "^test_bitshift_left_uint16"
 +    ]
 +}
-diff --git a/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc b/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc
-index 4b14d50127..320e1f75f3 100644
---- a/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc
-+++ b/onnxruntime/test/testdata/onnx_backend_test_series_filters.jsonc
-@@ -725,6 +725,400 @@
-         //TODO: Resolve as a graph implementation that returns a constant inf tensor with appropriate strides
-         "^test_reduce_min_empty_set_cpu"
-     ],
-+    "current_xfail_tests_ETGLOW": [
-+        "^test_abs_cpu",
-+        "^test_acos_cpu",
-+        "^test_acos_example_cpu",
-+        "^test_acosh_cpu",
-+        "^test_acosh_example_cpu",
-+        "^test_adagrad_cpu",
-+        "^test_adagrad_multiple_cpu",
-+        "^test_adam_cpu",
-+        "^test_adam_multiple_cpu",
-+        "^test_add_uint8_cpu",
-+        "^test_ai_onnx_ml_array_feature_extractor_cpu",
-+        "^test_ai_onnx_ml_binarizer_cpu",
-+        "^test_and2d_cpu",
-+        "^test_and3d_cpu",
-+        "^test_and4d_cpu",
-+        "^test_and_bcast3v1d_cpu",
-+        "^test_and_bcast3v2d_cpu",
-+        "^test_and_bcast3v3d_cpu",
-+        "^test_and_bcast3v4d_cpu",
-+        "^test_and_bcast4v2d_cpu",
-+        "^test_and_bcast4v3d_cpu",
-+        "^test_and_bcast4v4d_cpu",
-+        "^test_argmax_keepdims_example_select_last_index_cpu",
-+        "^test_argmax_negative_axis_keepdims_example_select_last_index_cpu",
-+        "^test_argmax_no_keepdims_example_select_last_index_cpu",
-+        "^test_argmin*",
-+        "^test_asin*",
-+        "^test_atan*",
-+        "^test_averagepool_2d_ceil_cpu",
-+        "^test_averagepool_2d_dilations_cpu",
-+        "^test_averagepool_3d_default_cpu",
-+        "^test_basic_deform_conv_with_padding_cpu",
-+        "^test_basic_deform_conv_without_padding_cpu",
-+        "^test_batchnorm_epsilon_training_mode_cpu",
-+        "^test_batchnorm_example_training_mode_cpu",
-+        "^test_bernoulli*",
-+        "^test_bitshift*",
-+        "^test_bitwise_and*",
-+        "^test_bitwise_not*",
-+        "^test_bitwise_or*",
-+        "^test_bitwise_xor*",
-+        "^test_blackmanwindow*",
-+        "^test_cast_*",
-+        "^test_castlike_*",
-+        "^test_ceil*",
-+        "^test_celu*",
-+        "^test_center*",
-+        "^test_clip_cpu",
-+        "^test_clip_default_inbounds_expanded_cpu",
-+        "^test_clip_default_int8_max_cpu",
-+        "^test_clip_default_int8_min_cpu",
-+        "^test_clip_default_max_cpu",
-+        "^test_clip_default_min_cpu",
-+        "^test_clip_example_cpu",
-+        "^test_clip_expanded_cpu",
-+        "^test_clip_inbounds_cpu",
-+        "^test_clip_outbounds_cpu",
-+        "^test_clip_splitbounds_cpu",
-+        "^test_col2im*",
-+        "^test_compress*",
-+        "^test_constant_pad*",
-+        "^test_constantofshape*",
-+        "^test_convinteger*",
-+        "^test_convtranspose_1d_cpu",
-+        "^test_convtranspose_3d_cpu",
-+        "^test_convtranspose_autopad_same_cpu",
-+        "^test_convtranspose_kernel_shape_cpu",
-+        "^test_convtranspose_output_shape_cpu",
-+        "^test_cosh_*",
-+        "^test_cumsum_1d*",
-+        "^test_cumsum_2d*",
-+        "^test_deform*",
-+        "^test_dequantizelinear*",
-+        "^test_det*",
-+        "^test_dft*",
-+        "^test_div_uint8_cpu",
-+        "^test_dropout_default_mask_cpu",
-+        "^test_dropout_default_mask_ratio_cpu",
-+        "^test_dynamicquantizelinear*",
-+        "^test_edge_pad_cpu",
-+        "^test_einsum*",
-+        "^test_elu_*",
-+        "^test_equal_string_broadcast_cpu",
-+        "^test_equal_string_cpu",
-+        "^test_expand_dim*",
-+        "^test_eyelike_*",
-+        "^test_floor_*",
-+        "^test_gather_elements_0_cpu",
-+        "^test_gather_elements_1_cpu",
-+        "^test_gather_elements_negative_indices_cpu",
-+        "^test_gathernd_e*",
-+        "^test_gemm_all_attributes_cpu",
-+        "^test_gemm_alpha_cpu",
-+        "^test_gemm_beta_cpu",
-+        "^test_gemm_default_scalar_bias_cpu",
-+        "^test_gemm_default_single_elem_vector_bias_cpu",
-+        "^test_gemm_default_vector_bias_cpu",
-+        "^test_gemm_default_zero_bias_cpu",
-+        "^test_gemm_transposeA_cpu",
-+        "^test_gemm_transposeB_cpu",
-+        "^test_globalmaxpool*",
-+        "^test_greater_*",
-+        "^test_gridsample_*",
-+        "^test_group_normalization_*",
-+        "^test_gru_batchwise_cpu",
-+        "^test_gru_seq_length_cpu", // precission error
-+        "^test_gru_with_initial_bias_cpu", // precission error
-+        "^test_hammingwindow*",
-+        "^test_hannwindow*",
-+        "^test_hardmax*",
-+        "^test_hardsigmoid_default_expanded_ver18_cpu",
-+        "^test_hardsigmoid_example_expanded_ver18_cpu",
-+        "^test_hardsigmoid_expanded_ver18_cpu",
-+        "^test_hardswish_cpu",
-+        "^test_identity_opt_cpu",
-+        "^test_identity_sequence_cpu",
-+        "^test_if_*",
-+        "^test_isinf*",
-+        "^test_isnan*",
-+        "^test_layer_normalization_2d_axis0_cpu",
-+        "^test_layer_normalization_2d_axis0_expanded_ver18_cpu",
-+        "^test_layer_normalization_2d_axis1_cpu",
-+        "^test_layer_normalization_2d_axis1_expanded_ver18_cpu",
-+        "^test_layer_normalization_2d_axis_negative_1_cpu",
-+        "^test_layer_normalization_2d_axis_negative_1_expanded_ver18_cpu",
-+        "^test_layer_normalization_2d_axis_negative_2_cpu",
-+        "^test_layer_normalization_2d_axis_negative_2_expanded_ver18_cpu",
-+        "^test_layer_normalization_3d_axis0_epsilon_cpu",
-+        "^test_layer_normalization_3d_axis0_epsilon_expanded_ver18_cpu",
-+        "^test_layer_normalization_3d_axis1_epsilon_cpu",
-+        "^test_layer_normalization_3d_axis1_epsilon_expanded_ver18_cpu",
-+        "^test_layer_normalization_3d_axis2_epsilon_cpu",
-+        "^test_layer_normalization_3d_axis2_epsilon_expanded_ver18_cpu",
-+        "^test_layer_normalization_3d_axis_negative_1_epsilon_cpu",
-+        "^test_layer_normalization_3d_axis_negative_1_epsilon_expanded_ver18_cpu",
-+        "^test_layer_normalization_3d_axis_negative_2_epsilon_cpu",
-+        "^test_layer_normalization_3d_axis_negative_2_epsilon_expanded_ver18_cpu",
-+        "^test_layer_normalization_3d_axis_negative_3_epsilon_cpu",
-+        "^test_layer_normalization_3d_axis_negative_3_epsilon_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis0_cpu",
-+        "^test_layer_normalization_4d_axis0_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis1_cpu",
-+        "^test_layer_normalization_4d_axis1_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis2_cpu",
-+        "^test_layer_normalization_4d_axis2_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis3_cpu",
-+        "^test_layer_normalization_4d_axis3_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis_negative_1_cpu",
-+        "^test_layer_normalization_4d_axis_negative_1_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis_negative_2_cpu",
-+        "^test_layer_normalization_4d_axis_negative_2_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis_negative_3_cpu",
-+        "^test_layer_normalization_4d_axis_negative_3_expanded_ver18_cpu",
-+        "^test_layer_normalization_4d_axis_negative_4_cpu",
-+        "^test_layer_normalization_4d_axis_negative_4_expanded_ver18_cpu",
-+        "^test_layer_normalization_default_axis_cpu",
-+        "^test_layer_normalization_default_axis_expanded_ver18_cpu",
-+        "^test_leakyrelu_default_expanded_cpu",
-+        "^test_leakyrelu_example_expanded_cpu",
-+        "^test_leakyrelu_expanded_cpu",
-+        "^test_less_equal*",
-+        "^test_logsoftmax_*",
-+        "^test_loop11_cpu",
-+        "^test_loop13_seq_cpu",
-+        "^test_lppool_*",
-+        "^test_matmulinteger_cpu",
-+        "^test_max_example_cpu",
-+        "^test_max_float64_cpu",
-+        "^test_max_uint16_cpu",
-+        "^test_max_uint32_cpu",
-+        "^test_max_uint64_cpu",
-+        "^test_max_uint8_cpu",
-+        "^test_maxpool_2d_ceil_cpu",
-+        "^test_maxpool_2d_dilations_cpu",
-+        "^test_maxpool_2d_uint8_cpu",
-+        "^test_maxpool_3d_default_cpu",
-+        "^test_maxpool_with_argmax_2d_precomputed_strides_cpu",
-+        "^test_maxunpool_*",
-+        "^test_melweightmatrix_cpu",
-+        "^test_min_example_cpu",
-+        "^test_min_float64_cpu",
-+        "^test_min_int16_cpu",
-+        "^test_min_uint16_cpu",
-+        "^test_min_uint32_cpu",
-+        "^test_min_uint64_cpu",
-+        "^test_min_uint8_cpu",
-+        "^test_mish*",
-+        "^test_mod*",
-+        "^test_momentum*",
-+        "^test_mul_uint8_cpu",
-+        "^test_mvn*",
-+        "^test_nesterov_momentum_cpu",
-+        "^test_nonmaxsuppression*",
-+        "^test_nonzero_example_cpu",
-+        "^test_onehot*",
-+        "^test_optional_get_element_optional_sequence_cpu",
-+        "^test_optional_get_element_optional_tensor_cpu",
-+        "^test_optional_get_element_sequence_cpu",
-+        "^test_optional_get_element_tensor_cpu",
-+        "^test_optional_has_element_empty_optional_input_cpu",
-+        "^test_optional_has_element_optional_input_cpu",
-+        "^test_optional_has_element_tensor_input_cpu",
-+        "^test_or2d_cpu",
-+        "^test_or3d_cpu",
-+        "^test_or4d_cpu",
-+        "^test_or_bcast*",
-+        "^test_pow_types*",
-+        "^test_prelu_broadcast_expanded_cpu",
-+        "^test_prelu_example_expanded_cpu",
-+        "^test_qlinearconv_cpu",
-+        "^test_qlinearmatmul_2D_cpu",
-+        "^test_qlinearmatmul_3D_cpu",
-+        "^test_quantizelinear*",
-+        "^test_range_*",
-+        "^test_reduce_l1_*",
-+        "^test_reduce_l2_default_axes_keepdims_example_expanded_cpu",
-+        "^test_reduce_l2_default_axes_keepdims_random_expanded_cpu",
-+        "^test_reduce_l2_do_not_keepdims_example_cpu",
-+        "^test_reduce_l2_do_not_keepdims_example_expanded_cpu",
-+        "^test_reduce_l2_do_not_keepdims_random_cpu",
-+        "^test_reduce_l2_do_not_keepdims_random_expanded_cpu",
-+        "^test_reduce_l2_keep_dims_example_cpu",
-+        "^test_reduce_l2_keep_dims_example_expanded_cpu",
-+        "^test_reduce_l2_keep_dims_random_cpu",
-+        "^test_reduce_l2_keep_dims_random_expanded_cpu",
-+        "^test_reduce_l2_negative_axes_keep_dims_example_cpu",
-+        "^test_reduce_l2_negative_axes_keep_dims_example_expanded_cpu",
-+        "^test_reduce_l2_negative_axes_keep_dims_random_cpu",
-+        "^test_reduce_l2_negative_axes_keep_dims_random_expanded_cpu",
-+        "^test_reduce_log_*",
-+        "^test_reduce_max_*",
-+        "^test_reduce_mean_*",
-+        "^test_reduce_min_do_not_keepdims_example_cpu",
-+        "^test_reduce_min_do_not_keepdims_random_cpu",
-+        "^test_reduce_min_keepdims_example_cpu",
-+        "^test_reduce_min_keepdims_random_cpu",
-+        "^test_reduce_min_negative_axes_keepdims_example_cpu",
-+        "^test_reduce_min_negative_axes_keepdims_random_cpu",
-+        "^test_reduce_prod_*",
-+        "^test_reduce_sum_*",
-+        "^test_relu_expanded_ver18_cpu",
-+        "^test_reversesequence_*",
-+        "^test_rnn_seq_length_cpu",
-+        "^test_round*",
-+        "^test_scan*",
-+        "^test_sce_NCd1*",
-+        "^test_selu*",
-+        "^test_sequence*",
-+        "^test_shrink_*",
-+        "^test_sign_cpu",
-+        "^test_simple_rnn_defaults_cpu",
-+        "^test_simple_rnn_with_initial_bias_cpu",
-+        "^test_sinh_cpu",
-+        "^test_sinh_example_cpu",
-+        "^test_slice_*",
-+        //"^test_softmax_*",
-+        "^test_softmax_axis_0_cpu",
-+        "^test_softmax_axis_0_expanded_cpu",
-+        "^test_softmax_axis_0_expanded_ver18_cpu",
-+        "^test_softmax_axis_1_cpu",
-+        "^test_softmax_axis_1_expanded_cpu",
-+        "^test_softmax_axis_1_expanded_ver18_cpu",
-+        "^test_softmax_axis_2_cpu",
-+        "^test_softmax_axis_2_expanded_cpu",
-+        "^test_softmax_axis_2_expanded_ver18_cpu",
-+        "^test_softmax_default_axis_cpu",
-+        "^test_softmax_default_axis_expanded_cpu",
-+        "^test_softmax_default_axis_expanded_ver18_cpu",
-+        "^test_softmax_example_cpu",
-+        "^test_softmax_example_expanded_cpu",
-+        "^test_softmax_example_expanded_ver18_cpu",
-+        "^test_softmax_large_number_cpu",
-+        "^test_softmax_large_number_expanded_cpu",
-+        "^test_softmax_large_number_expanded_ver18_cpu",
-+        "^test_softmax_negative_axis_cpu",
-+        "^test_softmax_negative_axis_expanded_cpu",
-+        "^test_softmax_negative_axis_expanded_ver18_cpu",
-+        "^test_softplus_*",
-+        "^test_softsign_*",
-+        "^test_squeeze_*",
-+        "^test_stft_*",
-+        "^test_strnormalizer_*",
-+        "^test_tan_cpu",
-+        "^test_tan_example_cpu",
-+        "^test_tfidfvectorizer_*",
-+        "^test_thresholdedrelu_*",
-+        "^test_tile_*",
-+        "^test_top_k_*",
-+        "^test_tril_*",
-+        "^test_triu_*",
-+        "^test_unique_*",
-+        "^test_unsqueeze_*",
-+        "^test_upsample_nearest_cpu",
-+        "^test_xor2d_cpu",
-+        "^test_xor3d_cpu",
-+        "^test_xor4d_cpu",
-+        "^test_xor_*",
-+
-+        // pytorch-converted
-+        "^test_ConvTranspose2d_cpu",
-+        "^test_ConvTranspose2d_no_bias_cpu",
-+        "^test_Conv3d_cpu",
-+        "^test_Conv3d_dilated_cpu",
-+        "^test_Conv3d_dilated_strided_cpu",
-+        "^test_Conv3d_groups_cpu",
-+        "^test_Conv3d_stride_cpu",
-+        "^test_Conv3d_stride_padding_cpu",
-+        "^test_ELU_*",
-+        "^test_LogSoftmax_*",
-+        "^test_MaxPool1d_stride_padding_dilation_cpu",
-+        "^test_MaxPool3d_*",
-+        "^test_MaxPool3d_*",
-+        "^test_ReflectionPad2d_*",
-+        "^test_ReplicationPad2d_*",
-+        "^test_SELU_*",
-+        "^test_Softplus_*",
-+        "^test_log_softmax_dim3_cpu",
-+        "^test_log_softmax_lastdim_cpu",
-+
-+        // pytorch-operator
-+        "^test_operator_pad_cpu",
-+        "^test_operator_selu_cpu",
-+        "^test_operator_view_cpu",
-+
-+        // simple
-+        "^test_expand_shape_model*",
-+        "^test_sequence_model*",
-+        "^test_shrink_cpu",
-+        "^test_sign_model_cpu",
-+        "^test_strnorm_model_*"
-+    ],
-+    "current_failing_tests_ETGLOW": [
-+        "^test_clip_default_inbounds_expanded_cpu",
-+        "^test_clip_default_int8_max_expanded_cpu",
-+        "^test_clip_default_int8_min_expanded_cpu",
-+        "^test_clip_default_max_expanded_cpu",
-+        "^test_clip_default_min_expanded_cpu",
-+        "^test_clip_example_expanded_cpu",
-+        "^test_clip_expanded_cpu",
-+        "^test_clip_inbounds_expanded_cpu",
-+        "^test_clip_outbounds_expanded_cpu",
-+        "^test_clip_splitbounds_expanded_cpu",
-+        "^test_depthtospace_example_cpu",          // unexpected success if xfailed
-+        "^test_depthtospace_crd_mode_example_cpu", // unexpected success if xfailed
-+        "^test_convtranspose_pad_cpu",
-+        "^test_elu_default_expanded_ver18_cpu", // crash
-+        "^test_elu_example_expanded_ver18_cpu", // crash
-+        "^test_elu_expanded_ver18_cpu", // crash
-+        "^test_gather_negative_indices_cpu",
-+        "^test_hardsigmoid_default_expanded_ver18_cpu", // crash
-+        "^test_hardsigmoid_example_expanded_ver18_cpu", // crash
-+        "^test_hardsigmoid_expanded_ver18_cpu", // crash
-+        "^test_lstm_with_initial_bias_cpu",    // flaky test (if xfail, sometimes produces 'Unexpected pass')
-+        "^test_leakyrelu_default_expanded",    // neuralizer crash
-+        "^test_leakyrelu_example_expanded_cpu", // neuralizer crash
-+        "^test_leakyrelu_expanded_cpu", // neuralizer crash
-+        "^test_max_one_input_cpu",
-+        "^test_min_one_input_cpu",
-+        "^test_prelu_broadcast_expanded_cpu", // neuralizer crash
-+        "^test_prelu_example_expanded_cpu", // neuralizer crash
-+        "^test_pow_bcast_scalar_cpu",
-+        "^test_pow_types_float32_int32_cpu", // glow crash (partitioner?)
-+        "^test_pow_types_float32_int64_cpu", // glow crash
-+        "^test_pow_types_int32_float32_cpu", // glow crash
-+        "^test_pow_types_int32_int32_cpu", // glow crash
-+        "^test_pow_types_int64_float32_cpu", // glow crash
-+        "^test_pow_types_int64_int64_cpu", // glow crash
-+        "^test_qlinearconv_cpu", // glow crash
-+        "^test_qlinearmatmul_2D_cpu", // glow crash
-+        "^test_qlinearmatmul_3D_cpu", // glow crash
-+        "^test_rnn_seq_length_cpu", // glow crash
-+        "^test_relu_expanded_ver18_cpu", // crash
-+        "^test_scatternd_cpu",                 // flaky test (if xfail, sometimes produces 'Unexpected pass')
-+        "^test_selu_default_expanded_ver18_cpu", // crash
-+        "^test_selu_example_expanded_ver18_cpu" ,// crash
-+        "^test_selu_expanded_ver18_cpu", // crash
-+        "^test_shrink_hard_expanded_ver18_cpu", // crash
-+        "^test_shrink_soft_expanded_ver18_cpu", // crash
-+        "^test_softplus_example_expanded_ver18_cpu", // crash
-+        "^test_softplus_expanded_ver18_cpu", // crash
-+        "^test_softsign_example_expanded_ver18_cpu", // crash
-+        "^test_softsign_expanded_ver18_cpu", // crash
-+        "^test_softsign_expanded_ver18_cpu", // crash
-+        "^test_thresholdedrelu_default_expanded_ver18_cpu", // crash
-+        "^test_thresholdedrelu_default_expanded_ver18_cpu", // crash
-+        "^test_thresholdedrelu_example_expanded_ver18_cpu", // crash
-+        "^test_thresholdedrelu_expanded_ver18_cpu", // crash
-+        // pytorch-converted
-+        "^test_ConvTranspose2d_cpu",         // Fatal Python error: Aborted,
-+        "^test_ConvTranspose2d_no_bias_cpu", // Fatal Python error: Aborted
-+        // pytorch-operator
-+        "^test_operator_convtranspose_cpu" // flaky test (if xfail, sometimes produces 'Unexpected pass')
-+    ],
-     // ORT first supported opset 7, so models with nodes that require versions prior to opset 7 are not supported
-     "tests_with_pre_opset7_dependencies": [
-         "^test_AvgPool1d",
-diff --git a/onnxruntime/test/util/default_providers.cc b/onnxruntime/test/util/default_providers.cc
-index 312aa86277..46ad9bffbf 100644
---- a/onnxruntime/test/util/default_providers.cc
-+++ b/onnxruntime/test/util/default_providers.cc
-@@ -319,5 +319,24 @@ std::unique_ptr<IExecutionProvider> DefaultDmlExecutionProvider() {
-   return nullptr;
- }
- 
-+std::unique_ptr<IExecutionProvider> DefaultEtGlowExecutionProvider() {
-+#ifdef USE_ETGLOW
-+  OrtEtGlowProviderOptions provider_options;
-+  if (auto factory = EtGlowProviderFactoryCreator::Create(&provider_options))
-+    return factory->CreateProvider();
-+#endif
-+  return nullptr;
-+}
-+
-+std::unique_ptr<IExecutionProvider> EtGlowExecutionProviderWithOptions(const OrtEtGlowProviderOptions* params) {
-+#ifdef USE_ETGLOW
-+  if (auto factory = EtGlowProviderFactoryCreator::Create(params))
-+    return factory->CreateProvider();
-+#else
-+  ORT_UNUSED_PARAMETER(params);
-+#endif
-+  return nullptr;
-+}
-+
- }  // namespace test
- }  // namespace onnxruntime
-diff --git a/onnxruntime/test/util/include/default_providers.h b/onnxruntime/test/util/include/default_providers.h
-index 606dfc068d..07428f9ebe 100644
---- a/onnxruntime/test/util/include/default_providers.h
-+++ b/onnxruntime/test/util/include/default_providers.h
-@@ -64,6 +64,8 @@ std::unique_ptr<IExecutionProvider> QnnExecutionProviderWithOptions(const Provid
- std::unique_ptr<IExecutionProvider> DefaultWebGpuExecutionProvider();
- std::unique_ptr<IExecutionProvider> DefaultCannExecutionProvider();
- std::unique_ptr<IExecutionProvider> DefaultDmlExecutionProvider();
-+std::unique_ptr<IExecutionProvider> DefaultEtGlowExecutionProvider();
-+std::unique_ptr<IExecutionProvider> EtGlowExecutionProviderWithOptions(const OrtEtGlowProviderOptions* params);
- 
- std::unique_ptr<IExecutionProvider> DefaultInternalTestingExecutionProvider(
-     const std::unordered_set<std::string>& supported_ops);
-diff --git a/onnxruntime/test/util/include/providers.h b/onnxruntime/test/util/include/providers.h
-index a73b237ae1..9fd3f7a9a9 100644
---- a/onnxruntime/test/util/include/providers.h
-+++ b/onnxruntime/test/util/include/providers.h
-@@ -40,3 +40,6 @@
- #ifdef USE_CANN
- #include "core/providers/cann/cann_provider_factory.h"
- #endif
-+#ifdef USE_ETGLOW
-+#include "core/providers/etglow/etglow_provider_factory.h"
-+#endif

@@ -243,49 +243,6 @@ index 71bca6ef3b..bcbfa90a30 100644
      profile_stream_ << "\"args\" : {";
      bool is_first_arg = true;
      for (std::pair<std::string, std::string> event_arg : rec.args) {
-diff --git a/onnxruntime/core/framework/allocator.cc b/onnxruntime/core/framework/allocator.cc
-index c3e96e450c..d31f5c2fba 100644
---- a/onnxruntime/core/framework/allocator.cc
-+++ b/onnxruntime/core/framework/allocator.cc
-@@ -141,7 +141,8 @@ ORT_API_STATUS_IMPL(OrtApis::CreateMemoryInfo, _In_ const char* name1, enum OrtA
-              strcmp(name1, onnxruntime::OpenVINO_GPU) == 0 ||
-              strcmp(name1, onnxruntime::DML) == 0 ||
-              strcmp(name1, onnxruntime::HIP) == 0 ||
-+             strcmp(name1, onnxruntime::ET) == 0 ||
-              strcmp(name1, onnxruntime::WEBGPU_BUFFER) == 0 ||
-              strcmp(name1, onnxruntime::WEBNN_TENSOR) == 0) {
-     *out = new OrtMemoryInfo(
-         name1, type, OrtDevice(OrtDevice::GPU, OrtDevice::MemType::DEFAULT, static_cast<OrtDevice::DeviceId>(id1)), id1,
-diff --git a/onnxruntime/core/graph/graph.cc b/onnxruntime/core/graph/graph.cc
-index e950d68947..3c1b379052 100644
---- a/onnxruntime/core/graph/graph.cc
-+++ b/onnxruntime/core/graph/graph.cc
-@@ -1250,10 +1250,12 @@ Graph::Graph(const Model& owning_model,
- 
-     // Remove sparse_initializers from protobuf to save memory as they are converted to dense now
-     graph_proto_->mutable_sparse_initializer()->Clear();
-+#if GOOGLE_PROTOBUF_VERSION < 5026000
-     const int sparse_num_cleared = graph_proto_->sparse_initializer().ClearedCount();
-     for (int i = 0; i < sparse_num_cleared; ++i) {
-       delete graph_proto_->mutable_sparse_initializer()->ReleaseCleared();
-     }
-+#endif
-   }
- #endif
- 
-@@ -3602,10 +3604,12 @@ void Graph::CleanAllInitializedTensors() noexcept {
-   // and can be reused. Need to explicitly release the cleared objects and free the
-   // memory.
-   graph_proto_->mutable_initializer()->Clear();
-+#if GOOGLE_PROTOBUF_VERSION < 5026000
-   const int num_cleared = graph_proto_->initializer().ClearedCount();
-   for (int i = 0; i < num_cleared; i++) {
-     delete graph_proto_->mutable_initializer()->ReleaseCleared();
-   }
-+#endif
- }
- 
- const ONNX_NAMESPACE::TensorProto* Graph::GetConstantInitializer(const std::string& initializer_name,
 diff --git a/onnxruntime/core/optimizer/graph_transformer_utils.cc b/onnxruntime/core/optimizer/graph_transformer_utils.cc
 index 54bd44ec2d..1ccdab4029 100644
 --- a/onnxruntime/core/optimizer/graph_transformer_utils.cc
@@ -539,9 +496,9 @@ index 5cf5ff9b3b..1fa65b61eb 100644
  #include "onnxruntime_extensions.h"
  #endif
 @@ -2730,6 +2735,13 @@ static constexpr OrtApi ort_api_1_to_19 = {
-     &OrtApis::RunOptionsAddActiveLoraAdapter,
 
      &OrtApis::SetEpDynamicOptions,
+     // End of Version 20 - DO NOT MODIFY ABOVE (see above text for more information)
 +
 +    &OrtApis::SessionOptionsAppendExecutionProvider_ETGLOW,
 +    &OrtApis::CreateEtGlowProviderOptions,
@@ -784,24 +741,65 @@ index 62e9cfe24c..85d7b2ec83 100644
 +#endif
 +}
 diff --git a/onnxruntime/core/session/provider_registration.cc b/onnxruntime/core/session/provider_registration.cc
-index db8b97f6d2..f43e8c5fd7 100644
+index 7fb518cdc0..13e631db67 100644
 --- a/onnxruntime/core/session/provider_registration.cc
 +++ b/onnxruntime/core/session/provider_registration.cc
-@@ -147,10 +147,16 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
- #endif
-   } else if (strcmp(provider_name, "VitisAI") == 0) {
-     status = OrtApis::SessionOptionsAppendExecutionProvider_VitisAI(options, provider_options_keys, provider_options_values, num_keys);
+@@ -165,11 +165,17 @@ ORT_API_STATUS_IMPL(OrtApis::SessionOptionsAppendExecutionProvider,
+     options->provider_factories.push_back(CoreMLProviderFactoryCreator::Create(provider_options));
+ #else
+     status = create_not_supported_status();
++#endif
 +  } else if (strcmp(provider_name, "ETGLOW") == 0) {
 +#if defined(USE_ETGLOW)
 +    options->provider_factories.push_back(EtGlowProviderFactoryCreator::Create(&provider_options, &(options->value)));
 +#else
 +    status = create_not_supported_status();
-+#endif
+ #endif
    } else {
      ORT_UNUSED_PARAMETER(options);
      status = OrtApis::CreateStatus(ORT_INVALID_ARGUMENT,
--                                   "Unknown provider name. Currently supported values are 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
-+                                   "Unknown provider name. Currently supported values are 'ETGLOW', 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' and 'AZURE'");
+-                                   "Unknown provider name. Currently supported values are 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' ,'CoreML', and 'AZURE'");
++                                   "Unknown provider name. Currently supported values are 'ETGLOW', 'OPENVINO', 'SNPE', 'XNNPACK', 'QNN', 'WEBNN' ,'CoreML', and 'AZURE'");
    }
  
    return status;
+diff --git a/onnxruntime/core/framework/allocator.cc b/onnxruntime/core/framework/allocator.cc
+index 02dbb3e518..72a0578057 100644
+--- a/onnxruntime/core/framework/allocator.cc
++++ b/onnxruntime/core/framework/allocator.cc
+@@ -168,6 +168,10 @@ ORT_API_STATUS_IMPL(OrtApis::CreateMemoryInfo, _In_ const char* name1, enum OrtA
+         onnxruntime::QNN_HTP_SHARED, type,
+         OrtDevice(OrtDevice::CPU, OrtDevice::MemType::QNN_HTP_SHARED, static_cast<OrtDevice::DeviceId>(id1)),
+         id1, mem_type1);
++  } else if (strcmp(name1, onnxruntime::ET) == 0) {
++    *out = new OrtMemoryInfo(
++        name1, type, OrtDevice(OrtDevice::ETGLOW, OrtDevice::MemType::DEFAULT, static_cast<OrtDevice::DeviceId>(id1)), id1,
++        mem_type1);
+   } else {
+     return OrtApis::CreateStatus(ORT_INVALID_ARGUMENT, "Specified device is not supported.");
+   }
+diff --git a/include/onnxruntime/core/framework/ortdevice.h b/include/onnxruntime/core/framework/ortdevice.h
+index adade482f6..832aacb3ea 100644
+--- a/include/onnxruntime/core/framework/ortdevice.h
++++ b/include/onnxruntime/core/framework/ortdevice.h
+@@ -18,6 +18,7 @@ struct OrtDevice {
+   static const DeviceType FPGA = 2;
+   static const DeviceType NPU = 3;  // Ascend
+   static const DeviceType DML = 4;
++  static const DeviceType ETGLOW = 5;
+ 
+   struct MemType {
+     // Pre-defined memory types.
+diff --git a/onnxruntime/core/session/inference_session.cc b/onnxruntime/core/session/inference_session.cc
+index a190389..9d96c7b 100644
+--- a/onnxruntime/core/session/inference_session.cc
++++ b/onnxruntime/core/session/inference_session.cc
+@@ -3117,6 +3117,8 @@ common::Status InferenceSession::ValidateAndParseShrinkArenaString(const std::st
+           device_type = OrtDevice::CPU;
+         } else if (device_id_component == "gpu") {
+           device_type = OrtDevice::GPU;
++        } else if (device_id_component == "et") {
++          device_type = OrtDevice::ETGLOW;
+         } else {
+           return ORT_MAKE_STATUS(ONNXRUNTIME, INVALID_ARGUMENT, "Unsupported device specified in the memory arena shrink list: ",
+                                  device_id_component);

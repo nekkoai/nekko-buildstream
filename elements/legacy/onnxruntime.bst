@@ -4,24 +4,11 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:components/patchelf.bst
-- deps/date.bst
-- deps/nsync.bst
-- deps/eigen.bst
-- deps/safeint.bst
-- deps/flatbuffers.bst
-- deps/re2.bst
-- deps/GSL.bst
-- deps/pytorch-cpuinfo.bst
-- deps/pybind.bst
-- deps/python3-numpy.bst
-- deps/onnx.bst
-- legacy/et-trace-utils.bst
-- legacy/glow.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/protobuf.bst
 - deps/date.bst
-- deps/nsync.bst
+- deps/dlpack.bst
 - deps/eigen.bst
 - deps/safeint.bst
 - deps/flatbuffers.bst
@@ -45,7 +32,6 @@ variables:
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
     -D onnxruntime_BUILD_UNIT_TESTS=off
     -D onnxruntime_BUILD_SHARED_LIB=on
-    -D onnxruntime_USE_PREINSTALLED_EIGEN=on
 
 # todo cover your eyes - this is the inverse of our approach to onnx...
 # for patchelf - see https://github.com/microsoft/onnxruntime/issues/24911
@@ -73,7 +59,7 @@ config:
 sources:
 - kind: git_repo
   url: github:microsoft/onnxruntime
-  track: v1.20.2
-  ref: v1.20.2-0-g8608bf02f21774be0388d2aa3a9f886d009d0b4c
+  track: v1.21.1
+  ref: v1.21.1-0-g8f7cce3a49fdbdac96e0868b75b7d0159db7ac7f
 - kind: patch_queue
   path: static/patches/onnxruntime

@@ -1,11 +1,11 @@
 diff --git a/cmake/CMakeLists.txt b/cmake/CMakeLists.txt
-index 5555fa692e..bcc4aa83a6 100644
+index 205dccdad6..1987956cfc 100644
 --- a/cmake/CMakeLists.txt
 +++ b/cmake/CMakeLists.txt
-@@ -149,6 +150,10 @@ option(onnxruntime_TVM_USE_LLVM "Build TVM with LLVM. Set customized path to llv
- option(onnxruntime_USE_XNNPACK "Build with XNNPACK support. Provides an alternative math library on ARM, WebAssembly and x86." OFF)
- option(onnxruntime_USE_WEBNN "Build with WebNN support. Enable hardware acceleration in web browsers." OFF)
- option(onnxruntime_USE_WEBGPU "Build with WebGPU support. Enable WebGPU via C/C++ interface." OFF)
+@@ -143,6 +143,10 @@ option(onnxruntime_ENABLE_PIX_FOR_WEBGPU_EP "Adding frame present for PIX to cap
+ # The following 2 options are only for Windows
+ option(onnxruntime_ENABLE_DAWN_BACKEND_VULKAN "Enable Vulkan backend for Dawn (on Windows)" OFF)
+ option(onnxruntime_ENABLE_DAWN_BACKEND_D3D12 "Enable D3D12 backend for Dawn (on Windows)" ON)
 +option(onnxruntime_USE_ETGLOW "Build with ESPERANTO GLOW support." OFF)
 +# Enable ONNX Runtime ETGLOW EP's internal unit tests that directly access the EP's internal functions instead of through
 +# OpKernels. Same GTest observations as in onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS
@@ -13,7 +13,7 @@ index 5555fa692e..bcc4aa83a6 100644
  
  # Options related to reducing the binary size produced by the build
  # XNNPACK EP requires the internal NHWC contrib ops to be available, so this option must be OFF when onnxruntime_USE_XNNPACK is ON
-@@ -982,7 +987,7 @@ function(onnxruntime_set_compile_flags target_name)
+@@ -1140,7 +1144,7 @@ function(onnxruntime_set_compile_flags target_name)
        target_compile_definitions(${target_name} PRIVATE ENABLE_ATEN)
      endif()
  
@@ -23,12 +23,12 @@ index 5555fa692e..bcc4aa83a6 100644
        # Suppress a "conversion_function_not_usable" warning in gsl/span
        target_compile_options(${target_name} PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:-Xcudafe \"--diag_suppress=conversion_function_not_usable\">")
 diff --git a/cmake/external/abseil-cpp.cmake b/cmake/external/abseil-cpp.cmake
-index 3223724693..cafd14bbd4 100644
+index cd93a8da00..a47cb6ab59 100644
 --- a/cmake/external/abseil-cpp.cmake
 +++ b/cmake/external/abseil-cpp.cmake
-@@ -27,7 +27,7 @@ FetchContent_Declare(
-     URL ${DEP_URL_abseil_cpp}
+@@ -28,7 +28,7 @@ onnxruntime_fetchcontent_declare(
      URL_HASH SHA1=${DEP_SHA1_abseil_cpp}
+     EXCLUDE_FROM_ALL
      PATCH_COMMAND ${ABSL_PATCH_COMMAND}
 -    FIND_PACKAGE_ARGS 20240722 NAMES absl
 +    FIND_PACKAGE_ARGS NAMES absl
@@ -36,119 +36,34 @@ index 3223724693..cafd14bbd4 100644
  
  onnxruntime_fetchcontent_makeavailable(abseil_cpp)
 diff --git a/cmake/external/eigen.cmake b/cmake/external/eigen.cmake
-index b123adb624..1d89cf8108 100644
+index f885606973..7f2bd1eba3 100644
 --- a/cmake/external/eigen.cmake
 +++ b/cmake/external/eigen.cmake
-@@ -1,7 +1,5 @@
- if (onnxruntime_USE_PREINSTALLED_EIGEN)
--    add_library(eigen INTERFACE)
--    file(TO_CMAKE_PATH ${eigen_SOURCE_PATH} eigen_INCLUDE_DIRS)
--    target_include_directories(eigen INTERFACE ${eigen_INCLUDE_DIRS})
-+    find_package(Eigen3 REQUIRED)
- else ()
-     if(CMAKE_SYSTEM_NAME MATCHES "AIX")
-         FetchContent_Declare(
-diff --git a/cmake/external/pybind11.cmake b/cmake/external/pybind11.cmake
-index 2c9e3cf454..9c694c3b51 100644
---- a/cmake/external/pybind11.cmake
-+++ b/cmake/external/pybind11.cmake
-@@ -2,7 +2,7 @@ FetchContent_Declare(
-     pybind11_project
-     URL ${DEP_URL_pybind11}
- 	URL_HASH SHA1=${DEP_SHA1_pybind11}
--	FIND_PACKAGE_ARGS 2.6 NAMES pybind11
-+	FIND_PACKAGE_ARGS 2.7 NAMES pybind11 REQUIRED
+@@ -8,5 +8,6 @@ onnxruntime_fetchcontent_declare(
+     URL ${DEP_URL_eigen}
+     URL_HASH SHA1=${DEP_SHA1_eigen}
+     EXCLUDE_FROM_ALL
++    FIND_PACKAGE_ARGS NAMES Eigen3
  )
- onnxruntime_fetchcontent_makeavailable(pybind11_project)
- 
-diff --git a/cmake/onnxruntime.cmake b/cmake/onnxruntime.cmake
-index 927b4ac84b..dcb7d5409e 100644
---- a/cmake/onnxruntime.cmake
-+++ b/cmake/onnxruntime.cmake
-@@ -118,7 +118,7 @@ endif()
- if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-   add_dependencies(onnxruntime ${onnxruntime_EXTERNAL_DEPENDENCIES})
- else()
--  add_dependencies(onnxruntime onnxruntime_generate_def ${onnxruntime_EXTERNAL_DEPENDENCIES})
-+  list(APPEND onnxruntime_INTERNAL_LIBRARIES onnxruntime_generate_def)
- endif()
- target_include_directories(onnxruntime PRIVATE ${ONNXRUNTIME_ROOT} PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/onnxruntime>")
- 
+ onnxruntime_fetchcontent_makeavailable(eigen)
 diff --git a/cmake/onnxruntime_common.cmake b/cmake/onnxruntime_common.cmake
-index 896379d743..d7e679115e 100644
+index e599e4f04a..9af23672e5 100644
 --- a/cmake/onnxruntime_common.cmake
 +++ b/cmake/onnxruntime_common.cmake
-@@ -135,9 +135,7 @@ target_include_directories(onnxruntime_common
+@@ -135,7 +135,7 @@ target_include_directories(onnxruntime_common
          ${OPTIONAL_LITE_INCLUDE_DIR})
  
  
 -target_link_libraries(onnxruntime_common PUBLIC safeint_interface ${GSL_TARGET} ${ABSEIL_LIBS} date::date)
--
--add_dependencies(onnxruntime_common ${onnxruntime_EXTERNAL_DEPENDENCIES})
 +target_link_libraries(onnxruntime_common PUBLIC safeint_interface ${GSL_TARGET} ${ABSEIL_LIBS} date::date Eigen3::Eigen)
  
- set_target_properties(onnxruntime_common PROPERTIES LINKER_LANGUAGE CXX)
- set_target_properties(onnxruntime_common PROPERTIES FOLDER "ONNXRuntime")
-diff --git a/cmake/onnxruntime_flatbuffers.cmake b/cmake/onnxruntime_flatbuffers.cmake
-index 3ab4c19122..1f94f99af3 100644
---- a/cmake/onnxruntime_flatbuffers.cmake
-+++ b/cmake/onnxruntime_flatbuffers.cmake
-@@ -9,12 +9,12 @@ file(GLOB onnxruntime_flatbuffers_srcs CONFIGURE_DEPENDS
- source_group(TREE ${REPO_ROOT} FILES ${onnxruntime_flatbuffers_srcs})
+ add_dependencies(onnxruntime_common ${onnxruntime_EXTERNAL_DEPENDENCIES})
  
- onnxruntime_add_static_library(onnxruntime_flatbuffers ${onnxruntime_flatbuffers_srcs})
--onnxruntime_add_include_to_target(onnxruntime_flatbuffers onnx flatbuffers::flatbuffers ${GSL_TARGET})
-+onnxruntime_add_include_to_target(onnxruntime_flatbuffers flatbuffers::flatbuffers ${GSL_TARGET})
- if(onnxruntime_ENABLE_INSTRUMENT)
-   target_compile_definitions(onnxruntime_flatbuffers PUBLIC ONNXRUNTIME_ENABLE_INSTRUMENT)
- endif()
- target_include_directories(onnxruntime_flatbuffers PRIVATE ${ONNXRUNTIME_ROOT})
--add_dependencies(onnxruntime_flatbuffers ${onnxruntime_EXTERNAL_DEPENDENCIES})
-+target_link_libraries(onnxruntime_flatbuffers ${onnxruntime_EXTERNAL_DEPENDENCIES})
- set_target_properties(onnxruntime_flatbuffers PROPERTIES FOLDER "ONNXRuntime")
- 
- # Add dependency so the flatbuffers compiler is built if enabled
-diff --git a/cmake/onnxruntime_framework.cmake b/cmake/onnxruntime_framework.cmake
-index b85edbf37d..44ed01be9d 100644
---- a/cmake/onnxruntime_framework.cmake
-+++ b/cmake/onnxruntime_framework.cmake
-@@ -102,7 +102,7 @@ endif()
- 
- set_target_properties(onnxruntime_framework PROPERTIES FOLDER "ONNXRuntime")
- # need onnx to build to create headers that this project includes
--add_dependencies(onnxruntime_framework ${onnxruntime_EXTERNAL_DEPENDENCIES})
-+target_link_libraries(onnxruntime_framework ${onnxruntime_EXTERNAL_DEPENDENCIES})
- 
- # In order to find the shared provider libraries we need to add the origin to the rpath for all executables we build
- # For the shared onnxruntime library, this is set in onnxruntime.cmake through CMAKE_SHARED_LINKER_FLAGS
-@@ -115,7 +115,7 @@ endif()
- if (onnxruntime_DEBUG_NODE_INPUTS_OUTPUTS_ENABLE_DUMP_TO_SQLDB)
-   find_package (SQLite3 REQUIRED)
-   include_directories(${SQLite3_INCLUDE_DIR})
--  target_link_libraries (onnxruntime_framework ${SQLite3_LIBRARY})
-+  target_link_libraries (onnxruntime_framework PRIVATE SQLite::SQLite3)
-   target_compile_definitions(onnxruntime_framework PRIVATE DEBUG_NODE_INPUTS_OUTPUTS_ENABLE_DUMP_TO_SQLDB)
- endif()
- 
-diff --git a/cmake/onnxruntime_graph.cmake b/cmake/onnxruntime_graph.cmake
-index 4d51325b84..accd6040f9 100644
---- a/cmake/onnxruntime_graph.cmake
-+++ b/cmake/onnxruntime_graph.cmake
-@@ -95,7 +95,8 @@ if (onnxruntime_ENABLE_TRAINING_OPS)
- endif()
- 
- onnxruntime_add_static_library(onnxruntime_graph ${onnxruntime_graph_src} ${orttraining_graph_src})
--add_dependencies(onnxruntime_graph onnx_proto flatbuffers::flatbuffers)
-+#target_link_libraries(onnxruntime_graph ${onnxruntime_EXTERNAL_DEPENDECIES})
-+target_link_libraries(onnxruntime_graph ONNX::onnx_proto flatbuffers::flatbuffers)
- onnxruntime_add_include_to_target(onnxruntime_graph onnxruntime_common ${WIL_TARGET} onnx onnx_proto ${PROTOBUF_LIB} flatbuffers::flatbuffers safeint_interface Boost::mp11)
- 
- if (MSVC)
 diff --git a/cmake/onnxruntime_providers.cmake b/cmake/onnxruntime_providers.cmake
-index 05a50a55db..387acda86f 100644
+index 67fa48b282..3cb473f832 100644
 --- a/cmake/onnxruntime_providers.cmake
 +++ b/cmake/onnxruntime_providers.cmake
-@@ -206,3 +206,7 @@ endif()
+@@ -203,3 +203,7 @@ endif()
  if (onnxruntime_USE_AZURE)
    include(onnxruntime_providers_azure.cmake)
  endif()
@@ -156,25 +71,140 @@ index 05a50a55db..387acda86f 100644
 +if (onnxruntime_USE_ETGLOW)
 +  include(onnxruntime_providers_etglow.cmake)
 +endif()
-diff --git a/cmake/onnxruntime_providers_cpu.cmake b/cmake/onnxruntime_providers_cpu.cmake
-index bbcc709b14..40049b38e1 100644
---- a/cmake/onnxruntime_providers_cpu.cmake
-+++ b/cmake/onnxruntime_providers_cpu.cmake
-@@ -193,7 +193,7 @@ endif()
+diff --git a/cmake/onnxruntime_python.cmake b/cmake/onnxruntime_python.cmake
+index aee6d2ff76..a03fec6d30 100644
+--- a/cmake/onnxruntime_python.cmake
++++ b/cmake/onnxruntime_python.cmake
+@@ -190,6 +190,18 @@ if(onnxruntime_BUILD_QNN_EP_STATIC_LIB)
+   list(APPEND onnxruntime_pybind11_state_static_providers PRIVATE onnxruntime_providers_qnn)
+ endif()
  
- target_include_directories(onnxruntime_providers PRIVATE ${ONNXRUNTIME_ROOT} ${eigen_INCLUDE_DIRS})
- onnxruntime_add_include_to_target(onnxruntime_providers re2::re2)
--add_dependencies(onnxruntime_providers onnx ${onnxruntime_EXTERNAL_DEPENDENCIES})
-+target_link_libraries(onnxruntime_providers ONNX::onnx ${onnxruntime_EXTERNAL_DEPENDENCIES})
++find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
++
++# Get NumPy include directory
++execute_process(COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
++  OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
++  OUTPUT_STRIP_TRAILING_WHITESPACE)
++
++target_include_directories(onnxruntime_pybind11_state PRIVATE
++   ${Python3_INCLUDE_DIRS}
++   ${NUMPY_INCLUDE_DIR}
++)
++
+ target_link_libraries(onnxruntime_pybind11_state PRIVATE
+     onnxruntime_session
+     ${onnxruntime_libs}
+@@ -204,6 +216,7 @@ target_link_libraries(onnxruntime_pybind11_state PRIVATE
+     ${ONNXRUNTIME_MLAS_LIBS}
+     onnxruntime_common
+     onnxruntime_flatbuffers
++    ${Python3_LIBRARIES}
+     ${pybind11_lib}
+     Python::NumPy
+ )
+@@ -1051,4 +1064,23 @@ if (onnxruntime_USE_VSINPU)
+   )
+ endif()
  
- if (onnxruntime_ENABLE_TRAINING_OPS)
-   target_include_directories(onnxruntime_providers PRIVATE ${ORTTRAINING_ROOT})
++
++if (onnxruntime_USE_ETGLOW)
++  file(GLOB onnxruntime_python_providers_etglow_srcs CONFIGURE_DEPENDS
++    "${ONNXRUNTIME_ROOT}/python/providers/etglow/*.py"
++  )
++  add_custom_command(
++    TARGET onnxruntime_pybind11_state POST_BUILD
++    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers
++    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
++    COMMAND ${CMAKE_COMMAND} -E copy
++        ${onnxruntime_python_providers_etglow_srcs}
++        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
++    COMMAND ${CMAKE_COMMAND} -E copy
++        $<TARGET_FILE:onnxruntime_providers_etglow>
++        $<TARGET_FILE:onnxruntime_providers_shared>
++        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++  )
++endif()
++
+ endif()
+diff --git a/cmake/onnxruntime_unittests.cmake b/cmake/onnxruntime_unittests.cmake
+index 0916aeb3dd..5aad822e14 100644
+--- a/cmake/onnxruntime_unittests.cmake
++++ b/cmake/onnxruntime_unittests.cmake
+@@ -556,6 +556,11 @@ set(onnxruntime_test_server_libs
+   onnxruntime_test_utils_for_server
+ )
+ 
++if (onnxruntime_USE_ETGLOW)
++  list(APPEND onnxruntime_test_framework_src_patterns ${TEST_SRC_DIR}/providers/etglow/*)
++  list(APPEND onnxruntime_test_framework_src_patterns ${TEST_SRC_DIR}/providers/etglow/test_ops/*)
++endif()
++
+ if(WIN32)
+     list(APPEND onnxruntime_test_framework_libs Advapi32)
+ endif()
+@@ -619,8 +624,12 @@ if(onnxruntime_USE_ARMNN)
+   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_armnn)
+ endif()
+ 
++if(onnxruntime_USE_ETGLOW)
++  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_etglow)
++endif()
++
+ set(ONNXRUNTIME_TEST_STATIC_PROVIDER_LIBS
+-    # CUDA, ROCM, TENSORRT, MIGRAPHX, DNNL, and OpenVINO are dynamically loaded at runtime.
++    # CUDA, ROCM, TENSORRT, MIGRAPHX, DNNL, ETGLOW, and OpenVINO are dynamically loaded at runtime.
+     # QNN EP can be built as either a dynamic and static libs.
+     ${PROVIDERS_NNAPI}
+     ${PROVIDERS_VSINPU}
+@@ -837,6 +846,19 @@ if (onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS)
+   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_cuda_ut)
+ endif()
+ 
++if (onnxruntime_ENABLE_ETGLOW_EP_INTERNAL_TESTS)
++  file(GLOB onnxruntime_test_providers_etglow_ut_src CONFIGURE_DEPENDS
++    "${TEST_SRC_DIR}/providers/etglow/test_cases/*"
++  )
++  # onnxruntime_providers_etglow_ut is only for unittests.
++  onnxruntime_add_shared_library_module(onnxruntime_providers_etglow_ut ${onnxruntime_test_providers_etglow_ut_src} $<TARGET_OBJECTS:onnxruntime_providers_etglow_obj>)
++  config_etglow_provider_shared_module(onnxruntime_providers_etglow_ut)
++  onnxruntime_add_include_to_target(onnxruntime_providers_etglow_ut GTest::gtest GTest::gmock)
++  target_include_directories(onnxruntime_providers_etglow_ut PRIVATE ${TEST_SRC_DIR}/util/include)
++  target_link_libraries(onnxruntime_providers_etglow_ut PRIVATE GTest::gtest GTest::gmock ${ONNXRUNTIME_MLAS_LIBS} onnxruntime_common)
++  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_etglow_ut)
++endif()
++
+ set(all_dependencies ${onnxruntime_test_providers_dependencies} )
+ 
+ if (onnxruntime_ENABLE_TRAINING)
+@@ -903,6 +925,9 @@ endif ()
+ if(NOT onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS)
+   list(REMOVE_ITEM all_tests ${TEST_SRC_DIR}/providers/cuda/cuda_provider_test.cc)
+ endif()
++if(NOT onnxruntime_ENABLE_ETGLOW_EP_INTERNAL_TESTS)
++  list(REMOVE_ITEM all_tests ${TEST_SRC_DIR}/providers/etglow/etglow_provider_test_entrypoint.cc)
++endif()
+ AddTest(
+   TARGET onnxruntime_test_all
+   SOURCES ${all_tests} ${onnxruntime_unittest_main_src}
+diff --git a/cmake/onnxruntime_util.cmake b/cmake/onnxruntime_util.cmake
+index 17e64ca2c1..64dbafcf34 100644
+--- a/cmake/onnxruntime_util.cmake
++++ b/cmake/onnxruntime_util.cmake
+@@ -15,7 +15,7 @@ if(UNIX)
+ endif()
+ set_target_properties(onnxruntime_util PROPERTIES LINKER_LANGUAGE CXX)
+ set_target_properties(onnxruntime_util PROPERTIES FOLDER "ONNXRuntime")
+-add_dependencies(onnxruntime_util ${onnxruntime_EXTERNAL_DEPENDENCIES})
++target_link_libraries(onnxruntime_util ${onnxruntime_EXTERNAL_DEPENDENCIES})
+ if (WIN32)
+     target_compile_definitions(onnxruntime_util PRIVATE _SCL_SECURE_NO_WARNINGS)
+ endif()
 diff --git a/cmake/onnxruntime_providers_etglow.cmake b/cmake/onnxruntime_providers_etglow.cmake
 new file mode 100644
 index 0000000000..4fb31df546
 --- /dev/null
 +++ b/cmake/onnxruntime_providers_etglow.cmake
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,69 @@
 +add_definitions(-DUSE_ETGLOW=1)
 +
 +find_package(et-trace-utils REQUIRED)
@@ -222,10 +252,8 @@ index 0000000000..4fb31df546
 +                INSTALL_RPATH "@loader_path"
 +                BUILD_WITH_INSTALL_RPATH TRUE
 +                INSTALL_RPATH_USE_LINK_PATH FALSE)
-+        target_link_libraries(${target} PRIVATE nsync::nsync_cpp)
 +    elseif(UNIX)
 +        set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS "-Xlinker --version-script=${ONNXRUNTIME_ROOT}/core/providers/etglow/version_script.lds -Xlinker --gc-sections -Xlinker -rpath=\$ORIGIN")
-+        target_link_libraries(${target} PRIVATE nsync::nsync_cpp)
 +    elseif(WIN32)
 +        set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS "-DEF:${ONNXRUNTIME_ROOT}/core/providers/etglow/symbols.def")
 +    else()
@@ -246,143 +274,3 @@ index 0000000000..4fb31df546
 +        ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
 +        LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
 +        RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
-diff --git a/cmake/onnxruntime_python.cmake b/cmake/onnxruntime_python.cmake
-index 270139ceaf..118f25dad0 100644
---- a/cmake/onnxruntime_python.cmake
-+++ b/cmake/onnxruntime_python.cmake
-@@ -170,6 +170,18 @@ if (onnxruntime_ENABLE_LAZY_TENSOR)
-   endif()
- endif()
- 
-+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-+
-+# Get NumPy include directory
-+execute_process(COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
-+  OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-+  OUTPUT_STRIP_TRAILING_WHITESPACE)
-+
-+target_include_directories(onnxruntime_pybind11_state PRIVATE
-+   ${Python3_INCLUDE_DIRS}
-+   ${NUMPY_INCLUDE_DIR}
-+)
-+
- target_link_libraries(onnxruntime_pybind11_state PRIVATE
-     onnxruntime_session
-     ${onnxruntime_libs}
-@@ -194,6 +206,7 @@ target_link_libraries(onnxruntime_pybind11_state PRIVATE
-     ${ONNXRUNTIME_MLAS_LIBS}
-     onnxruntime_common
-     onnxruntime_flatbuffers
-+    ${Python3_LIBRARIES}
-     ${pybind11_lib}
- )
- 
-@@ -202,7 +215,7 @@ set(onnxruntime_pybind11_state_dependencies
-     ${pybind11_dep}
- )
- set_property(TARGET onnxruntime_pybind11_state APPEND_STRING PROPERTY LINK_FLAGS ${ONNXRUNTIME_SO_LINK_FLAG} ${onnxruntime_DELAYLOAD_FLAGS})
--add_dependencies(onnxruntime_pybind11_state ${onnxruntime_pybind11_state_dependencies})
-+#target_link_libraries(onnxruntime_pybind11_state ${onnxruntime_pybind11_state_dependencies})
- 
- if (MSVC)
-   set_target_properties(onnxruntime_pybind11_state PROPERTIES LINK_FLAGS "${ONNXRUNTIME_SO_LINK_FLAG}")
-@@ -1038,4 +1021,23 @@ if (onnxruntime_USE_QNN)
-   endif()
- endif()
- 
-+
-+if (onnxruntime_USE_ETGLOW)
-+  file(GLOB onnxruntime_python_providers_etglow_srcs CONFIGURE_DEPENDS
-+    "${ONNXRUNTIME_ROOT}/python/providers/etglow/*.py"
-+  )
-+  add_custom_command(
-+    TARGET onnxruntime_pybind11_state POST_BUILD
-+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers
-+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
-+    COMMAND ${CMAKE_COMMAND} -E copy
-+        ${onnxruntime_python_providers_etglow_srcs}
-+        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
-+    COMMAND ${CMAKE_COMMAND} -E copy
-+        $<TARGET_FILE:onnxruntime_providers_etglow>
-+        $<TARGET_FILE:onnxruntime_providers_shared>
-+        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
-+  )
-+endif()
-+
- endif()
-diff --git a/cmake/onnxruntime_unittests.cmake b/cmake/onnxruntime_unittests.cmake
-index 0c1e5e93c6..02413c8848 100644
---- a/cmake/onnxruntime_unittests.cmake
-+++ b/cmake/onnxruntime_unittests.cmake
-@@ -587,11 +587,15 @@ if(onnxruntime_USE_ARMNN)
-   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_armnn)
- endif()
- 
-+if(onnxruntime_USE_ETGLOW)
-+  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_etglow)
-+endif()
-+
- set(ONNXRUNTIME_TEST_LIBS
-     onnxruntime_session
-     ${ONNXRUNTIME_INTEROP_TEST_LIBS}
-     ${onnxruntime_libs}
--    # CUDA, ROCM, TENSORRT, MIGRAPHX, DNNL, and OpenVINO are dynamically loaded at runtime
-+    # CUDA, ROCM, TENSORRT, MIGRAPHX, DNNL, ETGLOW and OpenVINO are dynamically loaded at runtime
-     ${PROVIDERS_NNAPI}
-     ${PROVIDERS_VSINPU}
-     ${PROVIDERS_JS}
-@@ -702,6 +706,11 @@ if(onnxruntime_USE_AZURE)
-   list(APPEND onnxruntime_test_providers_libs onnxruntime_providers_azure)
- endif()
- 
-+if (onnxruntime_USE_ETGLOW)
-+  list(APPEND onnxruntime_test_framework_src_patterns ${TEST_SRC_DIR}/providers/etglow/*)
-+  list(APPEND onnxruntime_test_framework_src_patterns ${TEST_SRC_DIR}/providers/etglow/test_ops/*)
-+endif()
-+
- if(WIN32)
-   if (onnxruntime_USE_TVM)
-     list(APPEND disabled_warnings ${DISABLED_WARNINGS_FOR_TVM})
-@@ -802,6 +811,19 @@ if (onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS)
-   list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_cuda_ut)
- endif()
- 
-+if (onnxruntime_ENABLE_ETGLOW_EP_INTERNAL_TESTS)
-+  file(GLOB onnxruntime_test_providers_etglow_ut_src CONFIGURE_DEPENDS
-+    "${TEST_SRC_DIR}/providers/etglow/test_cases/*"
-+  )
-+  # onnxruntime_providers_etglow_ut is only for unittests.
-+  onnxruntime_add_shared_library_module(onnxruntime_providers_etglow_ut ${onnxruntime_test_providers_etglow_ut_src} $<TARGET_OBJECTS:onnxruntime_providers_etglow_obj>)
-+  config_etglow_provider_shared_module(onnxruntime_providers_etglow_ut)
-+  onnxruntime_add_include_to_target(onnxruntime_providers_etglow_ut GTest::gtest GTest::gmock)
-+  target_include_directories(onnxruntime_providers_etglow_ut PRIVATE ${TEST_SRC_DIR}/util/include)
-+  target_link_libraries(onnxruntime_providers_etglow_ut PRIVATE GTest::gtest GTest::gmock ${ONNXRUNTIME_MLAS_LIBS} onnxruntime_common)
-+  list(APPEND onnxruntime_test_providers_dependencies onnxruntime_providers_etglow_ut)
-+endif()
-+
- set(all_dependencies ${onnxruntime_test_providers_dependencies} )
- 
- if (onnxruntime_ENABLE_TRAINING)
-@@ -865,6 +887,9 @@ endif ()
- if(NOT onnxruntime_ENABLE_CUDA_EP_INTERNAL_TESTS)
-   list(REMOVE_ITEM all_tests ${TEST_SRC_DIR}/providers/cuda/cuda_provider_test.cc)
- endif()
-+if(NOT onnxruntime_ENABLE_ETGLOW_EP_INTERNAL_TESTS)
-+  list(REMOVE_ITEM all_tests ${TEST_SRC_DIR}/providers/etglow/etglow_provider_test_entrypoint.cc)
-+endif()
- AddTest(
-   TARGET onnxruntime_test_all
-   SOURCES ${all_tests} ${onnxruntime_unittest_main_src}
-diff --git a/cmake/onnxruntime_util.cmake b/cmake/onnxruntime_util.cmake
-index ae7e842f22..22a8b5b0af 100644
---- a/cmake/onnxruntime_util.cmake
-+++ b/cmake/onnxruntime_util.cmake
-@@ -16,7 +16,7 @@ if(UNIX)
- endif()
- set_target_properties(onnxruntime_util PROPERTIES LINKER_LANGUAGE CXX)
- set_target_properties(onnxruntime_util PROPERTIES FOLDER "ONNXRuntime")
--add_dependencies(onnxruntime_util ${onnxruntime_EXTERNAL_DEPENDENCIES})
-+target_link_libraries(onnxruntime_util ${onnxruntime_EXTERNAL_DEPENDENCIES})
- if (WIN32)
-     target_compile_definitions(onnxruntime_util PRIVATE _SCL_SECURE_NO_WARNINGS)
- endif()

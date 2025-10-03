@@ -138,7 +138,7 @@ index 0000000000..da468abc22
 +  EtGlowDeviceAllocator(OrtDevice::DeviceId device_id, const char* name, rt::IRuntime* rt)
 +      : IAllocator(
 +            OrtMemoryInfo(name, OrtAllocatorType::OrtDeviceAllocator,
-+                          OrtDevice(OrtDevice::GPU, OrtDevice::MemType::DEFAULT, device_id),
++                          OrtDevice(OrtDevice::ETGLOW, OrtDevice::MemType::DEFAULT, device_id),
 +                          device_id, OrtMemTypeDefault)),
 +        rt_{rt} {}
 +
@@ -216,15 +216,15 @@ index 0000000000..fdb6640e05
 +namespace onnxruntime {
 +
 +bool EtGlowDataTransfer::CanCopy(const OrtDevice& src_device, const OrtDevice& dst_device) const {
-+  return src_device.Type() == OrtDevice::GPU || src_device.MemType() == OrtDevice::MemType::DEFAULT ||
-+         dst_device.Type() == OrtDevice::GPU || dst_device.MemType() == OrtDevice::MemType::DEFAULT;
++  return src_device.Type() == OrtDevice::ETGLOW || src_device.MemType() == OrtDevice::MemType::DEFAULT ||
++         dst_device.Type() == OrtDevice::ETGLOW || dst_device.MemType() == OrtDevice::MemType::DEFAULT;
 +}
 +
 +common::Status EtGlowDataTransfer::CopyTensor(const Tensor& src, Tensor& dst) const {
 +  // 0. Get deviceId
 +  const auto& src_device = src.Location().device;
 +  const auto& dst_device = dst.Location().device;
-+  int device_id = (dst_device.Type() == OrtDevice::GPU) ? dst_device.Id() : src_device.Id();
++  int device_id = (dst_device.Type() == OrtDevice::ETGLOW) ? dst_device.Id() : src_device.Id();
 +
 +  rt::StreamId stream_id = streams_reg_.GetStreamForDevice(device_id);
 +  LOGS_DEFAULT(INFO) << "[ETGLOW EP] copy stream_id: " << static_cast<int>(stream_id) << " dev_src_id: " << src_device.Id() << " dev_dst_id: " << dst_device.Id();
@@ -257,12 +257,12 @@ index 0000000000..fdb6640e05
 +  auto* dst_ptr = static_cast<std::byte*>(dst_data);
 +
 +  auto copy_type_str = [](const OrtDevice::DeviceType& dst_device_t, const OrtDevice::DeviceType& src_device_t) {
-+    if (dst_device_t == OrtDevice::GPU && src_device_t == OrtDevice::GPU) {
-+      return "GPU->GPU";
-+    } else if (dst_device_t == OrtDevice::GPU && src_device_t != OrtDevice::GPU) {
-+      return "CPU->GPU";
-+    } else if (dst_device_t == OrtDevice::CPU && src_device_t == OrtDevice::GPU) {
-+      return "GPU->CPU";
++    if (dst_device_t == OrtDevice::ETGLOW && src_device_t == OrtDevice::ETGLOW) {
++      return "ETGLOW->ETGLOW";
++    } else if (dst_device_t == OrtDevice::ETGLOW && src_device_t != OrtDevice::ETGLOW) {
++      return "CPU->ETGLOW";
++    } else if (dst_device_t == OrtDevice::CPU && src_device_t == OrtDevice::ETGLOW) {
++      return "ETGLOW->CPU";
 +    } else {
 +      return "Other";
 +    }
@@ -287,12 +287,12 @@ index 0000000000..fdb6640e05
 +                     << " size: " << bytes;
 +
 +  constexpr bool barrier = true;
-+  if (dst_device.Type() == OrtDevice::GPU && src_device.Type() == OrtDevice::GPU) {
++  if (dst_device.Type() == OrtDevice::ETGLOW && src_device.Type() == OrtDevice::ETGLOW) {
 +    auto etrt_device_id = static_cast<rt::DeviceId>(dst_device.Id());
 +    rt_->memcpyDeviceToDevice(etrt_stream_id, etrt_device_id, src_ptr, dst_ptr, bytes, barrier);
-+  } else if (dst_device.Type() == OrtDevice::GPU && src_device.Type() != OrtDevice::GPU) {
++  } else if (dst_device.Type() == OrtDevice::ETGLOW && src_device.Type() != OrtDevice::ETGLOW) {
 +    rt_->memcpyHostToDevice(etrt_stream_id, src_ptr, dst_ptr, bytes, barrier);
-+  } else if (dst_device.Type() == OrtDevice::CPU && src_device.Type() == OrtDevice::GPU) {
++  } else if (dst_device.Type() == OrtDevice::CPU && src_device.Type() == OrtDevice::ETGLOW) {
 +    rt_->memcpyDeviceToHost(etrt_stream_id, src_ptr, dst_ptr, bytes, barrier);
 +  } else {
 +    // sync the stream first to make sure the data arrived
@@ -345,1420 +345,6 @@ index 0000000000..0071e70a24
 +
 +}  // namespace onnxruntime
 \ No newline at end of file
-diff --git a/onnxruntime/core/providers/etglow/etglow_execution_provider.cc b/onnxruntime/core/providers/etglow/etglow_execution_provider.cc
-new file mode 100644
-index 0000000000..8bae398246
---- /dev/null
-+++ b/onnxruntime/core/providers/etglow/etglow_execution_provider.cc
-@@ -0,0 +1,1150 @@
-+// Copyright (c) Microsoft Corporation. All rights reserved.
-+// Licensed under the MIT License.
-+
-+#include "etglow_execution_provider.h"
-+#include "etglow_execution_provider_utils.h"
-+#include "etglow_execution_provider_bundle.h"
-+#include "etglow_data_transfer.h"
-+#include "etglow_stream_handle.h"
-+#include "etglow_allocator.h"
-+#include "etglow_profiler.h"
-+#include "etglow_provider_factory.h"
-+
-+#include "core/platform/ort_mutex.h"
-+#include "core/providers/shared_library/provider_api.h"
-+
-+#define ORT_API_MANUAL_INIT
-+#include "core/session/onnxruntime_cxx_api.h"
-+
-+#include <algorithm>
-+#include <fstream>
-+#include <memory>
-+#include <mutex>
-+#include <functional>
-+#include <string>
-+#include <utility>
-+
-+#include "glow/GlowAPI/etsoc.h"
-+
-+namespace onnxruntime {
-+
-+class Memcpy final : public OpKernel {
-+ public:
-+  using OpKernel::OpKernel;  // Directly inherit parent constructor
-+
-+  Status Compute(OpKernelContext* ctx) const override {
-+    const auto* X_type = ctx->InputType(0);
-+    if (X_type->IsTensorType()) {
-+      const auto* X = ctx->Input<Tensor>(0);
-+      ORT_ENFORCE(X != nullptr, "Memcpy: Input tensor is nullptr.");
-+      Tensor* Y = ctx->Output(0, X->Shape());
-+      ORT_ENFORCE(Y != nullptr, "Memcpy: Failed to allocate output tensor.");
-+      const auto* gpu_data_transfer = Info().GetDataTransferManager().GetDataTransfer(X->Location().device, Y->Location().device);
-+      ORT_RETURN_IF_ERROR(gpu_data_transfer->CopyTensorAsync(*X, *Y, *ctx->GetComputeStream()));
-+    } else {
-+      if (X_type->IsSparseTensorType()) {
-+        return {common::ONNXRUNTIME, common::FAIL, "Memcpy: Unsupported SparseTensorType."};
-+      } else if (X_type->IsTensorSequenceType()) {
-+        const TensorSeq* X = ctx->Input<TensorSeq>(0);
-+        ORT_ENFORCE(X != nullptr, "Memcpy: Input tensor sequence is nullptr.");
-+        TensorSeq* Y = ctx->Output<TensorSeq>(0);
-+        ORT_ENFORCE(Y != nullptr, "Memcpy: Failed to allocate output tensor sequence.");
-+        const auto* X_dtype = X->DataType();
-+        Y->SetType(X_dtype);
-+        AllocatorPtr alloc;
-+
-+        // If we are copying contents to CUDA, the allocator to use
-+        // to allocate the buffers of the new tensors in the sequence
-+        // can be temp space allocator associated with the CUDA EP
-+        if (Node().OpType() == "MemcpyFromHost") {
-+          ORT_RETURN_IF_ERROR(ctx->GetTempSpaceAllocator(&alloc));
-+        } else {
-+          // If we are copying contents to CPU (op type is "MemcpyToHost"),
-+          // the allocator to use to allocate the buffers of the new tensors
-+          // in the sequence will be the allocator from the CPU EP
-+          ORT_RETURN_IF_ERROR(ctx->GetTempSpaceCPUAllocator(&alloc));
-+        }
-+        auto X_size = X->Size();
-+        Y->Reserve(X_size);
-+        for (size_t i = 0; i < X_size; ++i) {
-+          const Tensor& source_tensor = X->Get(i);
-+          std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(), source_tensor.Shape(), alloc);
-+          const auto* gpu_data_transfer = Info().GetDataTransferManager().GetDataTransfer(source_tensor.Location().device,
-+                                                                                          target_tensor->Location().device);
-+          ORT_RETURN_IF_ERROR(gpu_data_transfer->CopyTensorAsync(source_tensor, *target_tensor, *ctx->GetComputeStream()));
-+          Y->Add(std::move(*target_tensor));
-+        }
-+      } else {
-+        return {common::ONNXRUNTIME, common::FAIL, "Memcpy: Unsupported input type."};
-+      }
-+    }
-+    return Status::OK();
-+  }
-+};
-+
-+ONNX_OPERATOR_KERNEL_EX(
-+    MemcpyFromHost,
-+    kOnnxDomain,
-+    1,
-+    kEtGlowExecutionProvider,
-+    (*KernelDefBuilder::Create())
-+        .InputMemoryType(OrtMemTypeCPUInput, 0)
-+        .TypeConstraint("T", DataTypeImpl::AllFixedSizeTensorTypes()),
-+    Memcpy);
-+
-+ONNX_OPERATOR_KERNEL_EX(
-+    MemcpyToHost,
-+    kOnnxDomain,
-+    1,
-+    kEtGlowExecutionProvider,
-+    (*KernelDefBuilder::Create())
-+        .OutputMemoryType(OrtMemTypeCPUOutput, 0)
-+        .TypeConstraint("T", DataTypeImpl::AllFixedSizeTensorTypes()),
-+    Memcpy);
-+
-+class ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyFromHost);
-+class ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyToHost);
-+
-+#define ETGLOW_KERNEL_DEF(operator, domain, startver, endver, types)                              \
-+                                                                                                  \
-+  class operator final : public OpKernel {                                                        \
-+   public:                                                                                        \
-+    using OpKernel::OpKernel; /* Directly inherit parent constructor */                           \
-+    Status Compute(OpKernelContext* ctx) const override {                                         \
-+      /* Empty implementation. */                                                                 \
-+      ORT_UNUSED_PARAMETER(ctx);                                                                  \
-+      return Status::OK();                                                                        \
-+    }                                                                                             \
-+  };                                                                                              \
-+                                                                                                  \
-+  ONNX_OPERATOR_VERSIONED_KERNEL_EX(operator, domain, startver, endver, kEtGlowExecutionProvider, \
-+                                    (*KernelDefBuilder::Create())types, operator);                \
-+  class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, domain, startver, endver, operator);
-+
-+#include "etglow_kernels.inc"
-+#undef ETGLOW_KERNEL_DEF
-+
-+// Scan operator needs a special treatment due to the templatized format imposed by the forward declaration in provider_api.h.
-+template <int OpSet>
-+class Scan final : public OpKernel {
-+ public:
-+  using OpKernel::OpKernel; /* Directly inherit parent constructor */
-+
-+  Status Compute(OpKernelContext* ctx) const override {
-+    /* Empty implementation. */
-+    ORT_UNUSED_PARAMETER(ctx);
-+    return Status::OK();
-+  }
-+};
-+
-+ONNX_OPERATOR_VERSIONED_KERNEL_EX(Scan, kOnnxDomain, 1, 21, kEtGlowExecutionProvider,
-+                                  (*KernelDefBuilder::Create()).TypeConstraint("V", DataTypeImpl::AllTensorTypes()), Scan<9>);
-+class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, 21, Scan);
-+
-+static std::shared_ptr<KernelRegistry> s_kernel_registry;
-+static std::shared_ptr<KernelRegistry> s_kernel_registry_offline;
-+
-+void InitializeRegistry() {
-+  s_kernel_registry = KernelRegistry::Create();
-+
-+  static const std::array<BuildKernelCreateInfoFn, 2> function_table = {
-+      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyFromHost)>,
-+      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyToHost)>,
-+  };
-+
-+  for (const auto& function_table_entry : function_table) {
-+    ORT_THROW_IF_ERROR(s_kernel_registry->Register(function_table_entry()));
-+  }
-+
-+  // Initialize registry for offline mode.
-+  s_kernel_registry_offline = KernelRegistry::Create();
-+  static const std::array<BuildKernelCreateInfoFn, 2 + /* num dummy kernels */ 195> offline_mode_function_table = {
-+      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyFromHost)>,
-+      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyToHost)>,
-+#define ETGLOW_KERNEL_DEF(operator, domain, startver, endver, types) \
-+  BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, domain, startver, endver, operator)>,
-+#include "etglow_kernels.inc"
-+#undef ETGLOW_KERNEL_DEF
-+      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, 21, Scan)>,
-+  };
-+
-+  for (auto& function_table_entry : offline_mode_function_table) {
-+    ORT_THROW_IF_ERROR(s_kernel_registry_offline->Register(function_table_entry()));
-+  }
-+}
-+
-+void DeleteRegistry() {
-+  s_kernel_registry.reset();
-+  s_kernel_registry_offline.reset();
-+}
-+
-+void EtGlowExecutionProvider::addToProfilerThreadMap() {
-+  std::scoped_lock lock(thread_map_mutex_);
-+  auto syscall_tid = logging::GetThreadId();
-+  auto std_tid = std::this_thread::get_id();
-+  auto [it, success] = profiler_thread_map_.try_emplace(std_tid, syscall_tid);
-+  if (success) {
-+    LOG(INFO) << "Adding thread id mapping: [" << std_tid << "->" << syscall_tid << "]";
-+  }
-+}
-+
-+std::shared_ptr<KernelRegistry> EtGlowExecutionProvider::GetKernelRegistry() const {
-+  return info_.offline_mode ? s_kernel_registry_offline : s_kernel_registry;
-+}
-+
-+EtGlowExecutionProvider::EtGlowExecutionProvider(EtGlowExecutionProviderInfo info, std::unique_ptr<etsoc::GlowAPI> glow, EtRt_StreamsRegistry& streams_reg)
-+    : IExecutionProvider{onnxruntime::kEtGlowExecutionProvider, OrtDevice(OrtDevice::GPU, OrtDevice::MemType::DEFAULT, info.device_id)},
-+      info_{std::move(info)},
-+      glow_api_{std::move(glow)},
-+      streams_reg_{streams_reg},
-+      op_mgr_{info_.onnx_symbols} {
-+  InitProviderOrtApi();
-+
-+  metadef_id_generator_ = ModelMetadefIdGenerator::Create();
-+
-+  auto options = EtGlowExecutionProviderInfo::ToProviderOptions(info_);
-+  std::string parameters;
-+  for (const auto& [key, value] : options) {
-+    if (value.empty()) {
-+      // do not print options that are empty
-+      continue;
-+    }
-+    parameters += "\n - ";
-+    parameters += key;
-+    parameters += " = ";
-+    parameters += value;
-+  }
-+  LOGS_DEFAULT(INFO) << "[ETGLOW] EP created with:" << parameters;
-+
-+  InitEtGlowStateFromEnvVars();
-+  addToProfilerThreadMap();
-+}
-+
-+EtGlowExecutionProvider::~EtGlowExecutionProvider() {
-+  // wait for any uncompleted work
-+  ORT_IGNORE_RETURN_VALUE(GetPerThreadContext().SynchronizeInferences());
-+
-+  // clean up thread local context caches
-+  {
-+    std::scoped_lock lock(context_state_.mutex);
-+    for (const auto& cache_weak : context_state_.caches_to_update_on_destruction) {
-+      const auto cache = cache_weak.lock();
-+      if (!cache) continue;
-+      ORT_IGNORE_RETURN_VALUE(cache->erase(this));
-+    }
-+  }
-+
-+  // unload all models from the device
-+  if (auto status = UnloadModels(); status != Status::OK()) {
-+    LOGS_DEFAULT(ERROR) << "[ETGLOW] Could not unload models: " << status.ErrorMessage();
-+  }
-+
-+  auto end = std::chrono::steady_clock::now();
-+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_);
-+  LOGS_DEFAULT(VERBOSE) << "[ETGLOW] lifetime: " << elapsed.count() << " ms";
-+}
-+
-+void EtGlowExecutionProvider::InitEtGlowStateFromEnvVars() {
-+  auto register_envvar_bool = [](const std::string& envvar_name, bool& knob) {
-+    if (const auto envvar_value = GetEnvironmentVar(envvar_name); !envvar_value.empty()) {
-+      const bool new_value = std::stoi(envvar_value) != 0;
-+      if (knob != new_value) {
-+        LOGS_DEFAULT(WARNING) << "[ETGLOW] Detected envvar " << envvar_name << " = " << new_value;
-+        knob = new_value;
-+      }
-+    }
-+  };
-+  register_envvar_bool(etglow::envvars::kGreedyEp, info_.greedy);
-+  register_envvar_bool(etglow::envvars::kOfflineModeEp, info_.offline_mode);
-+  register_envvar_bool(etglow::envvars::kFailIfUnsupportedNode, info_.fail_if_cannot_run_whole_graph);
-+  register_envvar_bool(etglow::envvars::kDebugLogs, debug_logs_);
-+  register_envvar_bool(etglow::envvars::kBundleCacheEnable, use_bundles_);
-+
-+  auto register_envvar_action = [](const std::string& envvar_name, const auto& action_if_found) {
-+    if (const auto envvar_value = GetEnvironmentVar(envvar_name); !envvar_value.empty()) {
-+      action_if_found(envvar_name, envvar_value);
-+    }
-+  };
-+  register_envvar_action(etglow::envvars::kCapabilityMode, [this](const std::string& envvar_name, const std::string& envvar_value) {
-+    LOGS_DEFAULT(WARNING) << "[ETGLOW] Detected envvar " << envvar_name << " = " << envvar_value;
-+    CapabilityMode new_mode = std::from_string(envvar_value);
-+    op_mgr_.UpdateCapabilityMode(new_mode);
-+  });
-+}
-+
-+std::unique_ptr<IDataTransfer> EtGlowExecutionProvider::GetDataTransfer() const {
-+  return std::make_unique<onnxruntime::EtGlowDataTransfer>(glow_api_->getBackendRuntimeInstance(), streams_reg_);
-+}
-+
-+std::unique_ptr<profiling::EpProfiler> EtGlowExecutionProvider::GetProfiler() {
-+  return std::make_unique<profiling::EtGlowProfiler>(*glow_api_, info_.traces_dir_prefix, info_.trace_options, profiler_thread_map_);
-+};
-+
-+AllocatorPtr EtGlowExecutionProvider::CreateEtGlowAllocator(OrtDevice::DeviceId device_id, size_t mem_limit, ArenaExtendStrategy arena_extend_strategy, rt::IRuntime* rt) {
-+  // lower arena memory limit to max available memory in the device
-+  mem_limit = std::min(mem_limit, rt->getDeviceProperties(rt::DeviceId(device_id)).memorySize_);
-+  AllocatorCreationInfo device_memory_info(
-+      [rt](OrtDevice::DeviceId id) {
-+        return std::make_unique<EtGlowDeviceAllocator>(id, ET, rt);
-+      },
-+      device_id,
-+      true /* use_arena */,
-+      OrtArenaCfg{mem_limit, static_cast<int>(arena_extend_strategy), -1, -1, -1, -1L},
-+      true /* stream aware */,
-+      false /* enable cross stream sharing */
-+  );
-+  return CreateAllocator(device_memory_info);
-+}
-+
-+std::vector<AllocatorPtr> EtGlowExecutionProvider::CreatePreferredAllocators() {
-+  AllocatorCreationInfo host_memory_info{[](int) { return std::make_unique<CPUAllocator>(); }};
-+  return std::vector<AllocatorPtr>{CreateEtGlowAllocator(info_.device_id, info_.device_mem_limit, info_.arena_extend_strategy, glow_api_->getBackendRuntimeInstance()),
-+                                   CreateAllocator(host_memory_info)};
-+}
-+
-+std::vector<std::unique_ptr<ComputeCapability>>
-+EtGlowExecutionProvider::GetCapability(const GraphViewer& graph_viewer, const IKernelLookup& /*kernel_lookup*/) const {
-+  std::vector<std::unique_ptr<ComputeCapability>> result;
-+
-+  if (info_.greedy) {
-+    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] in greedy mode!";
-+  }
-+  if (info_.fail_if_cannot_run_whole_graph) {
-+    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] fail if cannot run whole graph is enabled!";
-+  }
-+
-+  if (graph_viewer.IsSubgraph()) {
-+    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] refusing to return capability to compile subgraph.";
-+    return {};  // Do not accept sub-graphs for now
-+  }
-+  if (info_.offline_mode) {
-+    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] in offline mode!";
-+    // In offline mode everything is supported (no need to compile).
-+    for (const auto& node_index : graph_viewer.GetNodesInTopologicalOrder()) {
-+      std::unique_ptr<IndexedSubGraph> sub_graph = IndexedSubGraph::Create();
-+      sub_graph->Nodes().push_back(node_index);
-+      result.push_back(ComputeCapability::Create(std::move(sub_graph)));
-+    }
-+    return result;
-+  }
-+
-+  int subgraph_index = 0;
-+  int number_of_glow_nodes = 0;
-+  const auto supported_node_groups = GetSupportedNodes(graph_viewer);
-+  for (const auto& group : supported_node_groups) {
-+    if (group.empty()) {
-+      continue;
-+    }
-+
-+    auto sub_graph = GetSubGraph(group, graph_viewer, subgraph_index);
-+    if (sub_graph != nullptr) {
-+      number_of_glow_nodes += sub_graph->Nodes().size();
-+      result.push_back(ComputeCapability::Create(std::move(sub_graph)));
-+      subgraph_index++;
-+    }
-+  }
-+
-+  const int number_of_ort_nodes = graph_viewer.NumberOfNodes();
-+  whole_graph_runs_with_glow_ = (number_of_glow_nodes == number_of_ort_nodes) || info_.greedy;
-+  const std::string greedy_msg = "but in greedy mode all nodes are accepted";
-+  if (number_of_glow_nodes == 0) {
-+    std::string message = (info_.greedy) ? "[ETGLOW EP] No graph should run on ETGLOW EP, " + greedy_msg
-+                                         : "[ETGLOW EP] No graph will run on ETGLOW EP";
-+    LOGS_DEFAULT(WARNING) << message;
-+  } else if (number_of_glow_nodes == number_of_ort_nodes) {
-+    LOGS_DEFAULT(INFO) << "[ETGLOW EP] Whole graph will run on GLOW execution provider";
-+  } else {
-+    std::string message = "[ETGLOW EP] Detected " + std::to_string(number_of_glow_nodes) + " nodes supported (graph has " + std::to_string(number_of_ort_nodes) + " nodes) ";
-+    message += (info_.greedy) ? greedy_msg
-+                              : "graph will be partitioned between ETGLOW EP and other EPs";
-+    LOGS_DEFAULT(WARNING) << message;
-+  }
-+
-+  if (info_.dump_subgraphs) {
-+    HashValue model_hash = 0;
-+    const int metadef_id = metadef_id_generator_->GenerateId(graph_viewer, model_hash);
-+    std::string subgraph_name = "ETGLOW_" + std::to_string(model_hash) + "_" + std::to_string(metadef_id) + ".onnx";
-+    DoDumpSubgraph(graph_viewer, subgraph_name, false, true);
-+  }
-+
-+  return result;
-+}
-+
-+void EtGlowExecutionProvider::RegisterStreamHandlers(IStreamCommandHandleRegistry& stream_handle_registry, AllocatorMap& allocators) const {
-+  auto cpu_allocator = allocators[GetOrtDeviceByMemType(OrtMemTypeCPU)];
-+  RegisterEtRuntimeStreamHandles(stream_handle_registry, OrtDevice::GPU, cpu_allocator, streams_reg_);
-+}
-+
-+Status EtGlowExecutionProvider::Compile(const std::vector<FusedNodeAndGraph>& fused_nodes_and_graphs,
-+                                        std::vector<NodeComputeInfo>& node_compute_funcs) {
-+  for (const auto& fuse_node_graph : fused_nodes_and_graphs) {
-+    const GraphViewer& graph_body_viewer = fuse_node_graph.filtered_graph;
-+    const Node& fused_node = fuse_node_graph.fused_node;
-+
-+    if (info_.dump_subgraphs) {
-+      std::string subgraph_name = fused_node.Name() + ".onnx";
-+      DoDumpSubgraph(graph_body_viewer, subgraph_name);
-+    }
-+
-+    if (debug_logs_) {
-+      PrintGraphInputs(graph_body_viewer);
-+    }
-+
-+    OrderedShapeValues input_output_dim_params;
-+    ORT_RETURN_IF_ERROR(GetShapeValues(graph_body_viewer, input_output_dim_params));
-+
-+    EtGlowInferenceInputNames onnx_input_names;
-+    ORT_RETURN_IF_ERROR(GetInputNames(graph_body_viewer, fused_node, onnx_input_names));
-+
-+    EtGlowInferenceOutputNames onnx_output_names;
-+    std::unordered_map<std::string, std::vector<int64_t>> ordered_output_dimensions;
-+    ORT_RETURN_IF_ERROR(GetOutputNamesAndShapes(fused_node, onnx_output_names, ordered_output_dimensions, input_output_dim_params));
-+
-+    // construct bundle path
-+    const std::size_t bundle_abi = std::hash<BundleABI>{}(BundleABI::CreateWith(graph_body_viewer, info_.api_params, input_output_dim_params, info_.trace_options));
-+    auto bundle_path = GetBundlePath(info_.bundle_cache_prefix, bundle_abi, fused_node.Name());
-+    LOGS_DEFAULT(INFO) << "[ETGLOW EP] Calculated bundle name: " << bundle_path;
-+    if (auto bundle_dir = bundle_path.parent_path(); std::filesystem::create_directories(bundle_dir)) {
-+      LOGS_DEFAULT(INFO) << "[ETGLOW EP] Storing bundles in: " << bundle_dir;
-+    }
-+
-+    if (!compiled_models_reg_.HasCompiledModel(bundle_path)) {
-+      // EP has not loaded the model yet. Get CompileModel either from the bundle or compile it from scratch
-+      std::unique_ptr<GlowAPI::CompiledModel> compilation_result;
-+      ORT_RETURN_IF_ERROR(GetCompiledModel(graph_body_viewer, fused_node.Name(), bundle_path, input_output_dim_params, compilation_result));
-+
-+      compiled_models_reg_.StoreCompiledModel(bundle_path, std::move(compilation_result));
-+    }
-+
-+    if (ShouldExportBundle()) {
-+      ExportBundle(bundle_path, info_.export_bundle_path);
-+    }
-+
-+    NodeComputeInfo compute_info;
-+    const bool should_execute = !info_.compile_only;
-+    compute_info.create_state_func = [this, bundle_path, onnx_input_names, onnx_output_names, ordered_output_dimensions](ComputeContext* context, FunctionState* state) {
-+      auto p = std::make_unique<EtGlowFuncState>();
-+      *p = {
-+          context->allocate_func,
-+          context->release_func,
-+          context->allocator_handle,
-+          context->node_name,
-+          glow_api_.get(),
-+          compiled_models_reg_.GetCompiledModel(bundle_path),
-+          bundle_path,
-+          onnx_input_names,
-+          onnx_output_names,
-+          ordered_output_dimensions,
-+      };
-+      *state = p.release();
-+      return 0;
-+    };
-+    compute_info.release_state_func = [](gsl::owner<FunctionState> state) {
-+      if (state != nullptr) {
-+        delete static_cast<EtGlowFuncState*>(state);
-+      }
-+    };
-+    compute_info.compute_func = [should_execute, this](FunctionState state, const OrtApi* /*api*/, OrtKernelContext* context) {
-+      Ort::KernelContext ctx(context);
-+
-+      ORT_TRY {
-+        if (!should_execute) {
-+          return Status::OK();
-+        }
-+        auto* etfn_state = static_cast<EtGlowFuncState*>(state);
-+        ORT_RETURN_IF(etfn_state->etglow_api == nullptr, "[ETGLOW] Error: glow_api cannot be nullptr");
-+
-+        InferenceInputDescriptors inputs;
-+        ORT_RETURN_IF_ERROR(GetInputTensorDescriptors(ctx, etfn_state->ordered_input_names, inputs));
-+
-+        ORT_RETURN_IF(etfn_state->ordered_output_dimensions.size() != ctx.GetOutputCount(), "Output size mismatch.");
-+        InferenceOutputDescriptors outputs;
-+        ORT_RETURN_IF_ERROR(GetOutputTensorDescriptors(ctx, etfn_state->ordered_output_names, etfn_state->ordered_output_dimensions, outputs));
-+
-+        const GlowAPI::CompiledModel* glow_compiled_model_ptr = etfn_state->compiled_model;
-+        ORT_RETURN_IF(glow_compiled_model_ptr == nullptr, "[ETGLOW] Error: expected non-nullptr GlowAPI::CompiledModel* but got a nullptr");
-+
-+        GlowAPI::RegisteredModel* glow_registered_model_ptr = nullptr;
-+        ORT_RETURN_IF_ERROR(loaded_models_reg_.LoadModel(*etfn_state->etglow_api, etfn_state->bundle_name, *glow_compiled_model_ptr, loaded_models_, glow_registered_model_ptr));
-+        ORT_RETURN_IF(glow_registered_model_ptr == nullptr, "[ETGLOW] Error: expected non-nullptr GlowAPI::RegisteredModel* but got a nullptr");
-+
-+        auto device_placeholders = GlowAPI::getOnDevicePlaceholders(*glow_compiled_model_ptr);
-+
-+        void* stream_type_erased_ptr = ctx.GetGPUComputeStream();
-+        const auto* stream_id_ptr = static_cast<rt::StreamId*>(stream_type_erased_ptr);
-+        auto stream_id = *stream_id_ptr;
-+
-+        ORT_RETURN_IF_ERROR(DoInference(*etfn_state->etglow_api, *glow_registered_model_ptr, inputs, std::move(outputs), device_placeholders, stream_id));
-+
-+        addToProfilerThreadMap();
-+      }
-+      ORT_CATCH(const std::exception& e) {
-+        return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, e.what());
-+      }
-+
-+      return Status::OK();
-+    };
-+    node_compute_funcs.push_back(compute_info);
-+  }
-+
-+  return Status::OK();
-+}
-+
-+common::Status EtGlowExecutionProvider::Sync() const {
-+  return streams_reg_.Synchronize(rt::DeviceId(info_.device_id));
-+}
-+
-+Status EtGlowExecutionProvider::OnRunStart(const onnxruntime::RunOptions& /*run_options*/) {
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] OnRunStart()";
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::OnRunEnd(bool sync_stream, const onnxruntime::RunOptions& /*run_options*/) {
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] OnRunEnd()";
-+  if (sync_stream) {
-+    // only synchronize if we have recorded stream to synchronize to
-+    if (auto stream = GetPerThreadContext().GetComputeStream(); stream.has_value()) {
-+      ORT_RETURN_IF_ERROR(streams_reg_.Synchronize(stream.value()));
-+    }
-+  }
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] OnRunEnd() done.";
-+
-+  return Status::OK();
-+}
-+
-+std::vector<std::vector<NodeIndex>> EtGlowExecutionProvider::GetSupportedNodes(const GraphViewer& graph_viewer) const {
-+  std::vector<std::vector<size_t>> supported_node_vecs;
-+  std::vector<size_t> supported_node_vec;
-+
-+  std::unordered_map<std::string, int> all_nodes_count;
-+  std::unordered_map<std::string, int> supported_nodes_count;
-+
-+  const auto& node_indices = graph_viewer.GetNodesInTopologicalOrder();
-+  for (auto node_idx : node_indices) {
-+    const auto* node(graph_viewer.GetNode(node_idx));
-+    const auto result = op_mgr_.IsNodeSupported(node, graph_viewer);
-+    const auto supported = result.supported();
-+    if (!supported && !info_.greedy) {
-+      LOGS_DEFAULT(WARNING) << "[ETGLOW EP] node not supported: " << node->OpType() << " reason: " << result.reason();
-+    }
-+
-+    if (debug_logs_) {
-+      RegisterOperatorCoverage(*node, supported, all_nodes_count, supported_nodes_count);
-+    }
-+
-+    if (supported || info_.greedy) {
-+      supported_node_vec.push_back(node_idx);
-+    } else {
-+      if (!supported_node_vec.empty()) {
-+        supported_node_vecs.push_back(std::move(supported_node_vec));
-+        supported_node_vec = {};
-+      }
-+    }
-+  }
-+
-+  if (!supported_node_vec.empty()) {
-+    supported_node_vecs.push_back(supported_node_vec);
-+  }
-+
-+  if (debug_logs_) {
-+    PrintOperatorCoverage(all_nodes_count, supported_nodes_count);
-+  }
-+
-+  return supported_node_vecs;
-+}
-+
-+void EtGlowExecutionProvider::RegisterOperatorCoverage(const Node& node, const bool supported, std::unordered_map<std::string, int>& all_nodes_count, std::unordered_map<std::string, int>& supported_nodes_count) {
-+  auto node_optype_ver = node.OpType() + "_" + std::to_string(node.SinceVersion());
-+  all_nodes_count[node_optype_ver]++;
-+  if (supported) {
-+    supported_nodes_count[node_optype_ver]++;
-+  }
-+}
-+
-+void EtGlowExecutionProvider::PrintOperatorCoverage(const std::unordered_map<std::string, int>& all_nodes_count,
-+                                                    std::unordered_map<std::string, int>& supported_nodes_count) {
-+  int all_counts = 0;
-+  int support_counts = 0;
-+  for (auto [optype_ver, all_count] : all_nodes_count) {
-+    const auto& support_count = supported_nodes_count[optype_ver];
-+    all_counts += all_count;
-+    support_counts += support_count;
-+    LOGS_DEFAULT(INFO) << "Operator type: [" << optype_ver << "] coverage: " << support_count << ":" << all_count
-+                       << " percentage: " << static_cast<float>(support_count) / static_cast<float>(all_count);
-+  }
-+  LOGS_DEFAULT(INFO) << "Total coverage: " << support_counts << ":" << all_counts
-+                     << " percentage: " << static_cast<float>(support_counts) / static_cast<float>(all_counts);
-+}
-+
-+std::unique_ptr<IndexedSubGraph> EtGlowExecutionProvider::GetSubGraph(const std::vector<std::size_t>& group,
-+                                                                      const GraphViewer& graph_viewer,
-+                                                                      int subgraph_index) const {
-+  const auto& graph_output_list = graph_viewer.GetOutputs();
-+  const std::unordered_set<const NodeArg*> graph_outputs(graph_output_list.cbegin(), graph_output_list.cend());
-+
-+  std::unordered_set<NodeIndex> node_set;
-+  node_set.reserve(group.size());
-+  for (const auto& index : group) {
-+    node_set.insert(index);
-+  }
-+
-+  // Get parent graph output names
-+  std::unordered_set<std::string> graph_output_names;
-+  for (const auto* output_arg : graph_viewer.GetOutputs()) {
-+    graph_output_names.insert(output_arg->Name());
-+  }
-+
-+  // Find inputs and outputs of the subgraph
-+  auto sub_graph = onnxruntime::IndexedSubGraph::Create();
-+  std::unordered_set<const NodeArg*> node_outputs;
-+  std::unordered_set<const NodeArg*> subgraph_inputs;
-+  std::unordered_set<const NodeArg*> subgraph_outputs;
-+  std::vector<const NodeArg*> ordered_subgraph_inputs;
-+  std::vector<const NodeArg*> ordered_subgraph_outputs;
-+
-+  for (const auto& index : group) {
-+    sub_graph->Nodes().push_back(index);
-+    const auto& node = graph_viewer.GetNode(index);
-+
-+    for (const auto& input : node->InputDefs()) {
-+      // if the node input was not produced by this subgraph, add it to the subgraph inputs.
-+      if (!input->Exists()) {
-+        continue;
-+      }
-+      if ((node_outputs.count(input) == 0) && (subgraph_inputs.count(input) == 0)) {
-+        subgraph_inputs.insert(input);
-+        ordered_subgraph_inputs.push_back(input);
-+      }
-+    }
-+
-+    const auto& output_defs = node->OutputDefs();
-+    for (const auto* output_def : output_defs) {
-+      if (!output_def->Exists()) {
-+        continue;
-+      }
-+      node_outputs.insert(output_def);
-+      // if output is overall graph output we need to produce it.
-+      if (graph_outputs.count(output_def) != 0) {
-+        ordered_subgraph_outputs.push_back(output_def);
-+      }
-+    }
-+
-+    // if output connects to a node not in this subgraph we need to produce it
-+    for (auto it = node->OutputEdgesBegin(), end = node->OutputEdgesEnd(); it != end; ++it) {
-+      if (node_set.count(it->GetNode().Index()) != 0) {
-+        continue;
-+      }
-+      const auto* output_def = output_defs[it->GetSrcArgIndex()];
-+      if (subgraph_outputs.count(output_def) == 0 && graph_outputs.count(output_def) == 0) {
-+        subgraph_outputs.insert(output_def);
-+        ordered_subgraph_outputs.push_back(output_def);
-+      }
-+    }
-+  }
-+
-+  auto meta_def = IndexedSubGraph_MetaDef::Create();
-+  meta_def->name() = GenerateMetaDefName(graph_viewer, *metadef_id_generator_, std::nullopt, subgraph_index);
-+  meta_def->domain() = kMSDomain;
-+  meta_def->since_version() = 1;
-+  meta_def->status() = ONNX_NAMESPACE::EXPERIMENTAL;
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] GLOW subgraph MetaDef name " + meta_def->name();
-+
-+  auto HasShape = [](const auto* tensor, const std::string& subgraph_name) {
-+    if (tensor->Shape() == nullptr) {
-+      // if any subgraph input/output shape information is missing, do not accept the subgraph
-+      LOGS_DEFAULT(WARNING) << "[ETGLOW EP] subgraph " + subgraph_name + " tensor: '" + tensor->Name() +
-+                                   "' has missing shapes!"
-+                                   " ETGLOW EP requires input/outputs to have known shapes. Subgraph not supported.";
-+      return false;
-+    }
-+    return true;
-+  };
-+
-+  // Assign inputs and outputs to subgraph's meta_def
-+  for (const auto& input : ordered_subgraph_inputs) {
-+    meta_def->inputs().push_back(input->Name());
-+    if (!HasShape(input, meta_def->name()) && !info_.greedy) {
-+      return nullptr;
-+    }
-+  }
-+
-+  for (const auto& output : ordered_subgraph_outputs) {
-+    meta_def->outputs().push_back(output->Name());
-+    if (!HasShape(output, meta_def->name()) && !info_.greedy) {
-+      return nullptr;
-+    }
-+  }
-+
-+  sub_graph->SetMetaDef(std::move(meta_def));
-+
-+  return sub_graph;
-+}
-+
-+void EtGlowExecutionProvider::PrintGraphInputs(const GraphViewer& graph) {
-+  for (const auto& input : graph.GetInputs()) {
-+    const auto* shape = input->Shape();
-+    if (shape == nullptr) {
-+      continue;
-+    }
-+
-+    if (const auto* type = input->Type(); type != nullptr) {
-+      LOGS_DEFAULT(INFO) << "input name: " << input->Name()
-+                         << " length: " << std::to_string(type->length())
-+                         << " type: " << *type
-+                         << " shape (dim_size): " << std::to_string(shape->dim_size());
-+    }
-+    int dimIdx = 0;
-+    for (const auto& dim : shape->dim()) {
-+      LOGS_DEFAULT(INFO)
-+          << " -- dimIdx: " << dimIdx
-+          << " has_dim_param: " << dim.has_dim_param()
-+          << " dim_param: " << dim.dim_param()
-+          << " has_dim_value: " << dim.has_dim_value()
-+          << " dim_value: " << dim.dim_value()
-+          << " value_case: " << dim.value_case();
-+      dimIdx++;
-+    }
-+  }
-+}
-+
-+void EtGlowExecutionProvider::DoDumpSubgraph(const GraphViewer& graph_viewer, const std::string& subgraph_name, bool include_initializers, bool include_outer_scope_args) const {
-+  // Dump EtGlow subgraphs
-+  auto model = graph_viewer.CreateModel(*GetLogger());
-+  auto model_proto = model->ToProto();
-+  graph_viewer.ToProto(*model_proto->mutable_graph(), include_initializers, include_outer_scope_args);
-+  model_proto->set_ir_version(ONNX_NAMESPACE::Version::IR_VERSION);
-+  std::fstream dump(subgraph_name, std::ios::out | std::ios::trunc | std::ios::binary);
-+  model_proto->SerializeToOstream(dump);
-+}
-+
-+Status EtGlowExecutionProvider::GetShapeValues(const GraphViewer& graph_viewer, OrderedShapeValues& dim_params) const {
-+  auto fill_dim_params = [this, &dim_params](const std::vector<const NodeArg*>& nodes) {
-+    for (const auto& tensor : nodes) {
-+      const auto* shape = tensor->Shape();
-+      if (shape == nullptr) {
-+        return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] doesn't support models whose input/output Shape(s) are not known at Compile() time. Missing shape for tensor " + tensor->Name());
-+      }
-+      for (const auto& dim : shape->dim()) {
-+        if (!dim.has_dim_param()) {
-+          continue;
-+        }
-+
-+        const auto& dim_param = dim.dim_param();
-+        auto it = info_.onnx_symbols.find(dim_param);
-+        if (it != info_.onnx_symbols.end()) {
-+          dim_params.try_emplace(dim_param, std::get<std::size_t>(it->second));
-+        } else {
-+          LOGS_DEFAULT(ERROR) << "dim_param: " << dim_param << " missing in onnx_symbols. Please provide a value!";
-+          return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] cannot fill GlowAPI LoadOptions symbolTable.");
-+        }
-+      }
-+    }
-+
-+    return Status::OK();
-+  };
-+
-+  auto add_missing_user_params = [this, &dim_params]() {
-+    for (const auto& [key, value] : info_.onnx_symbols) {
-+      // Copy missing parameters to output dictionary. Must add all of them in case they are not used in the ONNX file
-+      // but the user still wishes to include that information in the compiled model.
-+      auto [it, result] = dim_params.try_emplace(key, std::get<std::size_t>(value));
-+      if (result) {
-+        LOGS_DEFAULT(VERBOSE) << "dim_param: " << key << " not used in ONNX file, registering it anyway.";
-+      }
-+    }
-+
-+    return Status::OK();
-+  };
-+
-+  ORT_RETURN_IF_ERROR(fill_dim_params(graph_viewer.GetInputs()));
-+  ORT_RETURN_IF_ERROR(fill_dim_params(graph_viewer.GetOutputs()));
-+  ORT_RETURN_IF_ERROR(add_missing_user_params());
-+  LOGS_DEFAULT(INFO) << "dim_params size:" << dim_params.size();
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::GetInputNames(const GraphViewer& graph_viewer, const Node& fused_node,
-+                                              EtGlowInferenceInputNames& input_names) {
-+  const auto& input_defs = fused_node.InputDefs();
-+  input_names.reserve(input_defs.size());
-+  for (size_t i = 0; i < input_defs.size(); ++i) {
-+    const auto* input_def = input_defs[i];
-+    const auto& input_name = input_def->Name();
-+    if (graph_viewer.IsConstantInitializer(input_name, false)) {
-+      LOGS_DEFAULT(VERBOSE) << "Excluding constant initializer: " << input_name;
-+      continue;
-+    }
-+    LOGS_DEFAULT(VERBOSE) << "Keeping input: " << input_name;
-+    input_names.try_emplace(input_name, i);
-+  }
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::GetOutputNamesAndShapes(const Node& fused_node, EtGlowInferenceOutputNames& output_names, std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, const OrderedShapeValues& output_dim_params) {
-+  const auto& output_defs = fused_node.OutputDefs();
-+  output_names.reserve(output_defs.size());
-+  for (const auto* output_ptr : output_defs) {
-+    const auto& output_ref = *output_ptr;
-+    output_names.emplace_back(output_ref.Name());
-+    std::vector<int64_t> dimensions;
-+    const auto* output_shape = output_ref.Shape();
-+    if (output_shape == nullptr) {
-+      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] doesn't support models whose output Shape(s) are not known at Compile() time.");
-+    }
-+    dimensions.reserve(output_shape->dim_size());
-+    for (int j = 0; j < output_shape->dim_size(); j++) {
-+      const auto& dim = output_shape->dim(j);
-+      if (dim.has_dim_value()) {
-+        dimensions.emplace_back(dim.dim_value());
-+      } else if (dim.has_dim_param()) {
-+        if (auto it = output_dim_params.find(dim.dim_param()); auto dim_value = it->second) {
-+          dimensions.emplace_back(dim_value);
-+        } else {
-+          return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] Didn't find " + dim.dim_param() + " in output_dim_params");
-+        }
-+      }
-+    }
-+    ordered_output_dimensions.try_emplace(output_ref.Name(), std::move(dimensions));
-+  }
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::GetCompiledModel(const GraphViewer& graph_viewer, const std::string& fused_node_name, const fs::path& bundle_path, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result) {
-+  if (ShouldReuseCompiledModel(bundle_path)) {
-+    ORT_RETURN_IF_ERROR(DoReuseCompiledModelFromBundle(bundle_path, compilation_result));
-+  } else {
-+    ORT_RETURN_IF_ERROR(DoCompile(bundle_path, graph_viewer, fused_node_name, input_dim_params, compilation_result));
-+  }
-+  return Status::OK();
-+}
-+
-+bool EtGlowExecutionProvider::ShouldReuseCompiledModel(const fs::path& bundle_path) const {
-+  return use_bundles_ && std::filesystem::exists(bundle_path);
-+}
-+
-+Status EtGlowExecutionProvider::DoReuseCompiledModelFromBundle(const fs::path& bundle_path, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result) {
-+  // restore bundle
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] [Hit] Loading bundle: " << bundle_path;
-+
-+  auto eload_compiled_model = GlowAPI::loadCompiledModel(bundle_path);
-+  if (!eload_compiled_model) {
-+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(eload_compiled_model.takeError(), "loading CompiledModel from bundle."));
-+  }
-+  auto glow_compiled_model = std::move(*eload_compiled_model);
-+
-+  compilation_result = std::make_unique<GlowAPI::CompiledModel>(std::move(glow_compiled_model));
-+
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::SetDevicePlaceholders(GlowAPI::Model& glow_loaded_model) const {
-+  const bool bundles_for_external_use = info_.compile_only && ShouldExportBundle();
-+  std::vector<std::string> device_placeholder_names = bundles_for_external_use ? GetOnDevicePlaceholderNamesFromUserParams(info_.api_params) : GetOnDevicePlaceholderNamesFromGlowAPI(glow_loaded_model);
-+  std::vector<std::string> device_implicit_placeholder_names = GetOnDeviceImplicitPlaceholdrNamesFromUserParams(info_.api_params);
-+  // remove from device_placeholder_names those arrays that the user already provided as implicit-placeholders
-+  device_placeholder_names.erase(
-+      std::remove_if(
-+          device_placeholder_names.begin(),
-+          device_placeholder_names.end(),
-+          [&device_implicit_placeholder_names](const std::string& element) {
-+            bool should_remove = std::find(device_implicit_placeholder_names.begin(), device_implicit_placeholder_names.end(), element) != device_implicit_placeholder_names.end();
-+            if (should_remove) {
-+              LOGS_DEFAULT(WARNING) << "Found placeholder that the user wants as implicit-device-placeholder ( " << element << "). Removing it from placeholder's list.";
-+            }
-+            return should_remove;
-+          }),
-+      device_placeholder_names.end());
-+
-+  for (const auto& tensor_name : device_placeholder_names) {
-+    if (auto error_set_placeholders = GlowAPI::setOnDevicePlaceholder(glow_loaded_model, tensor_name); error_set_placeholders) {
-+      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(error_set_placeholders), "setting OnDevicePlaceholders with tensor_name:" + tensor_name));
-+    }
-+  }
-+
-+  for (const auto& tensor_name : device_implicit_placeholder_names) {
-+    if (auto error_set_implicit_pla = GlowAPI::setImplicitOnDevicePlaceholder(glow_loaded_model, tensor_name); error_set_implicit_pla) {
-+      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(error_set_implicit_pla), "setting ImplicitOnDevicePlaceholders with tensor_name: " + tensor_name));
-+    }
-+  }
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::DoCompile(const fs::path& bundle_path, const GraphViewer& graph_viewer, const std::string& fused_node_name, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result) {
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] [Miss] Could not find bundle: " << bundle_path << " .. compiling.";
-+
-+  // Reconstruct graph proto from fused node's function body
-+  auto model = graph_viewer.CreateModel(*GetLogger());
-+  auto model_proto = model->ToProto();
-+  graph_viewer.ToProto(*model_proto->mutable_graph(), true, true);
-+  model_proto->set_ir_version(ONNX_NAMESPACE::Version::IR_VERSION);
-+
-+  const auto onnx_model_path = GetModelPath(graph_viewer, fused_node_name);
-+  std::ofstream ofs(onnx_model_path);
-+  model_proto->SerializeToOstream(ofs);
-+  ofs.close();
-+
-+  GlowAPI::LoadOptions lo = GetGlowLoadOptions(info_.api_params, input_dim_params, graph_viewer, *metadef_id_generator_);
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] Loading the model: " << onnx_model_path;
-+
-+  auto expected_glow_loaded_model = GlowAPI::loadModelONNX(onnx_model_path, GlowAPI::InputsMap{}, lo);
-+  if (!expected_glow_loaded_model) {
-+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(expected_glow_loaded_model.takeError(), "loading onnx model"));
-+  }
-+  auto glow_loaded_model = std::move(*expected_glow_loaded_model);
-+
-+  ORT_RETURN_IF_ERROR(SetDevicePlaceholders(glow_loaded_model));
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] compiling the model.";
-+  GlowAPI::CompilationOptions co;
-+  if (lo.useFP16) {
-+    // convert all FP32 internal nodes to FP16
-+    co.ctxt.precisionConfig.convertToFP16 = true;
-+    // convert constants from FP32 to FP16
-+    co.ctxt.precisionConfig.convertConstantsToFP16 = true;
-+    // add conversion nodes from FP32 to FP16 to model inputs/outputs
-+    co.ctxt.precisionConfig.convertPlaceholdersToFP16 = true;
-+  }
-+  auto expected_glow_compiled_model = glow_api_->compileModel(glow_loaded_model, co);
-+  if (!expected_glow_compiled_model) {
-+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(expected_glow_compiled_model.takeError(), "compiling onnx model"));
-+  }
-+  auto glow_compiled_model = std::move(*expected_glow_compiled_model);
-+
-+  if (save_bundles_) {
-+    if (fs::exists(bundle_path)) {
-+      LOGS_DEFAULT(WARNING) << "[ETGLOW EP] found existing bundle: " << bundle_path << " before saving compiled model! proceeding to remove.";
-+      fs::remove(bundle_path);
-+    }
-+    LOGS_DEFAULT(INFO) << "[ETGLOW EP] saving compiled model.";
-+    // this is optional, for maximum re-use of compiled model
-+    if (auto error_saved_compiled_model = GlowAPI::saveCompiledModel(glow_compiled_model, bundle_path); error_saved_compiled_model) {
-+      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(error_saved_compiled_model), "saving CompiledModel into bundle."));
-+    }
-+  }
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] Compilation is done.";
-+
-+  compilation_result = std::make_unique<GlowAPI::CompiledModel>(std::move(glow_compiled_model));
-+
-+  return Status::OK();
-+}
-+
-+bool EtGlowExecutionProvider::ShouldExportBundle() const {
-+  return !info_.export_bundle_path.empty();
-+}
-+
-+void EtGlowExecutionProvider::ExportBundle(const fs::path& from, const fs::path& to) {
-+  fs::path dest = fs::absolute(to);
-+  if (auto dest_dir = dest.parent_path(); !fs::exists(dest_dir)) {
-+    fs::create_directories(dest_dir);
-+  }
-+  const auto copyOptions = fs::copy_options::overwrite_existing;
-+  fs::copy_file(from, dest, copyOptions);
-+}
-+
-+Status EtGlowExecutionProvider::GetInputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceInputNames& ordered_input_names, InferenceInputDescriptors& inputs) {
-+  inputs.reserve(ordered_input_names.size());
-+  for (const auto& [input_name, input_idx] : ordered_input_names) {
-+    auto input_tensor = ctx.GetInput(input_idx);
-+    auto tensor_info = input_tensor.GetTensorTypeAndShapeInfo();
-+    auto shape = tensor_info.GetShape();
-+    const void* input_buffer = input_tensor.GetTensorRawData();
-+    inputs.try_emplace(
-+        input_name,
-+        ort_etglow::OnnxTensorInfo{tensor_info.GetElementType(), shape},
-+        input_buffer);
-+  }
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::GetOutputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceOutputNames& ordered_output_names, const std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, InferenceOutputDescriptors& outputs) {
-+  outputs.reserve(ordered_output_names.size());
-+  for (size_t i = 0; i < ordered_output_names.size(); i++) {
-+    const auto& output_name = ordered_output_names[i];
-+    auto it = ordered_output_dimensions.find(output_name);
-+    if (it == ordered_output_dimensions.end()) {
-+      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "could not find output_dimensions for output: " + output_name);
-+    }
-+    auto output_shape = it->second;
-+    auto output_tensor = ctx.GetOutput(i, output_shape.data(), output_shape.size());
-+    auto tensor_info = output_tensor.GetTensorTypeAndShapeInfo();
-+    auto shape = tensor_info.GetShape();
-+    void* output_buffer = output_tensor.GetTensorMutableRawData();
-+    outputs.try_emplace(
-+        output_name,
-+        ort_etglow::OnnxOutputTensorData{
-+            ort_etglow::OnnxTensorInfo{tensor_info.GetElementType(), shape},
-+            output_buffer,
-+        });
-+  }
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::SetDevicePlaceholderAddresses(GlowAPI::ExecutionBindings& execution_bindings, const InferenceInputDescriptors& inputs, const InferenceOutputDescriptors& outputs, const std::vector<std::string>& device_placeholders) const {
-+  auto set_device_placeholder_addr = [&execution_bindings, &device_placeholders](const auto& tensors, const std::string& direction) {
-+    for (const auto& [tensor_name, tensor_descriptor] : tensors) {
-+      LOGS_DEFAULT(VERBOSE) << "[ETGLOW EP] setting onDevicePlaceholder for (" + direction + ") tensor: " << tensor_name << " in address: " << tensor_descriptor.buffer;
-+      if (auto it = std::find(device_placeholders.begin(), device_placeholders.end(), tensor_name); it == device_placeholders.end()) {
-+        // skip registering not known to Glow
-+        continue;
-+      }
-+      if (auto spaError = GlowAPI::setOnDevicePlaceholderAddress(execution_bindings, tensor_name, const_cast<void*>(tensor_descriptor.buffer)); spaError) {
-+        return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(spaError), "setting onDevicePlaceholder address."));
-+      }
-+    }
-+    return Status::OK();
-+  };
-+  ORT_RETURN_IF_ERROR(set_device_placeholder_addr(inputs, "in"));
-+  ORT_RETURN_IF_ERROR(set_device_placeholder_addr(outputs, "out"));
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::DoInference(GlowAPI& etglow_api, const GlowAPI::RegisteredModel& glow_reg_model, const InferenceInputDescriptors& inputs, InferenceOutputDescriptors&& outputs, const std::vector<std::string>& device_placeholders, rt::StreamId stream_id) const {
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] creating execution bindings.";
-+
-+  auto ebindings = GlowAPI::createExecutionBindings(glow_reg_model);
-+  if (!ebindings) {
-+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(ebindings.takeError(), "creating execution bindings."));
-+  }
-+  auto bindings = std::move(*ebindings);
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] telling glow to use stream_id: " << static_cast<int>(stream_id);
-+  GlowAPI::ETSOCDeviceExecutionInfo info{static_cast<GlowAPI::StreamId>(stream_id)};
-+  if (auto sdeiError = etglow_api.setDeviceExecutionInfo(bindings, info); sdeiError) {
-+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(sdeiError), "setting device execution info."));
-+  }
-+
-+  ORT_RETURN_IF_ERROR(SetDevicePlaceholderAddresses(bindings, inputs, outputs, device_placeholders));
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference on stream_id: " << static_cast<int>(stream_id);
-+
-+  auto m = std::make_shared<std::mutex>();
-+  auto cv = std::make_shared<std::condition_variable>();
-+  auto scheduled = std::make_shared<bool>(false);
-+  auto completed = std::make_shared<bool>(false);
-+
-+  const auto inferenceScheduled = [m, cv, scheduled](GlowAPI::InferenceCallId id) {
-+    std::unique_lock lock(*m);
-+    LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference: " << std::to_string(id) << " done! Waking up ort thread";
-+    *scheduled = true;
-+    //// manual unlocking is done before notifying, to avoid waking up
-+    //// the waiting thread only to block again (see notify_one for details)
-+    lock.unlock();
-+    cv->notify_one();
-+  };
-+
-+  auto inferenceResultPromise = std::make_unique<std::promise<InferenceResult>>();
-+  auto* inferenceResultPromisePtr = inferenceResultPromise.get();
-+  std::future<InferenceResult> inferenceResultFuture = inferenceResultPromise->get_future();
-+  const auto inferenceCompleted = [inferenceResultPromisePtr, m, cv, completed](GlowAPI::InferenceCallId id, GlowAPI::Error error, GlowAPI::ExecutionBindings resultBindings) {
-+    LOGS_DEFAULT(INFO) << "[ETGLOW EP] completed inference: " << std::to_string(id) << " done!";
-+    inferenceResultPromisePtr->set_value(InferenceResult{.id = id, .error = std::move(error), .bindings = std::move(resultBindings)});
-+
-+    // if there was any problem and Glow didn't call the `inferenceScheduled` callback, the ORT thread will be still stuck in the condition_variable
-+    std::unique_lock lock(*m);
-+    *completed = true;
-+    cv->notify_one();  // force host thread to wake up
-+  };
-+  GlowAPI::ExecutionOptions eo = GetGlowExecutionOptions(info_.api_params);
-+  auto expectedInferenceId = etglow_api.launchInference(glow_reg_model, std::move(bindings), inferenceCompleted, eo, inferenceScheduled);
-+  if (!expectedInferenceId) {
-+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(expectedInferenceId.takeError(), "executing an inference."));
-+  }
-+  [[maybe_unused]] const auto inferenceId = expectedInferenceId.get();
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference: " << std::to_string(inferenceId) << " ... waiting for glow to launch kernel";
-+  // Block until inference has been scheduled on the device
-+  {
-+    std::unique_lock lock(*m);
-+    cv->wait(lock, [&scheduled, &completed] { return *scheduled || *completed; });
-+  }
-+
-+  GetPerThreadContext().SetComputeStream(stream_id);
-+  GetPerThreadContext().AddInferenceInFlight(InferenceInFlight{inferenceId, std::move(inferenceResultPromise), std::move(inferenceResultFuture), std::move(outputs)});
-+
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference: " << std::to_string(inferenceId) << " done.";
-+
-+  return Status::OK();
-+}
-+
-+Status onnxruntime::EtGlowExecutionProvider::InferenceInFlight::Sync() {
-+  LOGS_DEFAULT(INFO) << "[ETGLOW EP] synchronize inference: " << std::to_string(id);
-+  auto inferenceResult = future.get();  // blocks current thread until future is available
-+  ORT_RETURN_IF(inferenceResult.error, "[ETGLOW] The inference reports an error: ", glowApiErrMsg(std::move(inferenceResult.error), "executing an inference."));
-+  ORT_RETURN_IF_NOT(inferenceResult.id == id, "[ETGLOW] Got a inference result from a future with different InferenceId than the expected!");
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::PerThreadContext::SynchronizeInferences() {
-+  for (auto it = inferences_in_flight_.begin(); it != inferences_in_flight_.end();) {
-+    ORT_RETURN_IF_ERROR(it->Sync());
-+    it = inferences_in_flight_.erase(it);
-+  }
-+  return Status::OK();
-+}
-+
-+Status EtGlowExecutionProvider::UnloadModels() {
-+  for (auto it = loaded_models_.begin(); it != loaded_models_.end();) {
-+    ORT_RETURN_IF_ERROR(loaded_models_reg_.UnloadModel(*glow_api_, *it));
-+    it = loaded_models_.erase(it);
-+  }
-+  return Status::OK();
-+}
-+
-+EtGlowExecutionProvider::PerThreadContext& EtGlowExecutionProvider::GetPerThreadContext() const {
-+  const auto& per_thread_context_cache = PerThreadContextCache();
-+
-+  // try to use cached context
-+  if (auto cached_context_it = per_thread_context_cache->find(this);
-+      cached_context_it != per_thread_context_cache->end()) {
-+    auto cached_context = cached_context_it->second.lock();
-+    ORT_ENFORCE(cached_context);
-+    return *cached_context;
-+  }
-+
-+  // get context and update cache
-+  std::shared_ptr<PerThreadContext> context;
-+  {
-+    std::scoped_lock lock(context_state_.mutex);
-+
-+    // get or create a context
-+    if (context_state_.retired_context_pool.empty()) {
-+      context = std::make_shared<PerThreadContext>();
-+    } else {
-+      context = context_state_.retired_context_pool.back();
-+      context_state_.retired_context_pool.pop_back();
-+    }
-+
-+    // insert into active_contexts, should not already be present
-+    const auto [active_contexts_insert_it, active_contexts_insert_success] = context_state_.active_contexts.insert(context);
-+    ORT_UNUSED_PARAMETER(active_contexts_insert_it);
-+    ORT_ENFORCE(active_contexts_insert_success);
-+
-+    // insert into caches_to_update_on_destruction, may already be present
-+    ORT_IGNORE_RETURN_VALUE(context_state_.caches_to_update_on_destruction.insert(per_thread_context_cache));
-+  }
-+
-+  per_thread_context_cache->insert(std::make_pair(this, context));
-+
-+  return *context;
-+}
-+
-+void EtGlowExecutionProvider::ReleasePerThreadContext() const {
-+  const auto& per_thread_context_cache = PerThreadContextCache();
-+
-+  auto cached_context_it = per_thread_context_cache->find(this);
-+  ORT_ENFORCE(cached_context_it != per_thread_context_cache->end());
-+  auto cached_context = cached_context_it->second.lock();
-+  ORT_ENFORCE(cached_context);
-+
-+  {
-+    std::scoped_lock lock(context_state_.mutex);
-+    context_state_.active_contexts.erase(cached_context);
-+    context_state_.retired_context_pool.push_back(cached_context);
-+  }
-+
-+  per_thread_context_cache->erase(cached_context_it);
-+}
-+
-+}  // namespace onnxruntime
-diff --git a/onnxruntime/core/providers/etglow/etglow_execution_provider.h b/onnxruntime/core/providers/etglow/etglow_execution_provider.h
-new file mode 100644
-index 0000000000..7a86cbea6c
---- /dev/null
-+++ b/onnxruntime/core/providers/etglow/etglow_execution_provider.h
-@@ -0,0 +1,252 @@
-+// Copyright (c) Microsoft Corporation. All rights reserved.
-+// Licensed under the MIT License.
-+
-+#pragma once
-+
-+#include <glow/GlowAPI/etsoc.h>
-+#include <runtime/IRuntime.h>
-+
-+#include <utility>
-+#include <core/framework/arena_extend_strategy.h>
-+
-+#include "core/providers/shared_library/provider_api.h"
-+#include "core/session/onnxruntime_c_api.h"
-+#include "etglow_execution_provider_info.h"
-+#include "etglow_op_manager.h"
-+#include "etglow_compiled_models_registry.h"
-+#include "etglow_loaded_models_registry.h"
-+
-+#include <mutex>   // for std::mutex
-+#include <thread>  // std::thread::id
-+
-+using GlowAPI = etsoc::GlowAPI;
-+
-+namespace Ort {
-+struct KernelContext;
-+}
-+
-+namespace onnxruntime {
-+struct EtRt_StreamsRegistry;
-+
-+namespace ort_etglow {
-+
-+// borrow from coreml/dnnl ep's data structures to organize data handle, shape and data
-+struct OnnxTensorInfo {
-+  int32_t data_type;  // Uses TensorProto::DataType
-+  std::vector<int64_t> shape;
-+};
-+
-+struct OnnxInputTensorData {
-+  OnnxTensorInfo tensor_info;
-+  const void* buffer;
-+  OnnxInputTensorData(OnnxTensorInfo tensor_info, const void* buffer)
-+      : tensor_info{std::move(tensor_info)}, buffer{buffer} {}
-+};
-+struct OnnxOutputTensorData {
-+  OnnxTensorInfo tensor_info;
-+  void* buffer{nullptr};
-+};
-+
-+}  // namespace ort_etglow
-+
-+using EtGlowInferenceInputNames = std::unordered_map<std::string /* name */, size_t /* idx in graph */>;
-+using EtGlowInferenceOutputNames = std::vector<std::string>;
-+
-+// Information to construct kernel function state.
-+struct EtGlowFuncState {
-+  AllocateFunc allocate_func = nullptr;
-+  DestroyFunc release_func = nullptr;
-+  AllocatorHandle allocator = nullptr;
-+  std::string node_name;
-+  GlowAPI* etglow_api = nullptr;
-+  GlowAPI::CompiledModel* compiled_model = nullptr;
-+  std::string bundle_name;
-+
-+  EtGlowInferenceInputNames ordered_input_names;
-+  EtGlowInferenceOutputNames ordered_output_names;
-+  std::unordered_map<std::string, std::vector<int64_t>> ordered_output_dimensions;
-+};
-+
-+// Logical device representation.
-+class EtGlowExecutionProvider : public IExecutionProvider {
-+ public:
-+  EtGlowExecutionProvider(EtGlowExecutionProviderInfo info, std::unique_ptr<etsoc::GlowAPI> glow, EtRt_StreamsRegistry& streams_reg);
-+  ~EtGlowExecutionProvider() override;
-+
-+  std::unique_ptr<IDataTransfer> GetDataTransfer() const override;
-+  std::unique_ptr<profiling::EpProfiler> GetProfiler() override;
-+
-+  std::vector<std::unique_ptr<ComputeCapability>>
-+  GetCapability(const GraphViewer& graph,
-+                const IKernelLookup& /*kernel_lookup*/) const override;
-+
-+  std::shared_ptr<KernelRegistry> GetKernelRegistry() const override;
-+
-+  int GetDeviceId() const override { return info_.device_id; }
-+
-+  ProviderOptions GetProviderOptions() const override {
-+    return EtGlowExecutionProviderInfo::ToProviderOptions(info_);
-+  }
-+
-+  common::Status OnSessionInitializationEnd() override {
-+    if (info_.fail_if_cannot_run_whole_graph && !whole_graph_runs_with_glow_) {
-+      return {common::ONNXRUNTIME, common::NOT_IMPLEMENTED,
-+              "ETGLOW EP cannot run the whole graph. (as instructed) Failing execution on purpose."};
-+    }
-+    return Status::OK();
-+  }
-+
-+  common::Status Compile(const std::vector<FusedNodeAndGraph>& fused_nodes_and_graphs,
-+                         std::vector<NodeComputeInfo>& node_compute_funcs) override;
-+
-+  common::Status Sync() const override;
-+  common::Status OnRunStart(const onnxruntime::RunOptions& /*run_options*/) override;
-+  common::Status OnRunEnd(bool sync_stream, const onnxruntime::RunOptions& /*run_options*/) override;
-+
-+  void RegisterStreamHandlers(IStreamCommandHandleRegistry& stream_handle_registry, AllocatorMap& allocators) const override;
-+
-+  static AllocatorPtr CreateEtGlowAllocator(OrtDevice::DeviceId device_id, size_t mem_limit, ArenaExtendStrategy arena_extend_strategy, rt::IRuntime* rt);
-+  std::vector<AllocatorPtr> CreatePreferredAllocators() override;
-+
-+ private:
-+  void InitEtGlowStateFromEnvVars();
-+
-+  std::vector<std::vector<NodeIndex>> GetSupportedNodes(const GraphViewer& graph_viewer) const;
-+  std::unique_ptr<IndexedSubGraph> GetSubGraph(const std::vector<std::size_t>& group,
-+                                               const GraphViewer& graph_viewer, int subgraph_index) const;
-+
-+  static void RegisterOperatorCoverage(const Node& node, bool supported, std::unordered_map<std::string, int>& all_nodes_count, std::unordered_map<std::string, int>& supported_nodes_count);
-+  static void PrintOperatorCoverage(const std::unordered_map<std::string, int>& all_nodes_count, std::unordered_map<std::string, int>& supported_nodes_count);
-+  static void PrintGraphInputs(const GraphViewer& graph);
-+
-+  void DoDumpSubgraph(const GraphViewer& graph_viewer, const std::string& subgraph_name, bool include_initializers = true, bool include_outer_scope_args = true) const;
-+
-+  // Gets the user-provided replacements for ONNX parametric shapes.
-+  // Returns OK + a map of {input + replacement_value} or an error if the user didn't provide a value for a given shape.
-+  using OrderedShapeValues = std::map<std::string, std::size_t, std::less<>>;
-+  Status GetShapeValues(const GraphViewer& graph_viewer, OrderedShapeValues& dim_params) const;
-+  static Status GetInputNames(const GraphViewer& graph_viewer, const Node& fused_node, EtGlowInferenceInputNames& input_names);
-+  static Status GetOutputNamesAndShapes(const Node& fused_node, EtGlowInferenceOutputNames& output_names, std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, const OrderedShapeValues& output_dim_params);
-+
-+  // Gets compiled model from existing bundle or compiles the model from original ONNX
-+  Status GetCompiledModel(const GraphViewer& graph_viewer, const std::string& fused_node_name, const fs::path& bundle_path, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result);
-+  bool ShouldReuseCompiledModel(const fs::path& bundle_path) const;
-+  static Status DoReuseCompiledModelFromBundle(const fs::path& bundle_path, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result);
-+  Status SetDevicePlaceholders(GlowAPI::Model& glow_loaded_model) const;
-+  Status DoCompile(const fs::path& bundle_path, const GraphViewer& graph_viewer, const std::string& fused_node_name, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result);
-+
-+  bool ShouldExportBundle() const;
-+  static void ExportBundle(const fs::path& from, const fs::path& to);
-+
-+  using InferenceInputDescriptors = std::unordered_map<std::string, const ort_etglow::OnnxInputTensorData>;
-+  using InferenceOutputDescriptors = std::unordered_map<std::string, const ort_etglow::OnnxOutputTensorData>;
-+  static Status GetInputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceInputNames& ordered_input_names, InferenceInputDescriptors& inputs);
-+  static Status GetOutputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceOutputNames& ordered_output_names, const std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, InferenceOutputDescriptors& outputs);
-+  Status SetDevicePlaceholderAddresses(GlowAPI::ExecutionBindings& execution_bindings, const InferenceInputDescriptors& inputs, const InferenceOutputDescriptors& outputs, const std::vector<std::string>& device_placeholders) const;
-+  Status DoInference(GlowAPI& etglow_api, const GlowAPI::RegisteredModel& glow_reg_model, const InferenceInputDescriptors& inputs, InferenceOutputDescriptors&& outputs, const std::vector<std::string>& device_placeholders, rt::StreamId stream_id) const;
-+  void addToProfilerThreadMap();
-+
-+  struct InferenceResult {
-+    GlowAPI::InferenceCallId id;
-+    GlowAPI::Error error;
-+    GlowAPI::ExecutionBindings bindings;
-+  };
-+  struct InferenceInFlight {
-+    GlowAPI::InferenceCallId id;
-+    std::unique_ptr<std::promise<InferenceResult>> promise;
-+    std::future<InferenceResult> future;
-+    InferenceOutputDescriptors output_descriptors;
-+    InferenceInFlight(GlowAPI::InferenceCallId id, std::unique_ptr<std::promise<InferenceResult>> promise, std::future<InferenceResult> f, InferenceOutputDescriptors d)
-+        : id{id}, promise{std::move(promise)}, future{std::move(f)}, output_descriptors{std::move(d)} {}
-+
-+    Status Sync();
-+  };
-+  Status UnloadModels();
-+
-+  EtGlowExecutionProviderInfo info_;
-+  std::unique_ptr<etsoc::GlowAPI> glow_api_;
-+  EtRt_StreamsRegistry& streams_reg_;
-+
-+  EtGlowCompiledModelsRegistry compiled_models_reg_;
-+  EtGlowLoadedModelsRegistry loaded_models_reg_;
-+  std::unordered_set<std::string> loaded_models_;
-+
-+  mutable bool whole_graph_runs_with_glow_ = true;
-+
-+  bool use_bundles_ = true;
-+  bool save_bundles_ = true;
-+  bool debug_logs_ = false;
-+
-+  EtGlowOpManager op_mgr_;
-+  std::unique_ptr<ModelMetadefIdGenerator> metadef_id_generator_;
-+
-+  std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
-+  // Renaming map to unify the thread ids across ORT, glow, runtime and neuralizer profile events.
-+  std::unordered_map<std::thread::id, unsigned int> profiler_thread_map_;
-+  std::mutex thread_map_mutex_;
-+
-+  class PerThreadContext final {
-+   public:
-+    PerThreadContext() = default;
-+    ~PerThreadContext() {
-+      ORT_IGNORE_RETURN_VALUE(SynchronizeInferences());
-+    };
-+    ORT_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(PerThreadContext);
-+
-+    void SetComputeStream(rt::StreamId stream) { compute_stream_ = stream; }
-+    std::optional<rt::StreamId> GetComputeStream() const { return compute_stream_; }
-+
-+    void AddInferenceInFlight(InferenceInFlight&& iif) {
-+      inferences_in_flight_.emplace_back(std::move(iif));
-+    }
-+
-+    Status SynchronizeInferences();
-+
-+   private:
-+    std::optional<rt::StreamId> compute_stream_;
-+    std::list<InferenceInFlight> inferences_in_flight_;
-+  };
-+
-+  using PerThreadContextMap = std::unordered_map<const EtGlowExecutionProvider*, std::weak_ptr<PerThreadContext>>;
-+  // thread local PerThreadContext cache
-+
-+  struct ContextCacheHolder {
-+    ContextCacheHolder() {
-+      // Keep a weak pointer to the object, if the weak pointer can be locked, then the shared pointer is still around, so we can reset it
-+      RunOnUnload([this, weak_p_ = std::weak_ptr<PerThreadContextMap>(p)] {
-+        if (auto lock = weak_p_.lock())
-+          p.reset();
-+      });
-+    }
-+    std::shared_ptr<PerThreadContextMap> p = std::make_shared<PerThreadContextMap>();
-+  };
-+
-+  static const std::shared_ptr<PerThreadContextMap>& PerThreadContextCache() {
-+    thread_local const ContextCacheHolder per_thread_context_cache;
-+    return per_thread_context_cache.p;
-+  }
-+
-+  struct PerThreadContextState {
-+    // contexts that are currently active
-+    std::set<std::shared_ptr<PerThreadContext>, std::owner_less<std::shared_ptr<PerThreadContext>>> active_contexts;
-+    // contexts available for reuse
-+    std::vector<std::shared_ptr<PerThreadContext>> retired_context_pool;
-+    // weak references to thread local caches from which this EtGlowExecutionProvider instance's entry should be removed
-+    // upon destruction
-+    std::set<std::weak_ptr<PerThreadContextMap>, std::owner_less<std::weak_ptr<PerThreadContextMap>>>
-+        caches_to_update_on_destruction;
-+    // synchronizes access to PerThreadContextState members
-+    OrtMutex mutex;
-+  };
-+
-+  // The execution provider maintains the PerThreadContexts in this structure.
-+  // Synchronization is required to update the contained structures.
-+  // On the other hand, access to an individual PerThreadContext is assumed to be from a single thread at a time,
-+  // so synchronization is not required for that.
-+  mutable PerThreadContextState context_state_;
-+
-+  PerThreadContext& GetPerThreadContext() const;
-+  void ReleasePerThreadContext() const;
-+};
-+
-+}  // namespace onnxruntime
 diff --git a/onnxruntime/core/providers/etglow/etglow_execution_provider_bundle.cc b/onnxruntime/core/providers/etglow/etglow_execution_provider_bundle.cc
 new file mode 100644
 index 0000000000..9a7feb0971
@@ -7749,7 +6335,7 @@ index 0000000000..561bb682d0
 +}
 +
 +void EtRuntimeNotification::wait_on_device(Stream& device_stream) const {
-+  ORT_ENFORCE(device_stream.GetDevice().Type() == OrtDevice::GPU);
++  ORT_ENFORCE(device_stream.GetDevice().Type() == OrtDevice::ETGLOW);
 +  // Esperanto host runtime does not have an API to synchronize 2 streams asynchronously.
 +  // Instead, we'll block the current thread and flush both streams.
 +  auto& etglow_stream = dynamic_cast<EtGlowStream&>(device_stream);
@@ -7781,7 +6367,7 @@ index 0000000000..561bb682d0
 +}
 +
 +void WaitEtRuntimeNotificationOnDevice(Stream& stream, synchronize::Notification& notification) {
-+  // 'stream' corresponds to a 'GPU' stream (in this case a EtGlowStream)
++  // 'stream' corresponds to a 'ETGLOW' stream (in this case a EtGlowStream)
 +  dynamic_cast<EtRuntimeNotification*>(&notification)->wait_on_device(stream);
 +};
 +
@@ -7887,3 +6473,1417 @@ index 0000000000..2c8e9c4b3e
 +  local:
 +    *;
 +};
+diff --git a/onnxruntime/core/providers/etglow/etglow_execution_provider.cc b/onnxruntime/core/providers/etglow/etglow_execution_provider.cc
+new file mode 100644
+index 0000000..a32d107
+--- /dev/null
++++ b/onnxruntime/core/providers/etglow/etglow_execution_provider.cc
+@@ -0,0 +1,1149 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++#include "etglow_execution_provider.h"
++#include "etglow_execution_provider_utils.h"
++#include "etglow_execution_provider_bundle.h"
++#include "etglow_data_transfer.h"
++#include "etglow_stream_handle.h"
++#include "etglow_allocator.h"
++#include "etglow_profiler.h"
++#include "etglow_provider_factory.h"
++
++#include "core/providers/shared_library/provider_api.h"
++
++#define ORT_API_MANUAL_INIT
++#include "core/session/onnxruntime_cxx_api.h"
++
++#include <algorithm>
++#include <fstream>
++#include <memory>
++#include <mutex>
++#include <functional>
++#include <string>
++#include <utility>
++
++#include "glow/GlowAPI/etsoc.h"
++
++namespace onnxruntime {
++
++class Memcpy final : public OpKernel {
++ public:
++  using OpKernel::OpKernel;  // Directly inherit parent constructor
++
++  Status Compute(OpKernelContext* ctx) const override {
++    const auto* X_type = ctx->InputType(0);
++    if (X_type->IsTensorType()) {
++      const auto* X = ctx->Input<Tensor>(0);
++      ORT_ENFORCE(X != nullptr, "Memcpy: Input tensor is nullptr.");
++      Tensor* Y = ctx->Output(0, X->Shape());
++      ORT_ENFORCE(Y != nullptr, "Memcpy: Failed to allocate output tensor.");
++      const auto* gpu_data_transfer = Info().GetDataTransferManager().GetDataTransfer(X->Location().device, Y->Location().device);
++      ORT_RETURN_IF_ERROR(gpu_data_transfer->CopyTensorAsync(*X, *Y, *ctx->GetComputeStream()));
++    } else {
++      if (X_type->IsSparseTensorType()) {
++        return {common::ONNXRUNTIME, common::FAIL, "Memcpy: Unsupported SparseTensorType."};
++      } else if (X_type->IsTensorSequenceType()) {
++        const TensorSeq* X = ctx->Input<TensorSeq>(0);
++        ORT_ENFORCE(X != nullptr, "Memcpy: Input tensor sequence is nullptr.");
++        TensorSeq* Y = ctx->Output<TensorSeq>(0);
++        ORT_ENFORCE(Y != nullptr, "Memcpy: Failed to allocate output tensor sequence.");
++        const auto* X_dtype = X->DataType();
++        Y->SetType(X_dtype);
++        AllocatorPtr alloc;
++
++        // If we are copying contents to CUDA, the allocator to use
++        // to allocate the buffers of the new tensors in the sequence
++        // can be temp space allocator associated with the CUDA EP
++        if (Node().OpType() == "MemcpyFromHost") {
++          ORT_RETURN_IF_ERROR(ctx->GetTempSpaceAllocator(&alloc));
++        } else {
++          // If we are copying contents to CPU (op type is "MemcpyToHost"),
++          // the allocator to use to allocate the buffers of the new tensors
++          // in the sequence will be the allocator from the CPU EP
++          ORT_RETURN_IF_ERROR(ctx->GetTempSpaceCPUAllocator(&alloc));
++        }
++        auto X_size = X->Size();
++        Y->Reserve(X_size);
++        for (size_t i = 0; i < X_size; ++i) {
++          const Tensor& source_tensor = X->Get(i);
++          std::unique_ptr<Tensor> target_tensor = Tensor::Create(source_tensor.DataType(), source_tensor.Shape(), alloc);
++          const auto* gpu_data_transfer = Info().GetDataTransferManager().GetDataTransfer(source_tensor.Location().device,
++                                                                                          target_tensor->Location().device);
++          ORT_RETURN_IF_ERROR(gpu_data_transfer->CopyTensorAsync(source_tensor, *target_tensor, *ctx->GetComputeStream()));
++          Y->Add(std::move(*target_tensor));
++        }
++      } else {
++        return {common::ONNXRUNTIME, common::FAIL, "Memcpy: Unsupported input type."};
++      }
++    }
++    return Status::OK();
++  }
++};
++
++ONNX_OPERATOR_KERNEL_EX(
++    MemcpyFromHost,
++    kOnnxDomain,
++    1,
++    kEtGlowExecutionProvider,
++    (*KernelDefBuilder::Create())
++        .InputMemoryType(OrtMemTypeCPUInput, 0)
++        .TypeConstraint("T", DataTypeImpl::AllFixedSizeTensorTypes()),
++    Memcpy);
++
++ONNX_OPERATOR_KERNEL_EX(
++    MemcpyToHost,
++    kOnnxDomain,
++    1,
++    kEtGlowExecutionProvider,
++    (*KernelDefBuilder::Create())
++        .OutputMemoryType(OrtMemTypeCPUOutput, 0)
++        .TypeConstraint("T", DataTypeImpl::AllFixedSizeTensorTypes()),
++    Memcpy);
++
++class ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyFromHost);
++class ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyToHost);
++
++#define ETGLOW_KERNEL_DEF(operator, domain, startver, endver, types)                              \
++                                                                                                  \
++  class operator final : public OpKernel {                                                        \
++   public:                                                                                        \
++    using OpKernel::OpKernel; /* Directly inherit parent constructor */                           \
++    Status Compute(OpKernelContext* ctx) const override {                                         \
++      /* Empty implementation. */                                                                 \
++      ORT_UNUSED_PARAMETER(ctx);                                                                  \
++      return Status::OK();                                                                        \
++    }                                                                                             \
++  };                                                                                              \
++                                                                                                  \
++  ONNX_OPERATOR_VERSIONED_KERNEL_EX(operator, domain, startver, endver, kEtGlowExecutionProvider, \
++                                    (*KernelDefBuilder::Create())types, operator);                \
++  class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, domain, startver, endver, operator);
++
++#include "etglow_kernels.inc"
++#undef ETGLOW_KERNEL_DEF
++
++// Scan operator needs a special treatment due to the templatized format imposed by the forward declaration in provider_api.h.
++template <int OpSet>
++class Scan final : public OpKernel {
++ public:
++  using OpKernel::OpKernel; /* Directly inherit parent constructor */
++
++  Status Compute(OpKernelContext* ctx) const override {
++    /* Empty implementation. */
++    ORT_UNUSED_PARAMETER(ctx);
++    return Status::OK();
++  }
++};
++
++ONNX_OPERATOR_VERSIONED_KERNEL_EX(Scan, kOnnxDomain, 1, 21, kEtGlowExecutionProvider,
++                                  (*KernelDefBuilder::Create()).TypeConstraint("V", DataTypeImpl::AllTensorTypes()), Scan<9>);
++class ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, 21, Scan);
++
++static std::shared_ptr<KernelRegistry> s_kernel_registry;
++static std::shared_ptr<KernelRegistry> s_kernel_registry_offline;
++
++void InitializeRegistry() {
++  s_kernel_registry = KernelRegistry::Create();
++
++  static const std::array<BuildKernelCreateInfoFn, 2> function_table = {
++      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyFromHost)>,
++      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyToHost)>,
++  };
++
++  for (const auto& function_table_entry : function_table) {
++    ORT_THROW_IF_ERROR(s_kernel_registry->Register(function_table_entry()));
++  }
++
++  // Initialize registry for offline mode.
++  s_kernel_registry_offline = KernelRegistry::Create();
++  static const std::array<BuildKernelCreateInfoFn, 2 + /* num dummy kernels */ 195> offline_mode_function_table = {
++      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyFromHost)>,
++      BuildKernelCreateInfo<ONNX_OPERATOR_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, MemcpyToHost)>,
++#define ETGLOW_KERNEL_DEF(operator, domain, startver, endver, types) \
++  BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, domain, startver, endver, operator)>,
++#include "etglow_kernels.inc"
++#undef ETGLOW_KERNEL_DEF
++      BuildKernelCreateInfo<ONNX_OPERATOR_VERSIONED_KERNEL_CLASS_NAME(kEtGlowExecutionProvider, kOnnxDomain, 1, 21, Scan)>,
++  };
++
++  for (auto& function_table_entry : offline_mode_function_table) {
++    ORT_THROW_IF_ERROR(s_kernel_registry_offline->Register(function_table_entry()));
++  }
++}
++
++void DeleteRegistry() {
++  s_kernel_registry.reset();
++  s_kernel_registry_offline.reset();
++}
++
++void EtGlowExecutionProvider::addToProfilerThreadMap() {
++  std::scoped_lock lock(thread_map_mutex_);
++  auto syscall_tid = logging::GetThreadId();
++  auto std_tid = std::this_thread::get_id();
++  auto [it, success] = profiler_thread_map_.try_emplace(std_tid, syscall_tid);
++  if (success) {
++    LOG(INFO) << "Adding thread id mapping: [" << std_tid << "->" << syscall_tid << "]";
++  }
++}
++
++std::shared_ptr<KernelRegistry> EtGlowExecutionProvider::GetKernelRegistry() const {
++  return info_.offline_mode ? s_kernel_registry_offline : s_kernel_registry;
++}
++
++EtGlowExecutionProvider::EtGlowExecutionProvider(EtGlowExecutionProviderInfo info, std::unique_ptr<etsoc::GlowAPI> glow, EtRt_StreamsRegistry& streams_reg)
++    : IExecutionProvider{onnxruntime::kEtGlowExecutionProvider, OrtDevice(OrtDevice::ETGLOW, OrtDevice::MemType::DEFAULT, info.device_id)},
++      info_{std::move(info)},
++      glow_api_{std::move(glow)},
++      streams_reg_{streams_reg},
++      op_mgr_{info_.onnx_symbols} {
++  InitProviderOrtApi();
++
++  metadef_id_generator_ = ModelMetadefIdGenerator::Create();
++
++  auto options = EtGlowExecutionProviderInfo::ToProviderOptions(info_);
++  std::string parameters;
++  for (const auto& [key, value] : options) {
++    if (value.empty()) {
++      // do not print options that are empty
++      continue;
++    }
++    parameters += "\n - ";
++    parameters += key;
++    parameters += " = ";
++    parameters += value;
++  }
++  LOGS_DEFAULT(INFO) << "[ETGLOW] EP created with:" << parameters;
++
++  InitEtGlowStateFromEnvVars();
++  addToProfilerThreadMap();
++}
++
++EtGlowExecutionProvider::~EtGlowExecutionProvider() {
++  // wait for any uncompleted work
++  ORT_IGNORE_RETURN_VALUE(GetPerThreadContext().SynchronizeInferences());
++
++  // clean up thread local context caches
++  {
++    std::scoped_lock lock(context_state_.mutex);
++    for (const auto& cache_weak : context_state_.caches_to_update_on_destruction) {
++      const auto cache = cache_weak.lock();
++      if (!cache) continue;
++      ORT_IGNORE_RETURN_VALUE(cache->erase(this));
++    }
++  }
++
++  // unload all models from the device
++  if (auto status = UnloadModels(); status != Status::OK()) {
++    LOGS_DEFAULT(ERROR) << "[ETGLOW] Could not unload models: " << status.ErrorMessage();
++  }
++
++  auto end = std::chrono::steady_clock::now();
++  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_);
++  LOGS_DEFAULT(VERBOSE) << "[ETGLOW] lifetime: " << elapsed.count() << " ms";
++}
++
++void EtGlowExecutionProvider::InitEtGlowStateFromEnvVars() {
++  auto register_envvar_bool = [](const std::string& envvar_name, bool& knob) {
++    if (const auto envvar_value = GetEnvironmentVar(envvar_name); !envvar_value.empty()) {
++      const bool new_value = std::stoi(envvar_value) != 0;
++      if (knob != new_value) {
++        LOGS_DEFAULT(WARNING) << "[ETGLOW] Detected envvar " << envvar_name << " = " << new_value;
++        knob = new_value;
++      }
++    }
++  };
++  register_envvar_bool(etglow::envvars::kGreedyEp, info_.greedy);
++  register_envvar_bool(etglow::envvars::kOfflineModeEp, info_.offline_mode);
++  register_envvar_bool(etglow::envvars::kFailIfUnsupportedNode, info_.fail_if_cannot_run_whole_graph);
++  register_envvar_bool(etglow::envvars::kDebugLogs, debug_logs_);
++  register_envvar_bool(etglow::envvars::kBundleCacheEnable, use_bundles_);
++
++  auto register_envvar_action = [](const std::string& envvar_name, const auto& action_if_found) {
++    if (const auto envvar_value = GetEnvironmentVar(envvar_name); !envvar_value.empty()) {
++      action_if_found(envvar_name, envvar_value);
++    }
++  };
++  register_envvar_action(etglow::envvars::kCapabilityMode, [this](const std::string& envvar_name, const std::string& envvar_value) {
++    LOGS_DEFAULT(WARNING) << "[ETGLOW] Detected envvar " << envvar_name << " = " << envvar_value;
++    CapabilityMode new_mode = std::from_string(envvar_value);
++    op_mgr_.UpdateCapabilityMode(new_mode);
++  });
++}
++
++std::unique_ptr<IDataTransfer> EtGlowExecutionProvider::GetDataTransfer() const {
++  return std::make_unique<onnxruntime::EtGlowDataTransfer>(glow_api_->getBackendRuntimeInstance(), streams_reg_);
++}
++
++std::unique_ptr<profiling::EpProfiler> EtGlowExecutionProvider::GetProfiler() {
++  return std::make_unique<profiling::EtGlowProfiler>(*glow_api_, info_.traces_dir_prefix, info_.trace_options, profiler_thread_map_);
++};
++
++AllocatorPtr EtGlowExecutionProvider::CreateEtGlowAllocator(OrtDevice::DeviceId device_id, size_t mem_limit, ArenaExtendStrategy arena_extend_strategy, rt::IRuntime* rt) {
++  // lower arena memory limit to max available memory in the device
++  mem_limit = std::min(mem_limit, rt->getDeviceProperties(rt::DeviceId(device_id)).memorySize_);
++  AllocatorCreationInfo device_memory_info(
++      [rt](OrtDevice::DeviceId id) {
++        return std::make_unique<EtGlowDeviceAllocator>(id, ET, rt);
++      },
++      device_id,
++      true /* use_arena */,
++      OrtArenaCfg{mem_limit, static_cast<int>(arena_extend_strategy), -1, -1, -1, -1L},
++      true /* stream aware */,
++      false /* enable cross stream sharing */
++  );
++  return CreateAllocator(device_memory_info);
++}
++
++std::vector<AllocatorPtr> EtGlowExecutionProvider::CreatePreferredAllocators() {
++  AllocatorCreationInfo host_memory_info{[](int) { return std::make_unique<CPUAllocator>(); }};
++  return std::vector<AllocatorPtr>{CreateEtGlowAllocator(info_.device_id, info_.device_mem_limit, info_.arena_extend_strategy, glow_api_->getBackendRuntimeInstance()),
++                                   CreateAllocator(host_memory_info)};
++}
++
++std::vector<std::unique_ptr<ComputeCapability>>
++EtGlowExecutionProvider::GetCapability(const GraphViewer& graph_viewer, const IKernelLookup& /*kernel_lookup*/, IResourceAccountant* /*resource_accountant*/) const {
++  std::vector<std::unique_ptr<ComputeCapability>> result;
++
++  if (info_.greedy) {
++    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] in greedy mode!";
++  }
++  if (info_.fail_if_cannot_run_whole_graph) {
++    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] fail if cannot run whole graph is enabled!";
++  }
++
++  if (graph_viewer.IsSubgraph()) {
++    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] refusing to return capability to compile subgraph.";
++    return {};  // Do not accept sub-graphs for now
++  }
++  if (info_.offline_mode) {
++    LOGS_DEFAULT(WARNING) << "[ETGLOW EP] in offline mode!";
++    // In offline mode everything is supported (no need to compile).
++    for (const auto& node_index : graph_viewer.GetNodesInTopologicalOrder()) {
++      std::unique_ptr<IndexedSubGraph> sub_graph = IndexedSubGraph::Create();
++      sub_graph->Nodes().push_back(node_index);
++      result.push_back(ComputeCapability::Create(std::move(sub_graph)));
++    }
++    return result;
++  }
++
++  int subgraph_index = 0;
++  int number_of_glow_nodes = 0;
++  const auto supported_node_groups = GetSupportedNodes(graph_viewer);
++  for (const auto& group : supported_node_groups) {
++    if (group.empty()) {
++      continue;
++    }
++
++    auto sub_graph = GetSubGraph(group, graph_viewer, subgraph_index);
++    if (sub_graph != nullptr) {
++      number_of_glow_nodes += sub_graph->Nodes().size();
++      result.push_back(ComputeCapability::Create(std::move(sub_graph)));
++      subgraph_index++;
++    }
++  }
++
++  const int number_of_ort_nodes = graph_viewer.NumberOfNodes();
++  whole_graph_runs_with_glow_ = (number_of_glow_nodes == number_of_ort_nodes) || info_.greedy;
++  const std::string greedy_msg = "but in greedy mode all nodes are accepted";
++  if (number_of_glow_nodes == 0) {
++    std::string message = (info_.greedy) ? "[ETGLOW EP] No graph should run on ETGLOW EP, " + greedy_msg
++                                         : "[ETGLOW EP] No graph will run on ETGLOW EP";
++    LOGS_DEFAULT(WARNING) << message;
++  } else if (number_of_glow_nodes == number_of_ort_nodes) {
++    LOGS_DEFAULT(INFO) << "[ETGLOW EP] Whole graph will run on GLOW execution provider";
++  } else {
++    std::string message = "[ETGLOW EP] Detected " + std::to_string(number_of_glow_nodes) + " nodes supported (graph has " + std::to_string(number_of_ort_nodes) + " nodes) ";
++    message += (info_.greedy) ? greedy_msg
++                              : "graph will be partitioned between ETGLOW EP and other EPs";
++    LOGS_DEFAULT(WARNING) << message;
++  }
++
++  if (info_.dump_subgraphs) {
++    HashValue model_hash = 0;
++    const int metadef_id = metadef_id_generator_->GenerateId(graph_viewer, model_hash);
++    std::string subgraph_name = "ETGLOW_" + std::to_string(model_hash) + "_" + std::to_string(metadef_id) + ".onnx";
++    DoDumpSubgraph(graph_viewer, subgraph_name, false, true);
++  }
++
++  return result;
++}
++
++void EtGlowExecutionProvider::RegisterStreamHandlers(IStreamCommandHandleRegistry& stream_handle_registry, AllocatorMap& allocators) const {
++  auto cpu_allocator = allocators[GetOrtDeviceByMemType(OrtMemTypeCPU)];
++  RegisterEtRuntimeStreamHandles(stream_handle_registry, OrtDevice::ETGLOW, cpu_allocator, streams_reg_);
++}
++
++Status EtGlowExecutionProvider::Compile(const std::vector<FusedNodeAndGraph>& fused_nodes_and_graphs,
++                                        std::vector<NodeComputeInfo>& node_compute_funcs) {
++  for (const auto& fuse_node_graph : fused_nodes_and_graphs) {
++    const GraphViewer& graph_body_viewer = fuse_node_graph.filtered_graph;
++    const Node& fused_node = fuse_node_graph.fused_node;
++
++    if (info_.dump_subgraphs) {
++      std::string subgraph_name = fused_node.Name() + ".onnx";
++      DoDumpSubgraph(graph_body_viewer, subgraph_name);
++    }
++
++    if (debug_logs_) {
++      PrintGraphInputs(graph_body_viewer);
++    }
++
++    OrderedShapeValues input_output_dim_params;
++    ORT_RETURN_IF_ERROR(GetShapeValues(graph_body_viewer, input_output_dim_params));
++
++    EtGlowInferenceInputNames onnx_input_names;
++    ORT_RETURN_IF_ERROR(GetInputNames(graph_body_viewer, fused_node, onnx_input_names));
++
++    EtGlowInferenceOutputNames onnx_output_names;
++    std::unordered_map<std::string, std::vector<int64_t>> ordered_output_dimensions;
++    ORT_RETURN_IF_ERROR(GetOutputNamesAndShapes(fused_node, onnx_output_names, ordered_output_dimensions, input_output_dim_params));
++
++    // construct bundle path
++    const std::size_t bundle_abi = std::hash<BundleABI>{}(BundleABI::CreateWith(graph_body_viewer, info_.api_params, input_output_dim_params, info_.trace_options));
++    auto bundle_path = GetBundlePath(info_.bundle_cache_prefix, bundle_abi, fused_node.Name());
++    LOGS_DEFAULT(INFO) << "[ETGLOW EP] Calculated bundle name: " << bundle_path;
++    if (auto bundle_dir = bundle_path.parent_path(); std::filesystem::create_directories(bundle_dir)) {
++      LOGS_DEFAULT(INFO) << "[ETGLOW EP] Storing bundles in: " << bundle_dir;
++    }
++
++    if (!compiled_models_reg_.HasCompiledModel(bundle_path)) {
++      // EP has not loaded the model yet. Get CompileModel either from the bundle or compile it from scratch
++      std::unique_ptr<GlowAPI::CompiledModel> compilation_result;
++      ORT_RETURN_IF_ERROR(GetCompiledModel(graph_body_viewer, fused_node.Name(), bundle_path, input_output_dim_params, compilation_result));
++
++      compiled_models_reg_.StoreCompiledModel(bundle_path, std::move(compilation_result));
++    }
++
++    if (ShouldExportBundle()) {
++      ExportBundle(bundle_path, info_.export_bundle_path);
++    }
++
++    NodeComputeInfo compute_info;
++    const bool should_execute = !info_.compile_only;
++    compute_info.create_state_func = [this, bundle_path, onnx_input_names, onnx_output_names, ordered_output_dimensions](ComputeContext* context, FunctionState* state) {
++      auto p = std::make_unique<EtGlowFuncState>();
++      *p = {
++          context->allocate_func,
++          context->release_func,
++          context->allocator_handle,
++          context->node_name,
++          glow_api_.get(),
++          compiled_models_reg_.GetCompiledModel(bundle_path),
++          bundle_path,
++          onnx_input_names,
++          onnx_output_names,
++          ordered_output_dimensions,
++      };
++      *state = p.release();
++      return 0;
++    };
++    compute_info.release_state_func = [](gsl::owner<FunctionState> state) {
++      if (state != nullptr) {
++        delete static_cast<EtGlowFuncState*>(state);
++      }
++    };
++    compute_info.compute_func = [should_execute, this](FunctionState state, const OrtApi* /*api*/, OrtKernelContext* context) {
++      Ort::KernelContext ctx(context);
++
++      ORT_TRY {
++        if (!should_execute) {
++          return Status::OK();
++        }
++        auto* etfn_state = static_cast<EtGlowFuncState*>(state);
++        ORT_RETURN_IF(etfn_state->etglow_api == nullptr, "[ETGLOW] Error: glow_api cannot be nullptr");
++
++        InferenceInputDescriptors inputs;
++        ORT_RETURN_IF_ERROR(GetInputTensorDescriptors(ctx, etfn_state->ordered_input_names, inputs));
++
++        ORT_RETURN_IF(etfn_state->ordered_output_dimensions.size() != ctx.GetOutputCount(), "Output size mismatch.");
++        InferenceOutputDescriptors outputs;
++        ORT_RETURN_IF_ERROR(GetOutputTensorDescriptors(ctx, etfn_state->ordered_output_names, etfn_state->ordered_output_dimensions, outputs));
++
++        const GlowAPI::CompiledModel* glow_compiled_model_ptr = etfn_state->compiled_model;
++        ORT_RETURN_IF(glow_compiled_model_ptr == nullptr, "[ETGLOW] Error: expected non-nullptr GlowAPI::CompiledModel* but got a nullptr");
++
++        GlowAPI::RegisteredModel* glow_registered_model_ptr = nullptr;
++        ORT_RETURN_IF_ERROR(loaded_models_reg_.LoadModel(*etfn_state->etglow_api, etfn_state->bundle_name, *glow_compiled_model_ptr, loaded_models_, glow_registered_model_ptr));
++        ORT_RETURN_IF(glow_registered_model_ptr == nullptr, "[ETGLOW] Error: expected non-nullptr GlowAPI::RegisteredModel* but got a nullptr");
++
++        auto device_placeholders = GlowAPI::getOnDevicePlaceholders(*glow_compiled_model_ptr);
++
++        void* stream_type_erased_ptr = ctx.GetGPUComputeStream();
++        const auto* stream_id_ptr = static_cast<rt::StreamId*>(stream_type_erased_ptr);
++        auto stream_id = *stream_id_ptr;
++
++        ORT_RETURN_IF_ERROR(DoInference(*etfn_state->etglow_api, *glow_registered_model_ptr, inputs, std::move(outputs), device_placeholders, stream_id));
++
++        addToProfilerThreadMap();
++      }
++      ORT_CATCH(const std::exception& e) {
++        return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, e.what());
++      }
++
++      return Status::OK();
++    };
++    node_compute_funcs.push_back(compute_info);
++  }
++
++  return Status::OK();
++}
++
++common::Status EtGlowExecutionProvider::Sync() const {
++  return streams_reg_.Synchronize(rt::DeviceId(info_.device_id));
++}
++
++Status EtGlowExecutionProvider::OnRunStart(const onnxruntime::RunOptions& /*run_options*/) {
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] OnRunStart()";
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::OnRunEnd(bool sync_stream, const onnxruntime::RunOptions& /*run_options*/) {
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] OnRunEnd()";
++  if (sync_stream) {
++    // only synchronize if we have recorded stream to synchronize to
++    if (auto stream = GetPerThreadContext().GetComputeStream(); stream.has_value()) {
++      ORT_RETURN_IF_ERROR(streams_reg_.Synchronize(stream.value()));
++    }
++  }
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] OnRunEnd() done.";
++
++  return Status::OK();
++}
++
++std::vector<std::vector<NodeIndex>> EtGlowExecutionProvider::GetSupportedNodes(const GraphViewer& graph_viewer) const {
++  std::vector<std::vector<size_t>> supported_node_vecs;
++  std::vector<size_t> supported_node_vec;
++
++  std::unordered_map<std::string, int> all_nodes_count;
++  std::unordered_map<std::string, int> supported_nodes_count;
++
++  const auto& node_indices = graph_viewer.GetNodesInTopologicalOrder();
++  for (auto node_idx : node_indices) {
++    const auto* node(graph_viewer.GetNode(node_idx));
++    const auto result = op_mgr_.IsNodeSupported(node, graph_viewer);
++    const auto supported = result.supported();
++    if (!supported && !info_.greedy) {
++      LOGS_DEFAULT(WARNING) << "[ETGLOW EP] node not supported: " << node->OpType() << " reason: " << result.reason();
++    }
++
++    if (debug_logs_) {
++      RegisterOperatorCoverage(*node, supported, all_nodes_count, supported_nodes_count);
++    }
++
++    if (supported || info_.greedy) {
++      supported_node_vec.push_back(node_idx);
++    } else {
++      if (!supported_node_vec.empty()) {
++        supported_node_vecs.push_back(std::move(supported_node_vec));
++        supported_node_vec = {};
++      }
++    }
++  }
++
++  if (!supported_node_vec.empty()) {
++    supported_node_vecs.push_back(supported_node_vec);
++  }
++
++  if (debug_logs_) {
++    PrintOperatorCoverage(all_nodes_count, supported_nodes_count);
++  }
++
++  return supported_node_vecs;
++}
++
++void EtGlowExecutionProvider::RegisterOperatorCoverage(const Node& node, const bool supported, std::unordered_map<std::string, int>& all_nodes_count, std::unordered_map<std::string, int>& supported_nodes_count) {
++  auto node_optype_ver = node.OpType() + "_" + std::to_string(node.SinceVersion());
++  all_nodes_count[node_optype_ver]++;
++  if (supported) {
++    supported_nodes_count[node_optype_ver]++;
++  }
++}
++
++void EtGlowExecutionProvider::PrintOperatorCoverage(const std::unordered_map<std::string, int>& all_nodes_count,
++                                                    std::unordered_map<std::string, int>& supported_nodes_count) {
++  int all_counts = 0;
++  int support_counts = 0;
++  for (auto [optype_ver, all_count] : all_nodes_count) {
++    const auto& support_count = supported_nodes_count[optype_ver];
++    all_counts += all_count;
++    support_counts += support_count;
++    LOGS_DEFAULT(INFO) << "Operator type: [" << optype_ver << "] coverage: " << support_count << ":" << all_count
++                       << " percentage: " << static_cast<float>(support_count) / static_cast<float>(all_count);
++  }
++  LOGS_DEFAULT(INFO) << "Total coverage: " << support_counts << ":" << all_counts
++                     << " percentage: " << static_cast<float>(support_counts) / static_cast<float>(all_counts);
++}
++
++std::unique_ptr<IndexedSubGraph> EtGlowExecutionProvider::GetSubGraph(const std::vector<std::size_t>& group,
++                                                                      const GraphViewer& graph_viewer,
++                                                                      int subgraph_index) const {
++  const auto& graph_output_list = graph_viewer.GetOutputs();
++  const std::unordered_set<const NodeArg*> graph_outputs(graph_output_list.cbegin(), graph_output_list.cend());
++
++  std::unordered_set<NodeIndex> node_set;
++  node_set.reserve(group.size());
++  for (const auto& index : group) {
++    node_set.insert(index);
++  }
++
++  // Get parent graph output names
++  std::unordered_set<std::string> graph_output_names;
++  for (const auto* output_arg : graph_viewer.GetOutputs()) {
++    graph_output_names.insert(output_arg->Name());
++  }
++
++  // Find inputs and outputs of the subgraph
++  auto sub_graph = onnxruntime::IndexedSubGraph::Create();
++  std::unordered_set<const NodeArg*> node_outputs;
++  std::unordered_set<const NodeArg*> subgraph_inputs;
++  std::unordered_set<const NodeArg*> subgraph_outputs;
++  std::vector<const NodeArg*> ordered_subgraph_inputs;
++  std::vector<const NodeArg*> ordered_subgraph_outputs;
++
++  for (const auto& index : group) {
++    sub_graph->Nodes().push_back(index);
++    const auto& node = graph_viewer.GetNode(index);
++
++    for (const auto& input : node->InputDefs()) {
++      // if the node input was not produced by this subgraph, add it to the subgraph inputs.
++      if (!input->Exists()) {
++        continue;
++      }
++      if ((node_outputs.count(input) == 0) && (subgraph_inputs.count(input) == 0)) {
++        subgraph_inputs.insert(input);
++        ordered_subgraph_inputs.push_back(input);
++      }
++    }
++
++    const auto& output_defs = node->OutputDefs();
++    for (const auto* output_def : output_defs) {
++      if (!output_def->Exists()) {
++        continue;
++      }
++      node_outputs.insert(output_def);
++      // if output is overall graph output we need to produce it.
++      if (graph_outputs.count(output_def) != 0) {
++        ordered_subgraph_outputs.push_back(output_def);
++      }
++    }
++
++    // if output connects to a node not in this subgraph we need to produce it
++    for (auto it = node->OutputEdgesBegin(), end = node->OutputEdgesEnd(); it != end; ++it) {
++      if (node_set.count(it->GetNode().Index()) != 0) {
++        continue;
++      }
++      const auto* output_def = output_defs[it->GetSrcArgIndex()];
++      if (subgraph_outputs.count(output_def) == 0 && graph_outputs.count(output_def) == 0) {
++        subgraph_outputs.insert(output_def);
++        ordered_subgraph_outputs.push_back(output_def);
++      }
++    }
++  }
++
++  auto meta_def = IndexedSubGraph_MetaDef::Create();
++  meta_def->name() = GenerateMetaDefName(graph_viewer, *metadef_id_generator_, std::nullopt, subgraph_index);
++  meta_def->domain() = kMSDomain;
++  meta_def->since_version() = 1;
++  meta_def->status() = ONNX_NAMESPACE::EXPERIMENTAL;
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] GLOW subgraph MetaDef name " + meta_def->name();
++
++  auto HasShape = [](const auto* tensor, const std::string& subgraph_name) {
++    if (tensor->Shape() == nullptr) {
++      // if any subgraph input/output shape information is missing, do not accept the subgraph
++      LOGS_DEFAULT(WARNING) << "[ETGLOW EP] subgraph " + subgraph_name + " tensor: '" + tensor->Name() +
++                                   "' has missing shapes!"
++                                   " ETGLOW EP requires input/outputs to have known shapes. Subgraph not supported.";
++      return false;
++    }
++    return true;
++  };
++
++  // Assign inputs and outputs to subgraph's meta_def
++  for (const auto& input : ordered_subgraph_inputs) {
++    meta_def->inputs().push_back(input->Name());
++    if (!HasShape(input, meta_def->name()) && !info_.greedy) {
++      return nullptr;
++    }
++  }
++
++  for (const auto& output : ordered_subgraph_outputs) {
++    meta_def->outputs().push_back(output->Name());
++    if (!HasShape(output, meta_def->name()) && !info_.greedy) {
++      return nullptr;
++    }
++  }
++
++  sub_graph->SetMetaDef(std::move(meta_def));
++
++  return sub_graph;
++}
++
++void EtGlowExecutionProvider::PrintGraphInputs(const GraphViewer& graph) {
++  for (const auto& input : graph.GetInputs()) {
++    const auto* shape = input->Shape();
++    if (shape == nullptr) {
++      continue;
++    }
++
++    if (const auto* type = input->Type(); type != nullptr) {
++      LOGS_DEFAULT(INFO) << "input name: " << input->Name()
++                         << " length: " << std::to_string(type->length())
++                         << " type: " << *type
++                         << " shape (dim_size): " << std::to_string(shape->dim_size());
++    }
++    int dimIdx = 0;
++    for (const auto& dim : shape->dim()) {
++      LOGS_DEFAULT(INFO)
++          << " -- dimIdx: " << dimIdx
++          << " has_dim_param: " << dim.has_dim_param()
++          << " dim_param: " << dim.dim_param()
++          << " has_dim_value: " << dim.has_dim_value()
++          << " dim_value: " << dim.dim_value()
++          << " value_case: " << dim.value_case();
++      dimIdx++;
++    }
++  }
++}
++
++void EtGlowExecutionProvider::DoDumpSubgraph(const GraphViewer& graph_viewer, const std::string& subgraph_name, bool include_initializers, bool include_outer_scope_args) const {
++  // Dump EtGlow subgraphs
++  auto model = graph_viewer.CreateModel(*GetLogger());
++  auto model_proto = model->ToProto();
++  graph_viewer.ToProto(*model_proto->mutable_graph(), include_initializers, include_outer_scope_args);
++  model_proto->set_ir_version(ONNX_NAMESPACE::Version::IR_VERSION);
++  std::fstream dump(subgraph_name, std::ios::out | std::ios::trunc | std::ios::binary);
++  model_proto->SerializeToOstream(dump);
++}
++
++Status EtGlowExecutionProvider::GetShapeValues(const GraphViewer& graph_viewer, OrderedShapeValues& dim_params) const {
++  auto fill_dim_params = [this, &dim_params](const std::vector<const NodeArg*>& nodes) {
++    for (const auto& tensor : nodes) {
++      const auto* shape = tensor->Shape();
++      if (shape == nullptr) {
++        return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] doesn't support models whose input/output Shape(s) are not known at Compile() time. Missing shape for tensor " + tensor->Name());
++      }
++      for (const auto& dim : shape->dim()) {
++        if (!dim.has_dim_param()) {
++          continue;
++        }
++
++        const auto& dim_param = dim.dim_param();
++        auto it = info_.onnx_symbols.find(dim_param);
++        if (it != info_.onnx_symbols.end()) {
++          dim_params.try_emplace(dim_param, std::get<std::size_t>(it->second));
++        } else {
++          LOGS_DEFAULT(ERROR) << "dim_param: " << dim_param << " missing in onnx_symbols. Please provide a value!";
++          return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] cannot fill GlowAPI LoadOptions symbolTable.");
++        }
++      }
++    }
++
++    return Status::OK();
++  };
++
++  auto add_missing_user_params = [this, &dim_params]() {
++    for (const auto& [key, value] : info_.onnx_symbols) {
++      // Copy missing parameters to output dictionary. Must add all of them in case they are not used in the ONNX file
++      // but the user still wishes to include that information in the compiled model.
++      auto [it, result] = dim_params.try_emplace(key, std::get<std::size_t>(value));
++      if (result) {
++        LOGS_DEFAULT(VERBOSE) << "dim_param: " << key << " not used in ONNX file, registering it anyway.";
++      }
++    }
++
++    return Status::OK();
++  };
++
++  ORT_RETURN_IF_ERROR(fill_dim_params(graph_viewer.GetInputs()));
++  ORT_RETURN_IF_ERROR(fill_dim_params(graph_viewer.GetOutputs()));
++  ORT_RETURN_IF_ERROR(add_missing_user_params());
++  LOGS_DEFAULT(INFO) << "dim_params size:" << dim_params.size();
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::GetInputNames(const GraphViewer& graph_viewer, const Node& fused_node,
++                                              EtGlowInferenceInputNames& input_names) {
++  const auto& input_defs = fused_node.InputDefs();
++  input_names.reserve(input_defs.size());
++  for (size_t i = 0; i < input_defs.size(); ++i) {
++    const auto* input_def = input_defs[i];
++    const auto& input_name = input_def->Name();
++    if (graph_viewer.IsConstantInitializer(input_name, false)) {
++      LOGS_DEFAULT(VERBOSE) << "Excluding constant initializer: " << input_name;
++      continue;
++    }
++    LOGS_DEFAULT(VERBOSE) << "Keeping input: " << input_name;
++    input_names.try_emplace(input_name, i);
++  }
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::GetOutputNamesAndShapes(const Node& fused_node, EtGlowInferenceOutputNames& output_names, std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, const OrderedShapeValues& output_dim_params) {
++  const auto& output_defs = fused_node.OutputDefs();
++  output_names.reserve(output_defs.size());
++  for (const auto* output_ptr : output_defs) {
++    const auto& output_ref = *output_ptr;
++    output_names.emplace_back(output_ref.Name());
++    std::vector<int64_t> dimensions;
++    const auto* output_shape = output_ref.Shape();
++    if (output_shape == nullptr) {
++      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] doesn't support models whose output Shape(s) are not known at Compile() time.");
++    }
++    dimensions.reserve(output_shape->dim_size());
++    for (int j = 0; j < output_shape->dim_size(); j++) {
++      const auto& dim = output_shape->dim(j);
++      if (dim.has_dim_value()) {
++        dimensions.emplace_back(dim.dim_value());
++      } else if (dim.has_dim_param()) {
++        if (auto it = output_dim_params.find(dim.dim_param()); auto dim_value = it->second) {
++          dimensions.emplace_back(dim_value);
++        } else {
++          return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "[ETGLOW EP] Didn't find " + dim.dim_param() + " in output_dim_params");
++        }
++      }
++    }
++    ordered_output_dimensions.try_emplace(output_ref.Name(), std::move(dimensions));
++  }
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::GetCompiledModel(const GraphViewer& graph_viewer, const std::string& fused_node_name, const fs::path& bundle_path, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result) {
++  if (ShouldReuseCompiledModel(bundle_path)) {
++    ORT_RETURN_IF_ERROR(DoReuseCompiledModelFromBundle(bundle_path, compilation_result));
++  } else {
++    ORT_RETURN_IF_ERROR(DoCompile(bundle_path, graph_viewer, fused_node_name, input_dim_params, compilation_result));
++  }
++  return Status::OK();
++}
++
++bool EtGlowExecutionProvider::ShouldReuseCompiledModel(const fs::path& bundle_path) const {
++  return use_bundles_ && std::filesystem::exists(bundle_path);
++}
++
++Status EtGlowExecutionProvider::DoReuseCompiledModelFromBundle(const fs::path& bundle_path, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result) {
++  // restore bundle
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] [Hit] Loading bundle: " << bundle_path;
++
++  auto eload_compiled_model = GlowAPI::loadCompiledModel(bundle_path);
++  if (!eload_compiled_model) {
++    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(eload_compiled_model.takeError(), "loading CompiledModel from bundle."));
++  }
++  auto glow_compiled_model = std::move(*eload_compiled_model);
++
++  compilation_result = std::make_unique<GlowAPI::CompiledModel>(std::move(glow_compiled_model));
++
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::SetDevicePlaceholders(GlowAPI::Model& glow_loaded_model) const {
++  const bool bundles_for_external_use = info_.compile_only && ShouldExportBundle();
++  std::vector<std::string> device_placeholder_names = bundles_for_external_use ? GetOnDevicePlaceholderNamesFromUserParams(info_.api_params) : GetOnDevicePlaceholderNamesFromGlowAPI(glow_loaded_model);
++  std::vector<std::string> device_implicit_placeholder_names = GetOnDeviceImplicitPlaceholdrNamesFromUserParams(info_.api_params);
++  // remove from device_placeholder_names those arrays that the user already provided as implicit-placeholders
++  device_placeholder_names.erase(
++      std::remove_if(
++          device_placeholder_names.begin(),
++          device_placeholder_names.end(),
++          [&device_implicit_placeholder_names](const std::string& element) {
++            bool should_remove = std::find(device_implicit_placeholder_names.begin(), device_implicit_placeholder_names.end(), element) != device_implicit_placeholder_names.end();
++            if (should_remove) {
++              LOGS_DEFAULT(WARNING) << "Found placeholder that the user wants as implicit-device-placeholder ( " << element << "). Removing it from placeholder's list.";
++            }
++            return should_remove;
++          }),
++      device_placeholder_names.end());
++
++  for (const auto& tensor_name : device_placeholder_names) {
++    if (auto error_set_placeholders = GlowAPI::setOnDevicePlaceholder(glow_loaded_model, tensor_name); error_set_placeholders) {
++      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(error_set_placeholders), "setting OnDevicePlaceholders with tensor_name:" + tensor_name));
++    }
++  }
++
++  for (const auto& tensor_name : device_implicit_placeholder_names) {
++    if (auto error_set_implicit_pla = GlowAPI::setImplicitOnDevicePlaceholder(glow_loaded_model, tensor_name); error_set_implicit_pla) {
++      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(error_set_implicit_pla), "setting ImplicitOnDevicePlaceholders with tensor_name: " + tensor_name));
++    }
++  }
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::DoCompile(const fs::path& bundle_path, const GraphViewer& graph_viewer, const std::string& fused_node_name, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result) {
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] [Miss] Could not find bundle: " << bundle_path << " .. compiling.";
++
++  // Reconstruct graph proto from fused node's function body
++  auto model = graph_viewer.CreateModel(*GetLogger());
++  auto model_proto = model->ToProto();
++  graph_viewer.ToProto(*model_proto->mutable_graph(), true, true);
++  model_proto->set_ir_version(ONNX_NAMESPACE::Version::IR_VERSION);
++
++  const auto onnx_model_path = GetModelPath(graph_viewer, fused_node_name);
++  std::ofstream ofs(onnx_model_path);
++  model_proto->SerializeToOstream(ofs);
++  ofs.close();
++
++  GlowAPI::LoadOptions lo = GetGlowLoadOptions(info_.api_params, input_dim_params, graph_viewer, *metadef_id_generator_);
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] Loading the model: " << onnx_model_path;
++
++  auto expected_glow_loaded_model = GlowAPI::loadModelONNX(onnx_model_path, GlowAPI::InputsMap{}, lo);
++  if (!expected_glow_loaded_model) {
++    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(expected_glow_loaded_model.takeError(), "loading onnx model"));
++  }
++  auto glow_loaded_model = std::move(*expected_glow_loaded_model);
++
++  ORT_RETURN_IF_ERROR(SetDevicePlaceholders(glow_loaded_model));
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] compiling the model.";
++  GlowAPI::CompilationOptions co;
++  if (lo.useFP16) {
++    // convert all FP32 internal nodes to FP16
++    co.ctxt.precisionConfig.convertToFP16 = true;
++    // convert constants from FP32 to FP16
++    co.ctxt.precisionConfig.convertConstantsToFP16 = true;
++    // add conversion nodes from FP32 to FP16 to model inputs/outputs
++    co.ctxt.precisionConfig.convertPlaceholdersToFP16 = true;
++  }
++  auto expected_glow_compiled_model = glow_api_->compileModel(glow_loaded_model, co);
++  if (!expected_glow_compiled_model) {
++    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(expected_glow_compiled_model.takeError(), "compiling onnx model"));
++  }
++  auto glow_compiled_model = std::move(*expected_glow_compiled_model);
++
++  if (save_bundles_) {
++    if (fs::exists(bundle_path)) {
++      LOGS_DEFAULT(WARNING) << "[ETGLOW EP] found existing bundle: " << bundle_path << " before saving compiled model! proceeding to remove.";
++      fs::remove(bundle_path);
++    }
++    LOGS_DEFAULT(INFO) << "[ETGLOW EP] saving compiled model.";
++    // this is optional, for maximum re-use of compiled model
++    if (auto error_saved_compiled_model = GlowAPI::saveCompiledModel(glow_compiled_model, bundle_path); error_saved_compiled_model) {
++      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(error_saved_compiled_model), "saving CompiledModel into bundle."));
++    }
++  }
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] Compilation is done.";
++
++  compilation_result = std::make_unique<GlowAPI::CompiledModel>(std::move(glow_compiled_model));
++
++  return Status::OK();
++}
++
++bool EtGlowExecutionProvider::ShouldExportBundle() const {
++  return !info_.export_bundle_path.empty();
++}
++
++void EtGlowExecutionProvider::ExportBundle(const fs::path& from, const fs::path& to) {
++  fs::path dest = fs::absolute(to);
++  if (auto dest_dir = dest.parent_path(); !fs::exists(dest_dir)) {
++    fs::create_directories(dest_dir);
++  }
++  const auto copyOptions = fs::copy_options::overwrite_existing;
++  fs::copy_file(from, dest, copyOptions);
++}
++
++Status EtGlowExecutionProvider::GetInputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceInputNames& ordered_input_names, InferenceInputDescriptors& inputs) {
++  inputs.reserve(ordered_input_names.size());
++  for (const auto& [input_name, input_idx] : ordered_input_names) {
++    auto input_tensor = ctx.GetInput(input_idx);
++    auto tensor_info = input_tensor.GetTensorTypeAndShapeInfo();
++    auto shape = tensor_info.GetShape();
++    const void* input_buffer = input_tensor.GetTensorRawData();
++    inputs.try_emplace(
++        input_name,
++        ort_etglow::OnnxTensorInfo{tensor_info.GetElementType(), shape},
++        input_buffer);
++  }
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::GetOutputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceOutputNames& ordered_output_names, const std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, InferenceOutputDescriptors& outputs) {
++  outputs.reserve(ordered_output_names.size());
++  for (size_t i = 0; i < ordered_output_names.size(); i++) {
++    const auto& output_name = ordered_output_names[i];
++    auto it = ordered_output_dimensions.find(output_name);
++    if (it == ordered_output_dimensions.end()) {
++      return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "could not find output_dimensions for output: " + output_name);
++    }
++    auto output_shape = it->second;
++    auto output_tensor = ctx.GetOutput(i, output_shape.data(), output_shape.size());
++    auto tensor_info = output_tensor.GetTensorTypeAndShapeInfo();
++    auto shape = tensor_info.GetShape();
++    void* output_buffer = output_tensor.GetTensorMutableRawData();
++    outputs.try_emplace(
++        output_name,
++        ort_etglow::OnnxOutputTensorData{
++            ort_etglow::OnnxTensorInfo{tensor_info.GetElementType(), shape},
++            output_buffer,
++        });
++  }
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::SetDevicePlaceholderAddresses(GlowAPI::ExecutionBindings& execution_bindings, const InferenceInputDescriptors& inputs, const InferenceOutputDescriptors& outputs, const std::vector<std::string>& device_placeholders) const {
++  auto set_device_placeholder_addr = [&execution_bindings, &device_placeholders](const auto& tensors, const std::string& direction) {
++    for (const auto& [tensor_name, tensor_descriptor] : tensors) {
++      LOGS_DEFAULT(VERBOSE) << "[ETGLOW EP] setting onDevicePlaceholder for (" + direction + ") tensor: " << tensor_name << " in address: " << tensor_descriptor.buffer;
++      if (auto it = std::find(device_placeholders.begin(), device_placeholders.end(), tensor_name); it == device_placeholders.end()) {
++        // skip registering not known to Glow
++        continue;
++      }
++      if (auto spaError = GlowAPI::setOnDevicePlaceholderAddress(execution_bindings, tensor_name, const_cast<void*>(tensor_descriptor.buffer)); spaError) {
++        return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(spaError), "setting onDevicePlaceholder address."));
++      }
++    }
++    return Status::OK();
++  };
++  ORT_RETURN_IF_ERROR(set_device_placeholder_addr(inputs, "in"));
++  ORT_RETURN_IF_ERROR(set_device_placeholder_addr(outputs, "out"));
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::DoInference(GlowAPI& etglow_api, const GlowAPI::RegisteredModel& glow_reg_model, const InferenceInputDescriptors& inputs, InferenceOutputDescriptors&& outputs, const std::vector<std::string>& device_placeholders, rt::StreamId stream_id) const {
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] creating execution bindings.";
++
++  auto ebindings = GlowAPI::createExecutionBindings(glow_reg_model);
++  if (!ebindings) {
++    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(ebindings.takeError(), "creating execution bindings."));
++  }
++  auto bindings = std::move(*ebindings);
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] telling glow to use stream_id: " << static_cast<int>(stream_id);
++  GlowAPI::ETSOCDeviceExecutionInfo info{static_cast<GlowAPI::StreamId>(stream_id)};
++  if (auto sdeiError = etglow_api.setDeviceExecutionInfo(bindings, info); sdeiError) {
++    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(std::move(sdeiError), "setting device execution info."));
++  }
++
++  ORT_RETURN_IF_ERROR(SetDevicePlaceholderAddresses(bindings, inputs, outputs, device_placeholders));
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference on stream_id: " << static_cast<int>(stream_id);
++
++  auto m = std::make_shared<std::mutex>();
++  auto cv = std::make_shared<std::condition_variable>();
++  auto scheduled = std::make_shared<bool>(false);
++  auto completed = std::make_shared<bool>(false);
++
++  const auto inferenceScheduled = [m, cv, scheduled](GlowAPI::InferenceCallId id) {
++    std::unique_lock lock(*m);
++    LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference: " << std::to_string(id) << " done! Waking up ort thread";
++    *scheduled = true;
++    //// manual unlocking is done before notifying, to avoid waking up
++    //// the waiting thread only to block again (see notify_one for details)
++    lock.unlock();
++    cv->notify_one();
++  };
++
++  auto inferenceResultPromise = std::make_unique<std::promise<InferenceResult>>();
++  auto* inferenceResultPromisePtr = inferenceResultPromise.get();
++  std::future<InferenceResult> inferenceResultFuture = inferenceResultPromise->get_future();
++  const auto inferenceCompleted = [inferenceResultPromisePtr, m, cv, completed](GlowAPI::InferenceCallId id, GlowAPI::Error error, GlowAPI::ExecutionBindings resultBindings) {
++    LOGS_DEFAULT(INFO) << "[ETGLOW EP] completed inference: " << std::to_string(id) << " done!";
++    inferenceResultPromisePtr->set_value(InferenceResult{.id = id, .error = std::move(error), .bindings = std::move(resultBindings)});
++
++    // if there was any problem and Glow didn't call the `inferenceScheduled` callback, the ORT thread will be still stuck in the condition_variable
++    std::unique_lock lock(*m);
++    *completed = true;
++    cv->notify_one();  // force host thread to wake up
++  };
++  GlowAPI::ExecutionOptions eo = GetGlowExecutionOptions(info_.api_params);
++  auto expectedInferenceId = etglow_api.launchInference(glow_reg_model, std::move(bindings), inferenceCompleted, eo, inferenceScheduled);
++  if (!expectedInferenceId) {
++    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, glowApiErrMsg(expectedInferenceId.takeError(), "executing an inference."));
++  }
++  [[maybe_unused]] const auto inferenceId = expectedInferenceId.get();
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference: " << std::to_string(inferenceId) << " ... waiting for glow to launch kernel";
++  // Block until inference has been scheduled on the device
++  {
++    std::unique_lock lock(*m);
++    cv->wait(lock, [&scheduled, &completed] { return *scheduled || *completed; });
++  }
++
++  GetPerThreadContext().SetComputeStream(stream_id);
++  GetPerThreadContext().AddInferenceInFlight(InferenceInFlight{inferenceId, std::move(inferenceResultPromise), std::move(inferenceResultFuture), std::move(outputs)});
++
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] launching inference: " << std::to_string(inferenceId) << " done.";
++
++  return Status::OK();
++}
++
++Status onnxruntime::EtGlowExecutionProvider::InferenceInFlight::Sync() {
++  LOGS_DEFAULT(INFO) << "[ETGLOW EP] synchronize inference: " << std::to_string(id);
++  auto inferenceResult = future.get();  // blocks current thread until future is available
++  ORT_RETURN_IF(inferenceResult.error, "[ETGLOW] The inference reports an error: ", glowApiErrMsg(std::move(inferenceResult.error), "executing an inference."));
++  ORT_RETURN_IF_NOT(inferenceResult.id == id, "[ETGLOW] Got a inference result from a future with different InferenceId than the expected!");
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::PerThreadContext::SynchronizeInferences() {
++  for (auto it = inferences_in_flight_.begin(); it != inferences_in_flight_.end();) {
++    ORT_RETURN_IF_ERROR(it->Sync());
++    it = inferences_in_flight_.erase(it);
++  }
++  return Status::OK();
++}
++
++Status EtGlowExecutionProvider::UnloadModels() {
++  for (auto it = loaded_models_.begin(); it != loaded_models_.end();) {
++    ORT_RETURN_IF_ERROR(loaded_models_reg_.UnloadModel(*glow_api_, *it));
++    it = loaded_models_.erase(it);
++  }
++  return Status::OK();
++}
++
++EtGlowExecutionProvider::PerThreadContext& EtGlowExecutionProvider::GetPerThreadContext() const {
++  const auto& per_thread_context_cache = PerThreadContextCache();
++
++  // try to use cached context
++  if (auto cached_context_it = per_thread_context_cache->find(this);
++      cached_context_it != per_thread_context_cache->end()) {
++    auto cached_context = cached_context_it->second.lock();
++    ORT_ENFORCE(cached_context);
++    return *cached_context;
++  }
++
++  // get context and update cache
++  std::shared_ptr<PerThreadContext> context;
++  {
++    std::scoped_lock lock(context_state_.mutex);
++
++    // get or create a context
++    if (context_state_.retired_context_pool.empty()) {
++      context = std::make_shared<PerThreadContext>();
++    } else {
++      context = context_state_.retired_context_pool.back();
++      context_state_.retired_context_pool.pop_back();
++    }
++
++    // insert into active_contexts, should not already be present
++    const auto [active_contexts_insert_it, active_contexts_insert_success] = context_state_.active_contexts.insert(context);
++    ORT_UNUSED_PARAMETER(active_contexts_insert_it);
++    ORT_ENFORCE(active_contexts_insert_success);
++
++    // insert into caches_to_update_on_destruction, may already be present
++    ORT_IGNORE_RETURN_VALUE(context_state_.caches_to_update_on_destruction.insert(per_thread_context_cache));
++  }
++
++  per_thread_context_cache->insert(std::make_pair(this, context));
++
++  return *context;
++}
++
++void EtGlowExecutionProvider::ReleasePerThreadContext() const {
++  const auto& per_thread_context_cache = PerThreadContextCache();
++
++  auto cached_context_it = per_thread_context_cache->find(this);
++  ORT_ENFORCE(cached_context_it != per_thread_context_cache->end());
++  auto cached_context = cached_context_it->second.lock();
++  ORT_ENFORCE(cached_context);
++
++  {
++    std::scoped_lock lock(context_state_.mutex);
++    context_state_.active_contexts.erase(cached_context);
++    context_state_.retired_context_pool.push_back(cached_context);
++  }
++
++  per_thread_context_cache->erase(cached_context_it);
++}
++
++}  // namespace onnxruntime
+diff --git a/onnxruntime/core/providers/etglow/etglow_execution_provider.h b/onnxruntime/core/providers/etglow/etglow_execution_provider.h
+new file mode 100644
+index 0000000..ac81ecb
+--- /dev/null
++++ b/onnxruntime/core/providers/etglow/etglow_execution_provider.h
+@@ -0,0 +1,253 @@
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License.
++
++#pragma once
++
++#include <glow/GlowAPI/etsoc.h>
++#include <runtime/IRuntime.h>
++
++#include <utility>
++#include <core/framework/arena_extend_strategy.h>
++
++#include "core/providers/shared_library/provider_api.h"
++#include "core/session/onnxruntime_c_api.h"
++#include "etglow_execution_provider_info.h"
++#include "etglow_op_manager.h"
++#include "etglow_compiled_models_registry.h"
++#include "etglow_loaded_models_registry.h"
++
++#include <mutex>   // for std::mutex
++#include <thread>  // std::thread::id
++
++using GlowAPI = etsoc::GlowAPI;
++
++namespace Ort {
++struct KernelContext;
++}
++
++namespace onnxruntime {
++struct EtRt_StreamsRegistry;
++
++namespace ort_etglow {
++
++// borrow from coreml/dnnl ep's data structures to organize data handle, shape and data
++struct OnnxTensorInfo {
++  int32_t data_type;  // Uses TensorProto::DataType
++  std::vector<int64_t> shape;
++};
++
++struct OnnxInputTensorData {
++  OnnxTensorInfo tensor_info;
++  const void* buffer;
++  OnnxInputTensorData(OnnxTensorInfo tensor_info, const void* buffer)
++      : tensor_info{std::move(tensor_info)}, buffer{buffer} {}
++};
++struct OnnxOutputTensorData {
++  OnnxTensorInfo tensor_info;
++  void* buffer{nullptr};
++};
++
++}  // namespace ort_etglow
++
++using EtGlowInferenceInputNames = std::unordered_map<std::string /* name */, size_t /* idx in graph */>;
++using EtGlowInferenceOutputNames = std::vector<std::string>;
++
++// Information to construct kernel function state.
++struct EtGlowFuncState {
++  AllocateFunc allocate_func = nullptr;
++  DestroyFunc release_func = nullptr;
++  AllocatorHandle allocator = nullptr;
++  std::string node_name;
++  GlowAPI* etglow_api = nullptr;
++  GlowAPI::CompiledModel* compiled_model = nullptr;
++  std::string bundle_name;
++
++  EtGlowInferenceInputNames ordered_input_names;
++  EtGlowInferenceOutputNames ordered_output_names;
++  std::unordered_map<std::string, std::vector<int64_t>> ordered_output_dimensions;
++};
++
++// Logical device representation.
++class EtGlowExecutionProvider : public IExecutionProvider {
++ public:
++  EtGlowExecutionProvider(EtGlowExecutionProviderInfo info, std::unique_ptr<etsoc::GlowAPI> glow, EtRt_StreamsRegistry& streams_reg);
++  ~EtGlowExecutionProvider() override;
++
++  std::unique_ptr<IDataTransfer> GetDataTransfer() const override;
++  std::unique_ptr<profiling::EpProfiler> GetProfiler() override;
++
++  std::vector<std::unique_ptr<ComputeCapability>>
++  GetCapability(const GraphViewer& graph,
++                const IKernelLookup& /*kernel_lookup*/,
++                IResourceAccountant* /*resource_accountant*/) const override;
++
++  std::shared_ptr<KernelRegistry> GetKernelRegistry() const override;
++
++  int GetDeviceId() const override { return info_.device_id; }
++
++  ProviderOptions GetProviderOptions() const override {
++    return EtGlowExecutionProviderInfo::ToProviderOptions(info_);
++  }
++
++  common::Status OnSessionInitializationEnd() override {
++    if (info_.fail_if_cannot_run_whole_graph && !whole_graph_runs_with_glow_) {
++      return {common::ONNXRUNTIME, common::NOT_IMPLEMENTED,
++              "ETGLOW EP cannot run the whole graph. (as instructed) Failing execution on purpose."};
++    }
++    return Status::OK();
++  }
++
++  common::Status Compile(const std::vector<FusedNodeAndGraph>& fused_nodes_and_graphs,
++                         std::vector<NodeComputeInfo>& node_compute_funcs) override;
++
++  common::Status Sync() const override;
++  common::Status OnRunStart(const onnxruntime::RunOptions& /*run_options*/) override;
++  common::Status OnRunEnd(bool sync_stream, const onnxruntime::RunOptions& /*run_options*/) override;
++
++  void RegisterStreamHandlers(IStreamCommandHandleRegistry& stream_handle_registry, AllocatorMap& allocators) const override;
++
++  static AllocatorPtr CreateEtGlowAllocator(OrtDevice::DeviceId device_id, size_t mem_limit, ArenaExtendStrategy arena_extend_strategy, rt::IRuntime* rt);
++  std::vector<AllocatorPtr> CreatePreferredAllocators() override;
++
++ private:
++  void InitEtGlowStateFromEnvVars();
++
++  std::vector<std::vector<NodeIndex>> GetSupportedNodes(const GraphViewer& graph_viewer) const;
++  std::unique_ptr<IndexedSubGraph> GetSubGraph(const std::vector<std::size_t>& group,
++                                               const GraphViewer& graph_viewer, int subgraph_index) const;
++
++  static void RegisterOperatorCoverage(const Node& node, bool supported, std::unordered_map<std::string, int>& all_nodes_count, std::unordered_map<std::string, int>& supported_nodes_count);
++  static void PrintOperatorCoverage(const std::unordered_map<std::string, int>& all_nodes_count, std::unordered_map<std::string, int>& supported_nodes_count);
++  static void PrintGraphInputs(const GraphViewer& graph);
++
++  void DoDumpSubgraph(const GraphViewer& graph_viewer, const std::string& subgraph_name, bool include_initializers = true, bool include_outer_scope_args = true) const;
++
++  // Gets the user-provided replacements for ONNX parametric shapes.
++  // Returns OK + a map of {input + replacement_value} or an error if the user didn't provide a value for a given shape.
++  using OrderedShapeValues = std::map<std::string, std::size_t, std::less<>>;
++  Status GetShapeValues(const GraphViewer& graph_viewer, OrderedShapeValues& dim_params) const;
++  static Status GetInputNames(const GraphViewer& graph_viewer, const Node& fused_node, EtGlowInferenceInputNames& input_names);
++  static Status GetOutputNamesAndShapes(const Node& fused_node, EtGlowInferenceOutputNames& output_names, std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, const OrderedShapeValues& output_dim_params);
++
++  // Gets compiled model from existing bundle or compiles the model from original ONNX
++  Status GetCompiledModel(const GraphViewer& graph_viewer, const std::string& fused_node_name, const fs::path& bundle_path, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result);
++  bool ShouldReuseCompiledModel(const fs::path& bundle_path) const;
++  static Status DoReuseCompiledModelFromBundle(const fs::path& bundle_path, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result);
++  Status SetDevicePlaceholders(GlowAPI::Model& glow_loaded_model) const;
++  Status DoCompile(const fs::path& bundle_path, const GraphViewer& graph_viewer, const std::string& fused_node_name, const OrderedShapeValues& input_dim_params, std::unique_ptr<GlowAPI::CompiledModel>& compilation_result);
++
++  bool ShouldExportBundle() const;
++  static void ExportBundle(const fs::path& from, const fs::path& to);
++
++  using InferenceInputDescriptors = std::unordered_map<std::string, const ort_etglow::OnnxInputTensorData>;
++  using InferenceOutputDescriptors = std::unordered_map<std::string, const ort_etglow::OnnxOutputTensorData>;
++  static Status GetInputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceInputNames& ordered_input_names, InferenceInputDescriptors& inputs);
++  static Status GetOutputTensorDescriptors(const Ort::KernelContext& ctx, const EtGlowInferenceOutputNames& ordered_output_names, const std::unordered_map<std::string, std::vector<int64_t>>& ordered_output_dimensions, InferenceOutputDescriptors& outputs);
++  Status SetDevicePlaceholderAddresses(GlowAPI::ExecutionBindings& execution_bindings, const InferenceInputDescriptors& inputs, const InferenceOutputDescriptors& outputs, const std::vector<std::string>& device_placeholders) const;
++  Status DoInference(GlowAPI& etglow_api, const GlowAPI::RegisteredModel& glow_reg_model, const InferenceInputDescriptors& inputs, InferenceOutputDescriptors&& outputs, const std::vector<std::string>& device_placeholders, rt::StreamId stream_id) const;
++  void addToProfilerThreadMap();
++
++  struct InferenceResult {
++    GlowAPI::InferenceCallId id;
++    GlowAPI::Error error;
++    GlowAPI::ExecutionBindings bindings;
++  };
++  struct InferenceInFlight {
++    GlowAPI::InferenceCallId id;
++    std::unique_ptr<std::promise<InferenceResult>> promise;
++    std::future<InferenceResult> future;
++    InferenceOutputDescriptors output_descriptors;
++    InferenceInFlight(GlowAPI::InferenceCallId id, std::unique_ptr<std::promise<InferenceResult>> promise, std::future<InferenceResult> f, InferenceOutputDescriptors d)
++        : id{id}, promise{std::move(promise)}, future{std::move(f)}, output_descriptors{std::move(d)} {}
++
++    Status Sync();
++  };
++  Status UnloadModels();
++
++  EtGlowExecutionProviderInfo info_;
++  std::unique_ptr<etsoc::GlowAPI> glow_api_;
++  EtRt_StreamsRegistry& streams_reg_;
++
++  EtGlowCompiledModelsRegistry compiled_models_reg_;
++  EtGlowLoadedModelsRegistry loaded_models_reg_;
++  std::unordered_set<std::string> loaded_models_;
++
++  mutable bool whole_graph_runs_with_glow_ = true;
++
++  bool use_bundles_ = true;
++  bool save_bundles_ = true;
++  bool debug_logs_ = false;
++
++  EtGlowOpManager op_mgr_;
++  std::unique_ptr<ModelMetadefIdGenerator> metadef_id_generator_;
++
++  std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
++  // Renaming map to unify the thread ids across ORT, glow, runtime and neuralizer profile events.
++  std::unordered_map<std::thread::id, unsigned int> profiler_thread_map_;
++  std::mutex thread_map_mutex_;
++
++  class PerThreadContext final {
++   public:
++    PerThreadContext() = default;
++    ~PerThreadContext() {
++      ORT_IGNORE_RETURN_VALUE(SynchronizeInferences());
++    };
++    ORT_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(PerThreadContext);
++
++    void SetComputeStream(rt::StreamId stream) { compute_stream_ = stream; }
++    std::optional<rt::StreamId> GetComputeStream() const { return compute_stream_; }
++
++    void AddInferenceInFlight(InferenceInFlight&& iif) {
++      inferences_in_flight_.emplace_back(std::move(iif));
++    }
++
++    Status SynchronizeInferences();
++
++   private:
++    std::optional<rt::StreamId> compute_stream_;
++    std::list<InferenceInFlight> inferences_in_flight_;
++  };
++
++  using PerThreadContextMap = std::unordered_map<const EtGlowExecutionProvider*, std::weak_ptr<PerThreadContext>>;
++  // thread local PerThreadContext cache
++
++  struct ContextCacheHolder {
++    ContextCacheHolder() {
++      // Keep a weak pointer to the object, if the weak pointer can be locked, then the shared pointer is still around, so we can reset it
++      RunOnUnload([this, weak_p_ = std::weak_ptr<PerThreadContextMap>(p)] {
++        if (auto lock = weak_p_.lock())
++          p.reset();
++      });
++    }
++    std::shared_ptr<PerThreadContextMap> p = std::make_shared<PerThreadContextMap>();
++  };
++
++  static const std::shared_ptr<PerThreadContextMap>& PerThreadContextCache() {
++    thread_local const ContextCacheHolder per_thread_context_cache;
++    return per_thread_context_cache.p;
++  }
++
++  struct PerThreadContextState {
++    // contexts that are currently active
++    std::set<std::shared_ptr<PerThreadContext>, std::owner_less<std::shared_ptr<PerThreadContext>>> active_contexts;
++    // contexts available for reuse
++    std::vector<std::shared_ptr<PerThreadContext>> retired_context_pool;
++    // weak references to thread local caches from which this EtGlowExecutionProvider instance's entry should be removed
++    // upon destruction
++    std::set<std::weak_ptr<PerThreadContextMap>, std::owner_less<std::weak_ptr<PerThreadContextMap>>>
++        caches_to_update_on_destruction;
++    // synchronizes access to PerThreadContextState members
++    std::mutex mutex;
++  };
++
++  // The execution provider maintains the PerThreadContexts in this structure.
++  // Synchronization is required to update the contained structures.
++  // On the other hand, access to an individual PerThreadContext is assumed to be from a single thread at a time,
++  // so synchronization is not required for that.
++  mutable PerThreadContextState context_state_;
++
++  PerThreadContext& GetPerThreadContext() const;
++  void ReleasePerThreadContext() const;
++};
++
++}  // namespace onnxruntime
