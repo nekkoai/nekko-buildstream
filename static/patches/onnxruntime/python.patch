@@ -42,7 +42,7 @@ index 5742b4db42..6fc194dfdf 100644
 +
 +const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetEtGlowToHostMemCpyFunction() {
 +  static std::unordered_map<OrtDevice::DeviceType, MemCpyFunc> map{
-+      {OrtDevice::GPU, EtGlowToCpuMemCpy}};
++      {OrtDevice::ETGLOW, EtGlowToCpuMemCpy}};
 +  return &map;
 +}
 +

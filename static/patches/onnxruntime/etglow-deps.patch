@@ -790,3 +790,16 @@ index adade482f6..832aacb3ea 100644
  
    struct MemType {
      // Pre-defined memory types.
+diff --git a/onnxruntime/core/session/inference_session.cc b/onnxruntime/core/session/inference_session.cc
+index a190389..9d96c7b 100644
+--- a/onnxruntime/core/session/inference_session.cc
++++ b/onnxruntime/core/session/inference_session.cc
+@@ -3117,6 +3117,8 @@ common::Status InferenceSession::ValidateAndParseShrinkArenaString(const std::st
+           device_type = OrtDevice::CPU;
+         } else if (device_id_component == "gpu") {
+           device_type = OrtDevice::GPU;
++        } else if (device_id_component == "et") {
++          device_type = OrtDevice::ETGLOW;
+         } else {
+           return ORT_MAKE_STATUS(ONNXRUNTIME, INVALID_ARGUMENT, "Unsupported device specified in the memory arena shrink list: ",
+                                  device_id_component);
