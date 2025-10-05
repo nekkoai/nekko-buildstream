@@ -28,18 +28,19 @@ environment:
   CMAKE_ARGS: >-
     -D CMAKE_INSTALL_PREFIX:PATH="%{prefix}"
     -D CMAKE_INSTALL_LIBDIR:PATH="%{lib}"
-    -D BUILD_TESTS=OFF
-    -D CMAKE_POSITION_INDEPENDENT_CODE=ON
-    -D BUILD_ONNX_PYTHON=on
-    -D ONNX_DISABLE_STATIC_REGISTRATION=on
-    -D ONNX_USE_PROTOBUF_SHARED_LIBS=on
     -D BUILD_SHARED_LIBS=on
+    -D CMAKE_POSITION_INDEPENDENT_CODE=ON
+    -D ONNX_BUILD_TESTS=OFF
+    -D ONNX_BUILD_PYTHON=on
+    -D ONNX_DISABLE_STATIC_REGISTRATION=on
+    -D ONNX_BUILD_CUSTOM_PROTOBUF=off
+    -D ONNX_USE_PROTOBUF_SHARED_LIBS=on
     -D Protobuf_PROTOC_EXECUTABLE=/usr/bin/protoc
 
 sources:
 - kind: git_repo
   url: github:onnx/onnx
-  track: v1.17.0
-  ref: v1.17.0-0-gb8baa8446686496da4cc8fda09f2b6fe65c2a02c
-- kind: patch
-  path: static/patches/onnx-python-cmake.patch
+  track: v1.18.0
+  ref: v1.18.0-0-ge709452ef2bbc1d113faf678c24e6d3467696e83
+- kind: patch_queue
+  path: static/patches/onnx
