@@ -15,7 +15,7 @@ build-depends:
 - deps/nlohmann-json.bst
 - deps/blingfire.bst
 - deps/pybind.bst
-- legacy/onnxruntime.bst
+- deps/onnxruntime.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/protobuf.bst
@@ -30,7 +30,7 @@ depends:
 - deps/nlohmann-json.bst
 - deps/blingfire.bst
 - deps/pybind.bst
-- legacy/onnxruntime.bst
+- deps/onnxruntime.bst
 
 variables:
   build-args: "--no-isolation --wheel --outdir %{dist-dir} -C ortx-user-option=ort_pkg_dir=%{prefix}"

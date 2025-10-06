@@ -4,13 +4,16 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
-- base/freedesktop-sdk.bst:components/protobuf.bst
-- base/freedesktop-sdk.bst:components/python3-protobuf.bst
 - deps/boost.bst
 - deps/pybind.bst
 
 depends:
+- base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/python3-protobuf.bst
+- deps/python3-ml_dtypes.bst
+
+runtime-depends:
+- base/freedesktop-sdk.bst:components/python3-typing-extensions.bst
 
 #variables:
 #  cmake-local: >-
@@ -28,18 +31,23 @@ environment:
   CMAKE_ARGS: >-
     -D CMAKE_INSTALL_PREFIX:PATH="%{prefix}"
     -D CMAKE_INSTALL_LIBDIR:PATH="%{lib}"
-    -D BUILD_TESTS=OFF
-    -D CMAKE_POSITION_INDEPENDENT_CODE=ON
-    -D BUILD_ONNX_PYTHON=on
-    -D ONNX_DISABLE_STATIC_REGISTRATION=on
-    -D ONNX_USE_PROTOBUF_SHARED_LIBS=on
     -D BUILD_SHARED_LIBS=on
+    -D CMAKE_POSITION_INDEPENDENT_CODE=ON
+    -D ONNX_BUILD_TESTS=OFF
+    -D ONNX_BUILD_PYTHON=on
+    -D ONNX_DISABLE_STATIC_REGISTRATION=on
+    -D ONNX_BUILD_CUSTOM_PROTOBUF=off
+    -D ONNX_USE_PROTOBUF_SHARED_LIBS=on
+    -D ONNX_BUILD_TESTS=OFF
     -D Protobuf_PROTOC_EXECUTABLE=/usr/bin/protoc
 
+# 1.19.1 has a cmake fix that prevents compiling everything twice, so bring that in.
+#track: v1.19.0
+#ref: 57b9c6a4f6eebb09ae1b34cfb632078518f72832
 sources:
-- kind: git_repo
+- kind: git
   url: github:onnx/onnx
-  track: v1.17.0
-  ref: v1.17.0-0-gb8baa8446686496da4cc8fda09f2b6fe65c2a02c
-- kind: patch
-  path: static/patches/onnx-python-cmake.patch
+  track: rel-1.19.1
+  ref: e11938a232432630e1ff8904bb80091af6823021
+- kind: patch_queue
+  path: static/patches/onnx

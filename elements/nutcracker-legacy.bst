@@ -3,10 +3,7 @@ kind: stack
 depends:
 - platform/platformsw-base.bst
 - platform/device-management-application.bst
-- legacy/llvm.bst
-- legacy/neuralizer.bst
-- legacy/glow.bst
-- legacy/onnxruntime.bst
+- legacy/onnxruntime-etglow.bst
 # Essential programs
 - base/freedesktop-sdk.bst:public-stacks/runtime-minimal.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
