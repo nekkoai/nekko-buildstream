@@ -1,8 +1,8 @@
 diff --git a/onnx/defs/schema.h b/onnx/defs/schema.h
-index acf3aac7..5bef6e72 100644
+index 7e9bc27f..599007d2 100644
 --- a/onnx/defs/schema.h
 +++ b/onnx/defs/schema.h
-@@ -980,10 +980,7 @@ class OpSchemaRegistry final : public ISchemaRegistry {
+@@ -999,10 +999,7 @@ class OpSchemaRegistry final : public ISchemaRegistry {
    class OpSchemaRegisterOnce final {
     public:
      // Export to cpp custom register macro
@@ -13,4 +13,4 @@ index acf3aac7..5bef6e72 100644
 +    OpSchemaRegisterOnce(OpSchema op_schema, int opset_version_to_load = 0, bool fail_duplicate_schema = true) {
        OpSchemaRegisterNoExcept(std::move(op_schema), opset_version_to_load, fail_duplicate_schema);
      }
-     static void
+     ONNX_API static void

@@ -1,0 +1,26 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 850431f..6dccf91 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -52,7 +52,7 @@ requires = [
+     # We build against the most recent supported NumPy 2.0 release;
+     # see https://github.com/numpy/numpy/issues/27265
+     "numpy~=2.0",
+-    "setuptools~=80.8.0",
++    "setuptools>=80.8.0",
+ ]
+ build-backend = "setuptools.build_meta"
+ 
+diff --git a/setup.py b/setup.py
+index 446cee8..a12c769 100644
+--- a/setup.py
++++ b/setup.py
+@@ -66,7 +66,7 @@ setup(
+                 "ml_dtypes/_src/numpy.cc",
+             ],
+             include_dirs=[
+-                "third_party/eigen",
++                "/usr/include/eigen3",
+                 ".",
+                 np.get_include(),
+             ],
