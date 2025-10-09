@@ -43,6 +43,10 @@ config:
     (cd %{build-dir} && python ../setup.py install --root=%{install-root} --prefix=%{prefix})
   - |
     patchelf --clear-execstack %{install-root}%{lib}/python*/site-packages/onnxruntime/capi/*.so
+  - |
+    patchelf --clear-execstack %{install-root}%{lib}/python*/site-packages/onnxruntime/capi/libonnxruntime.so.*
+  - |
+    patchelf --clear-execstack %{install-root}%{lib}/libonnxruntime.so.*
 
 #  track: v1.19.2
 #  ref: v1.19.2-0-gffceed9d44f2f3efb9dd69fa75fea51163c91d91
