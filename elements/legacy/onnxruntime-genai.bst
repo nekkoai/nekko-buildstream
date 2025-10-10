@@ -11,6 +11,9 @@ depends:
 - legacy/onnxruntime.bst
 - legacy/onnxruntime-extensions.bst
 
+runtime-depends:
+- deps/python3-onnx_ir.bst
+
 variables:
   (@):
   - include/_private/legacy-toolchain.yml

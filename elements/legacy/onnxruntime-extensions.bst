@@ -21,7 +21,7 @@ depends:
 - legacy/onnxruntime.bst
 
 variables:
-  build-args: "--no-isolation --wheel --outdir %{dist-dir} -C ortx-user-option=ort_pkg_dir=%{prefix},pp-api"
+  build-args: "--no-isolation --wheel --outdir %{dist-dir} -C ortx-user-option=ort_pkg_dir=%{prefix}"
   (@):
   - include/_private/legacy-toolchain.yml
 
