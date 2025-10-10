@@ -1,0 +1,1 @@
+set debug-file-directory /usr/lib/debug:/opt/nekko/legacy/lib/debug:/opt/nekko/platform/lib/debug

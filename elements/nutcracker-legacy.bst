@@ -22,6 +22,7 @@ depends:
 # friendly items for usability and debugging below
 - legacy/python3-site-nekko.bst
 - legacy/ldconfig-nekko.bst
+- legacy/gdbinit-nekko.bst
 - base/freedesktop-sdk.bst:integration/ldconfig.bst
 - base/freedesktop-sdk.bst:integration/app-debug-link.bst
 - base/freedesktop-sdk.bst:integration/extra-fs.bst
