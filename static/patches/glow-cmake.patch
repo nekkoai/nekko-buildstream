@@ -1,7 +1,7 @@
-diff --git a/glow/CMakeLists.txt b/glow/CMakeLists.txt
+diff --git a/CMakeLists.txt b/CMakeLists.txt
 index a1fc09ac..e7982ef2 100644
---- a/glow/CMakeLists.txt
-+++ b/glow/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
 @@ -97,7 +97,6 @@ if(GLOW_USE_LLD)
  endif()
  
@@ -67,10 +67,10 @@ index a1fc09ac..e7982ef2 100644
  else()
    list(APPEND LLVM_CORE_LIBS LLVMCore)
    list(APPEND LLVM_IR_LIBS
-diff --git a/glow/cmake/modules/Gflags.cmake b/glow/cmake/modules/Gflags.cmake
+diff --git a/cmake/modules/Gflags.cmake b/cmake/modules/Gflags.cmake
 deleted file mode 100644
 index b1827ae8..00000000
---- a/glow/cmake/modules/Gflags.cmake
+--- a/cmake/modules/Gflags.cmake
 +++ /dev/null
 @@ -1,91 +0,0 @@
 -# ---[ gflags
@@ -164,10 +164,10 @@ index b1827ae8..00000000
 -      "give you more info.")
 -endif()
 -
-diff --git a/glow/glowConfig.cmake.in b/glow/glowConfig.cmake.in
+diff --git a/glowConfig.cmake.in b/glowConfig.cmake.in
 index 5ff3bff8..89989379 100644
---- a/glow/glowConfig.cmake.in
-+++ b/glow/glowConfig.cmake.in
+--- a/glowConfig.cmake.in
++++ b/glowConfig.cmake.in
 @@ -24,8 +24,8 @@ if (GLOW_WITH_ETSOC)
      find_dependency(cereal REQUIRED)
      find_dependency(fmt REQUIRED)
@@ -179,10 +179,10 @@ index 5ff3bff8..89989379 100644
      find_dependency(deviceLayer REQUIRED)
      @ETSOC2_SYSEMU_CMAKE_DEPENDENCY@
  
-diff --git a/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h b/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h
+diff --git a/include/glow/LLVMIRCodeGen/JITFilePrinter.h b/include/glow/LLVMIRCodeGen/JITFilePrinter.h
 index e0e3fc9b..034c1bd0 100644
---- a/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h
-+++ b/glow/include/glow/LLVMIRCodeGen/JITFilePrinter.h
+--- a/include/glow/LLVMIRCodeGen/JITFilePrinter.h
++++ b/include/glow/LLVMIRCodeGen/JITFilePrinter.h
 @@ -21,6 +21,7 @@
  
  #include <condition_variable>
@@ -191,10 +191,10 @@ index e0e3fc9b..034c1bd0 100644
  #include <unordered_map>
  
  /// Structure implements file I/O related functions. Currently,
-diff --git a/glow/lib/Backends/ETSOC/ETSOC.cpp b/glow/lib/Backends/ETSOC/ETSOC.cpp
+diff --git a/lib/Backends/ETSOC/ETSOC.cpp b/lib/Backends/ETSOC/ETSOC.cpp
 index 64b2bde2..6b7d6d82 100644
---- a/glow/lib/Backends/ETSOC/ETSOC.cpp
-+++ b/glow/lib/Backends/ETSOC/ETSOC.cpp
+--- a/lib/Backends/ETSOC/ETSOC.cpp
++++ b/lib/Backends/ETSOC/ETSOC.cpp
 @@ -91,11 +91,11 @@ Error setETSOCBackendInternalParameters(
    static constexpr auto debugGlowOnlyParamName = "debug-glow-only";
    if (const auto it = parameters.find(debugGlowParamName);
@@ -218,10 +218,10 @@ index 64b2bde2..6b7d6d82 100644
      }
  
      if (paramName == "num-devices") {
-diff --git a/glow/lib/Backends/ETSOC/ETSOCFunction.cpp b/glow/lib/Backends/ETSOC/ETSOCFunction.cpp
+diff --git a/lib/Backends/ETSOC/ETSOCFunction.cpp b/lib/Backends/ETSOC/ETSOCFunction.cpp
 index a06151e0..9c17d948 100644
---- a/glow/lib/Backends/ETSOC/ETSOCFunction.cpp
-+++ b/glow/lib/Backends/ETSOC/ETSOCFunction.cpp
+--- a/lib/Backends/ETSOC/ETSOCFunction.cpp
++++ b/lib/Backends/ETSOC/ETSOCFunction.cpp
 @@ -694,7 +694,7 @@ bool ETSOCFunction::bundleConstants(neura::NetId netId) {
          neura::HostPtr hostPtr{(char *)runtimeBundle_.getConstants() +
                                 symbolInfo.offset};
@@ -231,10 +231,10 @@ index a06151e0..9c17d948 100644
          } catch (const neura::Exception &e) {
            LOG(FATAL) << "[ETSOCFunction] setConstantHostPointer returned an "
                          "error. Error: "
-diff --git a/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp b/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
+diff --git a/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp b/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
 index 605fe683..95474af4 100644
---- a/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
-+++ b/glow/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
+--- a/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
++++ b/lib/Backends/ETSOC/ETSOCNetworkLoader.cpp
 @@ -138,7 +138,7 @@ void ETSOCNetworkLoader::registerTensor(neura::NetId netId,
    DEBUG_GLOW(LOG(INFO) << "registerTensor [" << toNumber(netId) << ","
                         << name.str() << "] onDev: " << onDevice << "\n");
@@ -307,10 +307,10 @@ index 605fe683..95474af4 100644
                                      instId);
    } catch (const neura::Exception &e) {
      DEBUG_GLOW(LOG(ERROR) << "Cannot register instruction. Error: " << e.what()
-diff --git a/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp b/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp
+diff --git a/lib/Backends/ETSOC/utils/UnitTestGen.cpp b/lib/Backends/ETSOC/utils/UnitTestGen.cpp
 index 9a2d089a..662a613a 100644
---- a/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp
-+++ b/glow/lib/Backends/ETSOC/utils/UnitTestGen.cpp
+--- a/lib/Backends/ETSOC/utils/UnitTestGen.cpp
++++ b/lib/Backends/ETSOC/utils/UnitTestGen.cpp
 @@ -702,7 +702,7 @@ void UnitTestGen::writeUTest(const Instruction &I, const std::string &bTest,
    std::cout << "[dumpUnittest] " << iInfo << "\n";
  
@@ -320,10 +320,10 @@ index 9a2d089a..662a613a 100644
  
    // Header of the test
    addLine("TEST_P(Operator, " + std::string(I.getName()) + ") {");
-diff --git a/glow/lib/Backends/ETSOC/utils/tracedump.cpp b/glow/lib/Backends/ETSOC/utils/tracedump.cpp
+diff --git a/lib/Backends/ETSOC/utils/tracedump.cpp b/lib/Backends/ETSOC/utils/tracedump.cpp
 index 3ae7abf9..dae10a96 100644
---- a/glow/lib/Backends/ETSOC/utils/tracedump.cpp
-+++ b/glow/lib/Backends/ETSOC/utils/tracedump.cpp
+--- a/lib/Backends/ETSOC/utils/tracedump.cpp
++++ b/lib/Backends/ETSOC/utils/tracedump.cpp
 @@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
    std::istream &in = [&]() -> std::istream & {
      if (input_filename.empty()) {
@@ -333,10 +333,10 @@ index 3ae7abf9..dae10a96 100644
        fin.open(input_filename, std::ios::binary);
        if (!fin.good()) {
          std::cerr << "error: cannot open file: " << input_filename << std::endl;
-diff --git a/glow/lib/Base/Tensor.cpp b/glow/lib/Base/Tensor.cpp
+diff --git a/lib/Base/Tensor.cpp b/lib/Base/Tensor.cpp
 index 94ce8bc5..c6c0c3ea 100644
---- a/glow/lib/Base/Tensor.cpp
-+++ b/glow/lib/Base/Tensor.cpp
+--- a/lib/Base/Tensor.cpp
++++ b/lib/Base/Tensor.cpp
 @@ -192,7 +192,7 @@ template <class ElemTy>
  static void dumpBinaryGenericImpl(Handle<ElemTy> handle,
                                    llvm::StringRef fileName, float scale,
@@ -346,10 +346,10 @@ index 94ce8bc5..c6c0c3ea 100644
    for (size_t k = 0; k < handle.size(); ++k) {
      double value = ((double)handle.raw(k) - offset) * scale;
      file.write((char *)&value, sizeof(double));
-diff --git a/glow/lib/GlowAPI/etsoc.cpp b/glow/lib/GlowAPI/etsoc.cpp
+diff --git a/lib/GlowAPI/etsoc.cpp b/lib/GlowAPI/etsoc.cpp
 index 1342bb79..3acda1d3 100644
---- a/glow/lib/GlowAPI/etsoc.cpp
-+++ b/glow/lib/GlowAPI/etsoc.cpp
+--- a/lib/GlowAPI/etsoc.cpp
++++ b/lib/GlowAPI/etsoc.cpp
 @@ -423,12 +423,14 @@ auto loadJSONFile(std::filesystem::path const &filepath)
      -> GlowAPI::Expected<nlohmann::json> {
    // Helper class for handling JSON parsing errors
@@ -367,10 +367,10 @@ index 1342bb79..3acda1d3 100644
                j, /*allow_exceptions:*/ false) {}
  
      bool parse_error(std::size_t position, std::string const &,
-diff --git a/glow/lib/Importer/CMakeLists.txt b/glow/lib/Importer/CMakeLists.txt
+diff --git a/lib/Importer/CMakeLists.txt b/lib/Importer/CMakeLists.txt
 index 80e985c4..9fa71967 100644
---- a/glow/lib/Importer/CMakeLists.txt
-+++ b/glow/lib/Importer/CMakeLists.txt
+--- a/lib/Importer/CMakeLists.txt
++++ b/lib/Importer/CMakeLists.txt
 @@ -3,16 +3,16 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
  
  add_definitions(-DGOOGLE_PROTOBUF_NO_RTTI)
@@ -397,10 +397,10 @@ index 80e985c4..9fa71967 100644
  PROTOBUF_GENERATE_CPP(CAFFE_SRCS CAFFE_HDRS caffe2.proto)
  
  # NB: We need to copy the *.pb.h files to appropriately-prefixed paths to
-diff --git a/glow/lib/Importer/ONNXModelLoader.cpp b/glow/lib/Importer/ONNXModelLoader.cpp
+diff --git a/lib/Importer/ONNXModelLoader.cpp b/lib/Importer/ONNXModelLoader.cpp
 index abc920de..17afde3c 100755
---- a/glow/lib/Importer/ONNXModelLoader.cpp
-+++ b/glow/lib/Importer/ONNXModelLoader.cpp
+--- a/lib/Importer/ONNXModelLoader.cpp
++++ b/lib/Importer/ONNXModelLoader.cpp
 @@ -54,6 +54,8 @@
  #include <llvm/Support/ErrorHandling.h>                    // for llvm_u...
  #include <llvm/Support/raw_ostream.h>                      // for errs
@@ -430,10 +430,10 @@ index abc920de..17afde3c 100755
      }
    };
  
-diff --git a/glow/lib/PassManager/PassManager.cpp b/glow/lib/PassManager/PassManager.cpp
+diff --git a/lib/PassManager/PassManager.cpp b/lib/PassManager/PassManager.cpp
 index d6711c97..042e318d 100644
---- a/glow/lib/PassManager/PassManager.cpp
-+++ b/glow/lib/PassManager/PassManager.cpp
+--- a/lib/PassManager/PassManager.cpp
++++ b/lib/PassManager/PassManager.cpp
 @@ -231,7 +231,7 @@ bool PassManagerBase::run(IRContainer *C, const CompilationContext &cctx) {
      case ConvergenceMode::UntilFixedPoint:
        while (runPassWithConfig(passConfig, C, cctx)) {
@@ -443,10 +443,10 @@ index d6711c97..042e318d 100644
              << "Warning: " << getNameOfPass(passConfig).str()
              << " Pass applied another 100 iterations without reaching fixed "
                 "point";
-diff --git a/glow/lib/Runtime/CMakeLists.txt b/glow/lib/Runtime/CMakeLists.txt
+diff --git a/lib/Runtime/CMakeLists.txt b/lib/Runtime/CMakeLists.txt
 index edce56cd..4d80e4cc 100644
---- a/glow/lib/Runtime/CMakeLists.txt
-+++ b/glow/lib/Runtime/CMakeLists.txt
+--- a/lib/Runtime/CMakeLists.txt
++++ b/lib/Runtime/CMakeLists.txt
 @@ -13,6 +13,8 @@ target_link_libraries(Runtime
          glow::Support
          ${LLVM_SUPPORT_LIBS}
@@ -456,10 +456,10 @@ index edce56cd..4d80e4cc 100644
      PRIVATE
          glow::Flags
          glow::Graph
-diff --git a/glow/lib/Runtime/Executor/CMakeLists.txt b/glow/lib/Runtime/Executor/CMakeLists.txt
+diff --git a/lib/Runtime/Executor/CMakeLists.txt b/lib/Runtime/Executor/CMakeLists.txt
 index 80eb69de..e37ea878 100644
---- a/glow/lib/Runtime/Executor/CMakeLists.txt
-+++ b/glow/lib/Runtime/Executor/CMakeLists.txt
+--- a/lib/Runtime/Executor/CMakeLists.txt
++++ b/lib/Runtime/Executor/CMakeLists.txt
 @@ -8,13 +8,13 @@ target_link_libraries(Executor
          glow::Graph
          glow::ExecutionContext

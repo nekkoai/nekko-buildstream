@@ -1,7 +1,7 @@
-diff --git a/device/dnn-library/include/LibTypes.h b/device/dnn-library/include/LibTypes.h
+diff --git a/include/LibTypes.h b/include/LibTypes.h
 index 12e91a6..500f4d0 100644
---- a/device/dnn-library/include/LibTypes.h
-+++ b/device/dnn-library/include/LibTypes.h
+--- a/include/LibTypes.h
++++ b/include/LibTypes.h
 @@ -15,6 +15,7 @@
  #include "Compiler.h"
  #include <array>
@@ -10,10 +10,10 @@ index 12e91a6..500f4d0 100644
  
  #define INLINE_ATTR __attribute__((always_inline)) inline
  
-diff --git a/device/dnn-library/include/internal/0_filterMask.h b/device/dnn-library/include/internal/0_filterMask.h
+diff --git a/include/internal/0_filterMask.h b/include/internal/0_filterMask.h
 index 3677301..d404248 100644
---- a/device/dnn-library/include/internal/0_filterMask.h
-+++ b/device/dnn-library/include/internal/0_filterMask.h
+--- a/include/internal/0_filterMask.h
++++ b/include/internal/0_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_0_FILTERMASK_H_
  
@@ -22,10 +22,10 @@ index 3677301..d404248 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_0_filterMask__amp1_21__amp2_26__bw1_10__bw2_5__lim1_37__lim3_44 = {
-diff --git a/device/dnn-library/include/internal/1_filterMask.h b/device/dnn-library/include/internal/1_filterMask.h
+diff --git a/include/internal/1_filterMask.h b/include/internal/1_filterMask.h
 index 32a7409..732218e 100644
---- a/device/dnn-library/include/internal/1_filterMask.h
-+++ b/device/dnn-library/include/internal/1_filterMask.h
+--- a/include/internal/1_filterMask.h
++++ b/include/internal/1_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_1_FILTERMASK_H_
  
@@ -34,10 +34,10 @@ index 32a7409..732218e 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_1_filterMask__amp1_24__amp2_67__bw1_9__bw2_3__lim1_65__lim3_57 = {
-diff --git a/device/dnn-library/include/internal/2_filterMask.h b/device/dnn-library/include/internal/2_filterMask.h
+diff --git a/include/internal/2_filterMask.h b/include/internal/2_filterMask.h
 index 70905fb..2d96b3f 100644
---- a/device/dnn-library/include/internal/2_filterMask.h
-+++ b/device/dnn-library/include/internal/2_filterMask.h
+--- a/include/internal/2_filterMask.h
++++ b/include/internal/2_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_2_FILTERMASK_H_
  
@@ -46,10 +46,10 @@ index 70905fb..2d96b3f 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_2_filterMask__amp1_30__amp2_54__bw1_8__bw2_4__lim1_86__lim3_43 = {
-diff --git a/device/dnn-library/include/internal/3_filterMask.h b/device/dnn-library/include/internal/3_filterMask.h
+diff --git a/include/internal/3_filterMask.h b/include/internal/3_filterMask.h
 index e975582..66ae852 100644
---- a/device/dnn-library/include/internal/3_filterMask.h
-+++ b/device/dnn-library/include/internal/3_filterMask.h
+--- a/include/internal/3_filterMask.h
++++ b/include/internal/3_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_3_FILTERMASK_H_
  
@@ -58,10 +58,10 @@ index e975582..66ae852 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_3_filterMask__amp1_41__amp2_66__bw1_8__bw2_3__lim1_87__lim3_65 = {
-diff --git a/device/dnn-library/include/internal/4_filterMask.h b/device/dnn-library/include/internal/4_filterMask.h
+diff --git a/include/internal/4_filterMask.h b/include/internal/4_filterMask.h
 index 223fc9d..707c0a6 100644
---- a/device/dnn-library/include/internal/4_filterMask.h
-+++ b/device/dnn-library/include/internal/4_filterMask.h
+--- a/include/internal/4_filterMask.h
++++ b/include/internal/4_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_4_FILTERMASK_H_
  
@@ -70,10 +70,10 @@ index 223fc9d..707c0a6 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_4_filterMask__amp1_45__amp2_75__bw1_8__bw2_4__lim1_96__lim3_31 = {
-diff --git a/device/dnn-library/include/internal/5_filterMask.h b/device/dnn-library/include/internal/5_filterMask.h
+diff --git a/include/internal/5_filterMask.h b/include/internal/5_filterMask.h
 index 183f19a..c0219b1 100644
---- a/device/dnn-library/include/internal/5_filterMask.h
-+++ b/device/dnn-library/include/internal/5_filterMask.h
+--- a/include/internal/5_filterMask.h
++++ b/include/internal/5_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_5_FILTERMASK_H_
  
@@ -82,10 +82,10 @@ index 183f19a..c0219b1 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_5_filterMask__amp1_54__amp2_70__bw1_10__bw2_6__lim1_37__lim3_47 = {
-diff --git a/device/dnn-library/include/internal/6_filterMask.h b/device/dnn-library/include/internal/6_filterMask.h
+diff --git a/include/internal/6_filterMask.h b/include/internal/6_filterMask.h
 index f562afb..f5d1979 100644
---- a/device/dnn-library/include/internal/6_filterMask.h
-+++ b/device/dnn-library/include/internal/6_filterMask.h
+--- a/include/internal/6_filterMask.h
++++ b/include/internal/6_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_6_FILTERMASK_H_
  
@@ -94,10 +94,10 @@ index f562afb..f5d1979 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_6_filterMask__amp1_55__amp2_55__bw1_23__bw2_14__lim1_80__lim3_35 = {
-diff --git a/device/dnn-library/include/internal/7_filterMask.h b/device/dnn-library/include/internal/7_filterMask.h
+diff --git a/include/internal/7_filterMask.h b/include/internal/7_filterMask.h
 index 2f99e85..00e3481 100644
---- a/device/dnn-library/include/internal/7_filterMask.h
-+++ b/device/dnn-library/include/internal/7_filterMask.h
+--- a/include/internal/7_filterMask.h
++++ b/include/internal/7_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_7_FILTERMASK_H_
  
@@ -106,10 +106,10 @@ index 2f99e85..00e3481 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_7_filterMask__amp1_66__amp2_43__bw1_9__bw2_4__lim1_87__lim3_38 = {
-diff --git a/device/dnn-library/include/internal/8_filterMask.h b/device/dnn-library/include/internal/8_filterMask.h
+diff --git a/include/internal/8_filterMask.h b/include/internal/8_filterMask.h
 index ca26763..3cc2fd8 100644
---- a/device/dnn-library/include/internal/8_filterMask.h
-+++ b/device/dnn-library/include/internal/8_filterMask.h
+--- a/include/internal/8_filterMask.h
++++ b/include/internal/8_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_8_FILTERMASK_H_
  
@@ -118,10 +118,10 @@ index ca26763..3cc2fd8 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_8_filterMask__amp1_66__amp2_71__bw1_8__bw2_10__lim1_36__lim3_89 = {
-diff --git a/device/dnn-library/include/internal/9_filterMask.h b/device/dnn-library/include/internal/9_filterMask.h
+diff --git a/include/internal/9_filterMask.h b/include/internal/9_filterMask.h
 index 16002b0..7455ba5 100644
---- a/device/dnn-library/include/internal/9_filterMask.h
-+++ b/device/dnn-library/include/internal/9_filterMask.h
+--- a/include/internal/9_filterMask.h
++++ b/include/internal/9_filterMask.h
 @@ -14,6 +14,7 @@
  #define F_9_FILTERMASK_H_
  
@@ -130,3 +130,27 @@ index 16002b0..7455ba5 100644
  
  // clang-format off
  alignas(64) static constexpr std::array<uint8_t, (256*256)> f_9_filterMask__amp1_73__amp2_22__bw1_8__bw2_5__lim1_26__lim3_41 = {
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d2ea668..572dae5 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -227,12 +227,13 @@ target_compile_options(dnnlibraryDummyExecutable
+         -Werror=div-by-zero
+         -Werror=unused-but-set-parameter
+         -Werror=unused-but-set-variable
+-        -Werror=unused-parameter
+-        -Werror=unused-variable
+-        -Werror=float-conversion
+-        -Werror=double-promotion
+-        -Werror=cast-align
+-        -Werror=maybe-uninitialized
++        # Removed problematic -Werror flags for cross-compilation
++        #-Werror=unused-parameter
++        #-Werror=unused-variable
++        #-Werror=float-conversion
++        #-Werror=double-promotion
++        #-Werror=cast-align
++        #-Werror=maybe-uninitialized
+         -Werror=parentheses
+         -Werror=unused-local-typedefs
+         -Werror=sign-compare

@@ -1,7 +1,7 @@
-diff --git a/trace-utils/cmake/FindBackward.cmake b/trace-utils/cmake/FindBackward.cmake
+diff --git a/cmake/FindBackward.cmake b/cmake/FindBackward.cmake
 deleted file mode 100644
 index 71a4e819..00000000
---- a/trace-utils/cmake/FindBackward.cmake
+--- a/cmake/FindBackward.cmake
 +++ /dev/null
 @@ -1,25 +0,0 @@
 -# WHEN USING CONAN THIS SHOULD NOT BE USED
@@ -30,10 +30,10 @@ index 71a4e819..00000000
 -    endif()
 -endif()
 \ No newline at end of file
-diff --git a/trace-utils/cmake/Findcereal.cmake b/trace-utils/cmake/Findcereal.cmake
+diff --git a/cmake/Findcereal.cmake b/cmake/Findcereal.cmake
 deleted file mode 100644
 index a3d7cdd3..00000000
---- a/trace-utils/cmake/Findcereal.cmake
+--- a/cmake/Findcereal.cmake
 +++ /dev/null
 @@ -1,29 +0,0 @@
 -# WHEN USING CONAN THIS SHOULD NOT BE USED
@@ -65,10 +65,10 @@ index a3d7cdd3..00000000
 -        add_library(cereal::cereal ALIAS cereal)
 -    endif()
 -endif ()
-diff --git a/trace-utils/cmake/Findglog.cmake b/trace-utils/cmake/Findglog.cmake
+diff --git a/cmake/Findglog.cmake b/cmake/Findglog.cmake
 deleted file mode 100644
 index 3c1d8cfd..00000000
---- a/trace-utils/cmake/Findglog.cmake
+--- a/cmake/Findglog.cmake
 +++ /dev/null
 @@ -1,50 +0,0 @@
 -# - Try to find Glog
@@ -122,10 +122,10 @@ index 3c1d8cfd..00000000
 -    endif()
 -endif()
 \ No newline at end of file
-diff --git a/trace-utils/et-trace-utilsConfig.cmake.in b/trace-utils/et-trace-utilsConfig.cmake.in
+diff --git a/et-trace-utilsConfig.cmake.in b/et-trace-utilsConfig.cmake.in
 index 27fa39db..cffdafd5 100644
---- a/trace-utils/et-trace-utilsConfig.cmake.in
-+++ b/trace-utils/et-trace-utilsConfig.cmake.in
+--- a/et-trace-utilsConfig.cmake.in
++++ b/et-trace-utilsConfig.cmake.in
 @@ -15,21 +15,15 @@ find_dependency(nlohmann_json REQUIRED)
  find_dependency(glog REQUIRED)
  find_dependency(fmt REQUIRED)
@@ -155,10 +155,10 @@ index 27fa39db..cffdafd5 100644
  
  include(${CMAKE_CURRENT_LIST_DIR}/et-trace-utilsTargets.cmake)
 -check_required_components(et-trace-utils)
-diff --git a/trace-utils/include/et-trace-utils/support/frequency.h b/trace-utils/include/et-trace-utils/support/frequency.h
+diff --git a/include/et-trace-utils/support/frequency.h b/include/et-trace-utils/support/frequency.h
 index 0d5c7733..d87bd5bf 100644
---- a/trace-utils/include/et-trace-utils/support/frequency.h
-+++ b/trace-utils/include/et-trace-utils/support/frequency.h
+--- a/include/et-trace-utils/support/frequency.h
++++ b/include/et-trace-utils/support/frequency.h
 @@ -39,10 +39,6 @@ class Frequency {
  
  std::ostream& operator<<(std::ostream& os, Frequency f);
@@ -178,10 +178,10 @@ index 0d5c7733..d87bd5bf 100644
 +#if FMT_VERSION >= 90000
 +template <> struct fmt::formatter<et_tut::Frequency> : ostream_formatter {};
 +#endif
-diff --git a/trace-utils/include/et-trace-utils/thread_layout.h b/trace-utils/include/et-trace-utils/thread_layout.h
+diff --git a/include/et-trace-utils/thread_layout.h b/include/et-trace-utils/thread_layout.h
 index 105a1fec..d588cb58 100644
---- a/trace-utils/include/et-trace-utils/thread_layout.h
-+++ b/trace-utils/include/et-trace-utils/thread_layout.h
+--- a/include/et-trace-utils/thread_layout.h
++++ b/include/et-trace-utils/thread_layout.h
 @@ -93,8 +93,9 @@ class ThreadLayout {
  
  std::ostream& operator<<(std::ostream& os, ThreadLayout::Error err);
@@ -194,10 +194,10 @@ index 105a1fec..d588cb58 100644
  #endif
  
 -} // end namespace et_tut
-diff --git a/trace-utils/src/CMakeLists.txt b/trace-utils/src/CMakeLists.txt
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index 8bbf9e8a..e15e049c 100644
---- a/trace-utils/src/CMakeLists.txt
-+++ b/trace-utils/src/CMakeLists.txt
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
 @@ -15,31 +15,6 @@ add_subdirectory(perfetto)
  add_subdirectory(support)
  
@@ -260,10 +260,10 @@ index 8bbf9e8a..e15e049c 100644
 -endif()
 \ No newline at end of file
 +endif()
-diff --git a/trace-utils/src/cereal/cereal_evt_getters.cc b/trace-utils/src/cereal/cereal_evt_getters.cc
+diff --git a/src/cereal/cereal_evt_getters.cc b/src/cereal/cereal_evt_getters.cc
 index 8035a2cb..facee0e4 100644
---- a/trace-utils/src/cereal/cereal_evt_getters.cc
-+++ b/trace-utils/src/cereal/cereal_evt_getters.cc
+--- a/src/cereal/cereal_evt_getters.cc
++++ b/src/cereal/cereal_evt_getters.cc
 @@ -69,19 +69,19 @@ namespace detail {
  
  template <typename T>
@@ -345,10 +345,10 @@ index 8035a2cb..facee0e4 100644
        {"device_arch", argument.deviceArch_},
        {"frequency_Mhz", argument.frequency_},
        {"available_shires", argument.availableShires_},
-diff --git a/trace-utils/src/et_trace/txt_trace_sink.cc b/trace-utils/src/et_trace/txt_trace_sink.cc
+diff --git a/src/et_trace/txt_trace_sink.cc b/src/et_trace/txt_trace_sink.cc
 index 61383655..2831b27d 100644
---- a/trace-utils/src/et_trace/txt_trace_sink.cc
-+++ b/trace-utils/src/et_trace/txt_trace_sink.cc
+--- a/src/et_trace/txt_trace_sink.cc
++++ b/src/et_trace/txt_trace_sink.cc
 @@ -5,6 +5,10 @@
  #include <et-trace/layout.h>  // for trace_entry_header_t, trace_custom_event_t
  
@@ -391,10 +391,10 @@ index 61383655..2831b27d 100644
  
  namespace et_tut::et_trace {
  
-diff --git a/trace-utils/src/symbol_table.h b/trace-utils/src/symbol_table.h
+diff --git a/src/symbol_table.h b/src/symbol_table.h
 index 798534fc..5dd3ebf5 100644
---- a/trace-utils/src/symbol_table.h
-+++ b/trace-utils/src/symbol_table.h
+--- a/src/symbol_table.h
++++ b/src/symbol_table.h
 @@ -120,8 +120,9 @@ class SymbolTable {
  
  std::ostream& operator<<(std::ostream& os, SymbolTable::Error err);
@@ -407,10 +407,10 @@ index 798534fc..5dd3ebf5 100644
  #endif
  
 -} // end namespace et_tut
-diff --git a/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc b/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc
+diff --git a/tests/integration/cereal/cereal_evt_getters_test.cc b/tests/integration/cereal/cereal_evt_getters_test.cc
 index 658b217c..d1042507 100644
---- a/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc
-+++ b/trace-utils/tests/integration/cereal/cereal_evt_getters_test.cc
+--- a/tests/integration/cereal/cereal_evt_getters_test.cc
++++ b/tests/integration/cereal/cereal_evt_getters_test.cc
 @@ -232,7 +232,7 @@ TEST(get_args, should_process_runtime_events_with_metadata) {
      EXPECT_TRUE(args.has_value());
      auto args_js = args.value();
@@ -420,10 +420,10 @@ index 658b217c..d1042507 100644
    };
  
    check({}, kEventId, 20);
-diff --git a/trace-utils/tools/evt2json/main.cc b/trace-utils/tools/evt2json/main.cc
+diff --git a/tools/evt2json/main.cc b/tools/evt2json/main.cc
 index fccc37c9..41999dcb 100644
---- a/trace-utils/tools/evt2json/main.cc
-+++ b/trace-utils/tools/evt2json/main.cc
+--- a/tools/evt2json/main.cc
++++ b/tools/evt2json/main.cc
 @@ -80,6 +80,7 @@ std::unique_ptr<DutTrace> get_dut_trace_or_die(const Options& opts) {
        return std::make_unique<UeventTrace>(opts.trace);
  #else   // ENABLE_UEVENT
