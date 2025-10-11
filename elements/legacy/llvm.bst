@@ -13,6 +13,7 @@ build-depends:
 variables:
   prefix: /opt/toolchain/llvm
   conf-root: llvm
+  optimize-debug: false
   cmake-local: >-
     -D LLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;lld"
     -D LLVM_EXPERIMENTAL_TARGETS_TO_BUILD="RISCV"
@@ -24,8 +25,8 @@ variables:
 
 sources:
 - kind: git
-  url: github:nekkoai/llvm-old
-  track: master
-  ref: 2a34f4de888da0fec76623f0368cf188b4ae459e
+  url: github:llvm/llvm-project
+  track: llvmorg-9.0.1
+  ref: c1a0a213378a458fbea1a5c77b315c7dce08fd05
 - kind: patch
   path: static/patches/llvm-old-updates.patch
