@@ -48,18 +48,6 @@ config:
   - |
     patchelf --clear-execstack %{install-root}%{lib}/libonnxruntime.so.*
 
-#  track: v1.19.2
-#  ref: v1.19.2-0-gffceed9d44f2f3efb9dd69fa75fea51163c91d91
-#-kind: patch
-#  path: static/patches/onnxruntime-1192-upstream.patch
-
-#- kind: git_repo
-#  url: github:nekkoai/atlantis
-#  track: master
-#  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
-#-kind: patch
-#  path: static/patches/onnxruntime-cmake.patch
-
 sources:
 - kind: git_repo
   url: github:microsoft/onnxruntime
