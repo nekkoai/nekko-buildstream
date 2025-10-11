@@ -24,7 +24,6 @@ depends:
 - legacy/et-driver.bst
 
 variables:
-  command-subdir: glow
   (@):
   - include/_private/legacy-toolchain.yml
   cmake-local: >-
@@ -43,8 +42,8 @@ variables:
 
 sources:
 - kind: git_repo
-  url: github:nekkoai/atlantis
-  track: master
-  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
+  url: github:nekkoai/glow
+  track: et
+  ref: ecb67865036aa03faafbc3034bde44785190334f
 - kind: patch
   path: static/patches/glow-cmake.patch

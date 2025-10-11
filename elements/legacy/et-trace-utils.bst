@@ -30,7 +30,6 @@ depends:
 # todo handle options - see protobuf for an example
 # https://github.com/protocolbuffers/protobuf/blob/main/cmake/protobuf-options.cmake
 variables:
-  command-subdir: trace-utils
   (@):
   - include/_private/legacy-toolchain.yml
   cmake-local: >-
@@ -44,8 +43,8 @@ variables:
 
 sources:
 - kind: git_repo
-  url: github:nekkoai/atlantis
+  url: github:nekkoai/trace-utils
   track: master
-  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
+  ref: ea0ef6e305bf01ef44733a6d0040489c06e8a5ab
 - kind: patch
   path: static/patches/et-trace-utils-cmake-gcc.patch
