@@ -1,5 +1,6 @@
 .PHONY: build build-local build-docker help all
 
+# image that is built; can be overridden by running `make IMAGE=your-image:tag build`
 IMAGE ?= ghcr.io/nekkoai/nutcracker-legacy:latest
 DIST  ?= dist
 
@@ -10,6 +11,10 @@ all: help
 help:
 	@echo "Available make targets:"
 	@awk '/^#/{desc=$$0; next} /^[a-zA-Z0-9_-]+:([^=]|$$)/{gsub(/^# ?/, "", desc); printf "  %-20s %s\n", $$1, desc; desc=""}' $(MAKEFILE_LIST)
+
+# show the image tag that will be used by default when building the image 
+show-tag:
+	@echo $(IMAGE)
 
 # Build using default method of build-docker
 build: build-docker
