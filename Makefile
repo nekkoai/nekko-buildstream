@@ -14,13 +14,13 @@ help:
 # Build using default method of build-docker
 build: build-docker
 
-# Build using Docker; your tailscale network must be up
+# Build using Docker; note that it *only* builds for linux/amd64 due to a buildstream bug; see the README.md
 build-docker:
 	@echo "Building using Docker..."
-	docker build -t $(IMAGE) .
+	docker build --platform linux/amd64 -t $(IMAGE) .
 	@echo "Build complete.  The resulting artifact can be found in docker as $(IMAGE)."
 
-# Build using locally installed dependencies and tools; you must be connected to the tailscale network before running
+# Build using locally installed dependencies and tools
 build-local:
 	@echo "Building using locally installed dependencies and tools..."
 	bst build nutcracker-legacy.bst
