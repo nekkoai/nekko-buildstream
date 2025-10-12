@@ -63,10 +63,18 @@ You can build in one of two ways:
 #### Build with Docker
 
 ```sh
-% docker build -t ghcr.io/nekkoai/nutcracker-legacy:latest .
-# or simply
 make build-docker
 ```
+
+The docker build depends on access to private repositories. As such, it needs credentials to access those repositories.
+The `make build-docker` command assumes you already have access to the `nekkoai` private repositories, and thus
+mounts your git credentials into the docker build.
+
+The following must be set up in advance of running the `make build-docker` command:
+
+* `~/.git-credentials` - containing your https credentials for github.com, with access to private repositories in both github.com/nekkoai and github.com/aifoundry-org
+* `~/.gitconfig` - containing gitconfig settings
+* `GITHUB_TOKEN` environment variable - containing a personal access token with access to api.github.com for private repositories in both github.com/nekkoai and github.com/aifoundry-org
 
 #### Build locally
 

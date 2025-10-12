@@ -19,10 +19,20 @@ show-tag:
 # Build using default method of build-docker
 build: build-docker
 
-# Build using Docker; note that it *only* builds for linux/amd64 due to a buildstream bug; see the README.md
+ifdef CI
+BUILD_FLAGS=--secret id=git_credentials,src=$(HOME)/.git-credentials \
+              --secret id=git_config,src=$(HOME)/.gitconfig \
+              --secret id=github_token_nekkoai,env=GITHUB_TOKEN
+BUILD_ARGS=--build-arg USE_SSH=false
+else
+BUILD_FLAGS=--ssh default --secret id=github_token_nekkoai,env=GITHUB_TOKEN
+endif
+
+
+# Build using Docker; note that it *only* builds for linux/amd64 due to a buildstream bug; see the README.md. This is meant for running manually.
 build-docker:
 	@echo "Building using Docker..."
-	docker build --platform linux/amd64 -t $(IMAGE) .
+	docker build --platform linux/amd64 $(BUILD_FLAGS) -t $(IMAGE) .
 	@echo "Build complete.  The resulting artifact can be found in docker as $(IMAGE)."
 
 # Build using locally installed dependencies and tools

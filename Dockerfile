@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:24.04 AS build
 
 COPY . /src/nutcracker-legacy
@@ -20,8 +21,14 @@ RUN pip install buildstream buildstream-plugins dulwich tomlkit requests && \
     pip uninstall click -y && \
     pip install 'click<8.1'   # compatibility issue with buildstream
 
+# ensure that hostchecking is not done otherwise it will block
+ENV GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
 # run build and export the artifact as a directory
-RUN bst build nutcracker-legacy.bst && \
+RUN --mount=type=ssh \
+    --mount=type=secret,id=git_config,target=/root/.gitconfig \
+    --mount=type=secret,id=git_credentials,target=/root/.git-credentials \
+    --mount=type=secret,id=github_token_nekkoai,env=GITHUB_TOKEN \
+    bst build nutcracker-legacy.bst && \
     mkdir /out && \
     bst artifact checkout nutcracker-legacy.bst --directory /out
 
