@@ -9,7 +9,7 @@ config:
     components/jpeg.bst: deps/jpeg.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: gitlab:freedesktop-sdk/freedesktop-sdk.git
   track: release/25.08
   ref: 3be3192f35ef706a692ac1ddf4dbcfcf86c83df2

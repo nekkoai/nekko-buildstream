@@ -16,7 +16,7 @@ variables:
     -D XNNPACK_LIBRARY_TYPE=shared
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:google/xnnpack
   track: master
   ref: 51a0103656eff6fc9bfd39a4597923c4b542c883

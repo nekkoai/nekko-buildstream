@@ -15,7 +15,7 @@ variables:
     -D PTHREADPOOL_LIBRARY_TYPE=shared
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:Maratyszcza/pthreadpool
   track: master
   ref: 560c60d342a76076f0557a3946924c6478470044

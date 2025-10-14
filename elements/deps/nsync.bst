@@ -9,7 +9,7 @@ variables:
     -D CMAKE_POLICY_VERSION_MINIMUM=3.5
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:google/nsync
   track: master
   ref: f36c1e158477afc4877b8e348a1fd6a93f919a37

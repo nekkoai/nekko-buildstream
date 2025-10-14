@@ -14,7 +14,7 @@ variables:
     -D USE_SYSTEM_LIBS=ON
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:pytorch/cpuinfo
   track: main
   ref: 877328f188a3c7d1fa855871a278eb48d530c4c0

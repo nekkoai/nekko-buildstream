@@ -15,7 +15,7 @@ environment:
   SETUPTOOLS_SCM_PRETEND_VERSION: "0.11.6"
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:scikit-build/scikit-build-core
   track: main
   ref: 326490975510b2af888e0f319292fc4a9084a033

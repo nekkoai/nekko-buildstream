@@ -58,11 +58,7 @@ environment:
 sources:
 - kind: git_repo
   url: github:pytorch/pytorch
-  #submodules:
-  #  third_party/cutlass:
-  #    url: github:NVIDIA/cutlass
-  #    checkout: True
   track: release/2.8
-  ref: ba56102387ef21a3b04b357e5b183d48f0afefc7
+  ref: v2.8.0-0-gba56102387ef21a3b04b357e5b183d48f0afefc7
 - kind: patch
   path: static/patches/pytorch-cmake.patch

@@ -11,7 +11,7 @@ variables:
     -D GCC_PLUS_PLUS=off
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:dcleblanc/SafeInt
   track: master
   ref: 1c94d38fe4c19fe17792de5e0f6619258c94bb30

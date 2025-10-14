@@ -12,7 +12,7 @@ variables:
     %{pip} install --no-build-isolation --no-deps --root=%{install-root} --prefix=%{prefix}
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:sympy/sympy
   track: 1.14
   ref: 16fa855354eb7bcabd3fe10993841e03b1382692

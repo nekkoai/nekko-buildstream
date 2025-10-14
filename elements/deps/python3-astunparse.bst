@@ -7,7 +7,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:simonpercivall/astunparse
   track: main
   ref: 2acce01fcdda2ea32eea835c30ccca21aaff7297

@@ -7,7 +7,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:dabeaz/ply
   track: 3.11
   ref: 0f398b72618c1564d71f7dc0558e6722b241875a

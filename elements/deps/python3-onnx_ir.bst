@@ -10,7 +10,7 @@ depends:
 - deps/python3-ml_dtypes.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:onnx/ir-py
   track: v0.1.10
   ref: e657840b8ed9c0d6a54008ec77ed2aa50bfabeab

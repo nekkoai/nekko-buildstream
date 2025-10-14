@@ -12,7 +12,7 @@ variables:
     -D FP16_BUILD_COMPARATIVE_BENCHMARKS=OFF
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:Maratyszcza/FP16
   track: master
   ref: 3d2de1816307bac63c16a297e8c4dc501b4076df

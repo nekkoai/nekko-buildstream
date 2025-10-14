@@ -12,7 +12,7 @@ environment:
   SETUPTOOLS_SCM_PRETEND_VERSION: "0.27.1"
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:crate-py/rpds
   track: v0.27.1
   ref: 7ecc7a56108a64383fe5fbf5c0ca08a6f797db18

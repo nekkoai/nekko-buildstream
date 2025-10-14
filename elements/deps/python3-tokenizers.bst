@@ -16,7 +16,7 @@ variables:
   command-subdir: bindings/python
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:huggingface/tokenizers
   track: v0.22.1
   ref: afaae088837b277c19f90604a1111a272838857b

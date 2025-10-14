@@ -24,9 +24,9 @@ variables:
     -D CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:llvm/llvm-project
   track: llvmorg-9.0.1
-  ref: c1a0a213378a458fbea1a5c77b315c7dce08fd05
+  ref: llvmorg-9.0.1-0-gc1a0a213378a458fbea1a5c77b315c7dce08fd05
 - kind: patch
   path: static/patches/llvm-old-updates.patch

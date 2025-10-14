@@ -13,10 +13,14 @@ depends:
 
 # TODO figure out how to get this dynamically?  guess_version??
 environment:
-  SETUPTOOLS_SCM_PRETEND_VERSION: "0.17.2.4"
+  SETUPTOOLS_SCM_PRETEND_VERSION: "0.17.2.3"
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:mayeut/patchelf-pypi
   track: main
-  ref: a36233f5acb4c6332d567f73deb3faf6ecec9ac9
+  ref: v0.17.2.3-15-g075e676ff19596889139dfb3d962df476ef1f399
+- kind: git_module
+  path: src/patchelf-upstream
+  url: github:NixOS/patchelf
+  ref: 5908e16cd562bcb1909be4de0409c4912a8afc52

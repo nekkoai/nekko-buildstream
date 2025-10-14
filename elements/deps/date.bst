@@ -8,7 +8,7 @@ variables:
     -D CMAKE_POSITION_INDEPENDENT_CODE=on
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:HowardHinnant/date
   track: master
   ref: a5db3aecec580bc78b6c01c118f2628676769b69

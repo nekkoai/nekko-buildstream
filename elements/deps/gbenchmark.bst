@@ -10,7 +10,7 @@ variables:
     -D BENCHMARK_ENABLE_TESTING=OFF
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:google/benchmark
   track: main
   ref: b2959a733d26ca5f0c2a765069d8ae37f7b03fd8

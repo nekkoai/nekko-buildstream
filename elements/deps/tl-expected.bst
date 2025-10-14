@@ -9,7 +9,7 @@ variables:
     -D EXPECTED_BUILD_TESTS=off
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:TartanLlama/expected
   track: master
   ref: 1770e3559f2f6ea4a5fb4f577ad22aeb30fbd8e4

@@ -9,7 +9,7 @@ depends:
 - deps/python3-pybind.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:python-pillow/Pillow
   track: main
   ref: 9e4256e8aa9d7adad4271069732c48d129d5b38f

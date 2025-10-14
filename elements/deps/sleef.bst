@@ -13,7 +13,7 @@ variables:
     -D BUILD_SHARED_LIBS=ON
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:shibatch/sleef
   #track: master
   #ref: 51cc68ab794a49d9c80f4975b81211a98b346f01

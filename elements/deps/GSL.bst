@@ -9,7 +9,7 @@ variables:
     -D GSL_TEST=OFF
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:microsoft/GSL
   track: main
   ref: 7e0943d20d3082b4f350a7e0c3088d2388e934de

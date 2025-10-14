@@ -11,7 +11,7 @@ environment:
   SETUPTOOLS_SCM_PRETEND_VERSION: "0.9.0"
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:astanin/python-tabulate
   track: master
   ref: 74885be915e2ac611585f5398f23c402532c1059

@@ -6,7 +6,7 @@ build-depends:
 - base/freedesktop-sdk.bst:components/python3-installer.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:pypa/pyproject-metadata
   track: main
   ref: 14ebed1cc4ef746ed514ca2b15acd51878ab10eb

@@ -9,7 +9,7 @@ variables:
     -D BACKWARD_SHARED=on
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:bombela/backward-cpp
   track: master
   ref: 0bfd0a07a61551413ccd2ab9a9099af3bad40681

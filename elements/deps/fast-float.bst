@@ -4,7 +4,7 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:fastfloat/fast_float
   track: main
   ref: fec4082f014dfa29e307bcdea034fcd3c26f62c8

@@ -11,7 +11,7 @@ variables:
     -D WITH_EXAMPLES=OFF
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:open-telemetry/opentelemetry-cpp
   track: main
   ref: 4193b21d26e6156626f5028f53b33d838c65ccd4

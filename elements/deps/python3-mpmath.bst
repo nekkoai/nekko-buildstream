@@ -7,7 +7,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:mpmath/mpmath
   track: 1.3.0
   ref: b5c04506ef0cd4a1f1213f8389ee21c9c3551582

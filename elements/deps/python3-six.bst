@@ -7,7 +7,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:benjaminp/six
   track: main
   ref: 7d2a0e96602b83cd082896c8c224a87f1efe2111

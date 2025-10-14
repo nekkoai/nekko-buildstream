@@ -22,7 +22,7 @@ variables:
     -D CMAKE_INSTALL_DIR="%{lib}/cmake/folly"
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:facebook/folly
   #track: v2022.01.31.00
   #track: main

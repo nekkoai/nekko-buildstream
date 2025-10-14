@@ -12,7 +12,7 @@ environment:
   SETUPTOOLS_SCM_PRETEND_VERSION: "2025.9.1"
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:python-jsonschema/jsonschema-specifications
   track: v2025.9.1
   ref: 3b846010c34ce254d8ced23023451d1d64de37f5

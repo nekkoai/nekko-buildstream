@@ -12,7 +12,7 @@ variables:
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:pybind/pybind11
-  track: master
-  ref: 326b10637a9fe2d1c9f290b6e052097ffc2413c3
+  track: v3.0.1
+  ref: v3.0.1-0-gf5fbe867d2d26e4a0a9177a51f6e568868ad3dc8

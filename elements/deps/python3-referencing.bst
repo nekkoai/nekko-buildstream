@@ -12,7 +12,7 @@ environment:
   SETUPTOOLS_SCM_PRETEND_VERSION: "0.36.2"
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:python-jsonschema/referencing
   track: v0.36.2
   ref: 9a82e6c7e5e2e395b61bb4017dc6adc52ac52e7c

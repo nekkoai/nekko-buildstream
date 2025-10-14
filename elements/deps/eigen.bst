@@ -11,7 +11,7 @@ variables:
     -D EIGEN_BUILD_LAPACK=off
       
 sources:
-- kind: git
+- kind: git_repo
   url: gitlab:libeigen/eigen
   #track: master
   #ref: e0a59e5a66e6d16fa93ab4f5e48bf539205e837f

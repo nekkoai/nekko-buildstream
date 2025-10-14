@@ -10,7 +10,7 @@ variables:
     -D BUILD_SHARED_LIBS=ON
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:microsoft/BlingFire
   track: master
   ref: 18e9a19e586095fb60d629fa850fb610d5bca605

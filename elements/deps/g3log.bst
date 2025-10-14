@@ -13,7 +13,7 @@ variables:
     -D CMAKE_BUILD_TYPE=Release
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:KjellKod/g3log
   track: master
   ref: 38dbddc7071666ef6cc02f24ff30a8773ee4222f

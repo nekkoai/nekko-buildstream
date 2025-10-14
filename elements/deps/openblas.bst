@@ -9,7 +9,7 @@ variables:
     -D BUILD_SHARED_LIBS=on
       
 sources:
-- kind: git
+- kind: git_repo
   url: github:OpenMathLib/OpenBLAS
   track: v0.3.30
   ref: 993fad6aebbce34a97d3f8c34d6d79d35b64cc48

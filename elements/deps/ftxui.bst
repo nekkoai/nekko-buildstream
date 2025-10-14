@@ -8,7 +8,7 @@ variables:
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:ArthurSonzogni/FTXUI
   track: v6.1.9
   ref: 5cfed50702f52d51c1b189b5f97f8beaf5eaa2a6 

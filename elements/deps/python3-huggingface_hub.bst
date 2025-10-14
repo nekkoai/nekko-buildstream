@@ -18,7 +18,7 @@ variables:
     %{pip} install --no-build-isolation --no-deps --root=%{install-root} --prefix=%{prefix}
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:huggingface/huggingface_hub
   track: v0.35.0
   ref: 0f12365eb66305b280a7a3b65c48faf9f24f8c20

@@ -9,7 +9,7 @@ depends:
 - deps/python3-pyproject-metadata.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:mesonbuild/meson-python
   track: main
   ref: 8d50078e2c6134c058169b4df692e990174b8553

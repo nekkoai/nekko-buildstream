@@ -11,7 +11,7 @@ variables:
     -D BUILD_UTILS=OFF
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:shibatch/tlfloat
   track: main
   ref: 38f525b838b05dd5c266d34b16cb554cf1fe37c5

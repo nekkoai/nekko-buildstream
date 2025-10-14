@@ -10,7 +10,7 @@ variables:
     -D FXDIV_BUILD_BENCHMARKS=OFF
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:Maratyszcza/fxdiv
   track: master
   ref: 63058eff77e11aa15bf531df5dd34395ec3017c8

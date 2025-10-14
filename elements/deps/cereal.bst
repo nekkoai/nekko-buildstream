@@ -11,7 +11,7 @@ variables:
     -D BUILD_TESTS=off
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:USCiLab/cereal
   track: master
   ref: a56bad8bbb770ee266e930c95d37fff2a5be7fea

@@ -13,7 +13,7 @@ depends:
 #    - ldconfig
 
 sources:
-- kind: git
+- kind: git_repo
   url: inria:mpc/mpc
   track: master
   ref: 06b0dd15afd98a5eb19776e066b6184daee7a862

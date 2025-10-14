@@ -15,7 +15,7 @@ variables:
   command-subdir: bindings/python
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:huggingface/safetensors
   track: v0.6.2
   ref: aa6c43d729868fc43918e862d42bfeaf60485d1d

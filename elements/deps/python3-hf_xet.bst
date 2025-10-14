@@ -13,7 +13,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3-urllib3.bst
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:huggingface/xet-core
   track: v1.1.10
   ref: 81b08339659917a6279dd3c0f7a944079b18af94

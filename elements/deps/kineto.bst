@@ -14,9 +14,13 @@ variables:
     -D KINETO_LIBRARY_TYPE=shared
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:pytorch/kineto
   track: main
-  ref: 29a3485103287727ac3fb11954bb976f6ea11e69
+  ref: 073ff33828fcf7e2ef4ac7cf4ea54eb1e225af6e
+- kind: git_module
+  path: libkineto/third_party/dynolog
+  url: github:facebookincubator/dynolog
+  ref: d2ffe0a4e3acace628db49974246b66fc3e85fb1
 - kind: patch
   path: static/patches/kineto-cmake.patch
