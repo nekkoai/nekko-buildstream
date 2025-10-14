@@ -27,6 +27,6 @@ sources:
   #track: v2022.01.31.00
   #track: main
   track: v2025.09.08.00
-  ref: f3284fba4b26ddfe5cfded4486859d7d060f5c44
+  ref: v2025.09.08.00-0-gf3284fba4b26ddfe5cfded4486859d7d060f5c44
 - kind: patch
   path: static/patches/folly-glog.patch
