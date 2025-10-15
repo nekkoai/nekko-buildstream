@@ -76,6 +76,10 @@ The following must be set up in advance of running the `make build-docker` comma
 * `~/.gitconfig` - containing gitconfig settings
 * `GITHUB_TOKEN` environment variable - containing a personal access token with access to api.github.com for private repositories in both github.com/nekkoai and github.com/aifoundry-org
 
+Note that building in Docker using buildstream requires special privileges. To enable these privileges,
+the build is performed in a dedicated docker builder called `nutcracker-builder`.
+This builder is created automatically when you run `make build-docker` if it does not already exist.
+
 #### Build locally
 
 To build the image locally, you will need to:

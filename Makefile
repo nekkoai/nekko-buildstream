@@ -1,8 +1,10 @@
-.PHONY: build build-local build-docker help all
+.PHONY: build build-local build-docker docker-builder help all
 
 # image that is built; can be overridden by running `make IMAGE=your-image:tag build`
 IMAGE ?= ghcr.io/nekkoai/nutcracker-legacy:latest
 DIST  ?= dist
+
+DOCKER_BUILDER ?= nutcracker-builder
 
 # Default target is help
 all: help
@@ -23,16 +25,24 @@ ifdef CI
 BUILD_FLAGS=--secret id=git_credentials,src=$(HOME)/.git-credentials \
               --secret id=git_config,src=$(HOME)/.gitconfig \
               --secret id=github_token_nekkoai,env=GITHUB_TOKEN
-BUILD_ARGS=--build-arg USE_SSH=false
 else
 BUILD_FLAGS=--ssh default --secret id=github_token_nekkoai,env=GITHUB_TOKEN
 endif
 
+# Ensure we have a correct docker builder running
+docker-builder:
+	@if ! docker buildx inspect $(DOCKER_BUILDER) >/dev/null 2>&1; then \
+	  echo "Creating docker buildx builder '$(DOCKER_BUILDER)'..."; \
+	  docker buildx create --name $(DOCKER_BUILDER) --buildkitd-flags '--allow-insecure-entitlement security.insecure'; \
+	else \
+	  echo "Using existing docker buildx builder '$(DOCKER_BUILDER)'..."; \
+	fi
+	@docker buildx inspect $(DOCKER_BUILDER) --bootstrap >/dev/null
 
 # Build using Docker; note that it *only* builds for linux/amd64 due to a buildstream bug; see the README.md. This is meant for running manually.
-build-docker:
+build-docker: docker-builder
 	@echo "Building using Docker..."
-	docker buildx build --platform linux/amd64 $(BUILD_FLAGS) -t $(IMAGE) .
+	docker buildx build --builder $(DOCKER_BUILDER) --platform linux/amd64 --allow security.insecure $(BUILD_FLAGS) -t $(IMAGE) .
 	@echo "Build complete.  The resulting artifact can be found in docker as $(IMAGE)."
 
 # Build using locally installed dependencies and tools
