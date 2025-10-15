@@ -21,7 +21,6 @@ depends:
 - deps/python3-tabulate.bst
 
 variables:
-  command-subdir: neuralizer
   (@):
   - include/_private/legacy-toolchain.yml
   cmake-local: >-
@@ -39,8 +38,8 @@ variables:
 
 sources:
 - kind: git_repo
-  url: github:nekkoai/atlantis
+  url: github:nekkoai/neuralizer
   track: master
-  ref: 7a9f893254e81974f9ba57411f17b166e2e4def2
+  ref: eb73a07b5321b24e3cda0d26f3a78fcd7ebc9b4d
 - kind: patch
   path: static/patches/neuralizer-llvm.patch

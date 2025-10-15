@@ -7,7 +7,6 @@ build-depends:
 
 # TODO While this is in legacy/ namespace, it needs the device toolchain and will end up in platform
 variables:
-  command-subdir: device/dnn-library
   (@):
   - include/_private/platform-device-toolchain.yml
   cmake-local: >-
@@ -15,8 +14,8 @@ variables:
 
 sources:
 - kind: git
-  url: github:nekkoai/nutcracker
+  url: github:nekkoai/dnn-library
   track: main
-  ref: 0e72220972fdaebd4734f19d3ebfe6ad17d6fd16
+  ref: d4e7de30f299798f0b30340865edd00888380752
 - kind: patch
   path: static/patches/platformsw-dnn-library.patch
