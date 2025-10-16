@@ -1,0 +1,384 @@
+diff --git a/onnxruntime-extensions/.pyproject/cmdclass.py b/onnxruntime-extensions/.pyproject/cmdclass.py
+index fba74fc..17714ef 100644
+--- a/onnxruntime-extensions/.pyproject/cmdclass.py
++++ b/onnxruntime-extensions/.pyproject/cmdclass.py
+@@ -198,12 +198,15 @@ class CmdBuildCMakeExt(_build_ext):
+             '-DCMAKE_POLICY_VERSION_MINIMUM=3.5',
+             '-DOCOS_ENABLE_CTEST=OFF',
+             '-DOCOS_BUILD_PYTHON=ON',
++            '-DOCOS_BUILD_PRESET=ort_genai',
+             '-DOCOS_PYTHON_MODULE_PATH=' + str(ext_fullpath),
+             '-DCMAKE_BUILD_TYPE=' + config
+         ]
+ 
+         if self.ort_pkg_dir:
+             cmake_args += ['-DONNXRUNTIME_PKG_DIR=' + self.ort_pkg_dir]
++            cmake_args += ['-DCMAKE_PREFIX_PATH=' + self.ort_pkg_dir]
++            cmake_args += ['-DCMAKE_INSTALL_PREFIX=' + self.ort_pkg_dir]
+ 
+         if self.no_opencv:
+             # Disabling openCV can drastically reduce the build time.
+@@ -274,6 +277,8 @@ class CmdBuildCMakeExt(_build_ext):
+                         f"-DCMAKE_MAKE_PROGRAM:FILEPATH={ninja_executable_path}",
+                     ]
+                 except ImportError:
++                    if cmake_generator == "Ninja":
++                       cmake_args += [ "-GNinja" ]
+                     pass
+ 
+         if sys.platform.startswith("darwin"):
+diff --git a/onnxruntime-extensions/cmake/ext_imgcodecs.cmake b/onnxruntime-extensions/cmake/ext_imgcodecs.cmake
+index 686ec5f..89bcd4b 100644
+--- a/onnxruntime-extensions/cmake/ext_imgcodecs.cmake
++++ b/onnxruntime-extensions/cmake/ext_imgcodecs.cmake
+@@ -3,138 +3,12 @@
+ 
+ set(_IMGCODEC_ROOT_DIR ${dlib_SOURCE_DIR}/dlib/external)
+ 
+-# ----------------------------------------------------------------------------
+-#  project libpng
+-#
+-# ----------------------------------------------------------------------------
+-set (PNG_LIBRARY "libpng_static_c")
+-set (libPNG_SOURCE_DIR ${_IMGCODEC_ROOT_DIR}/libpng)
+-set (zlib_SOURCE_DIR ${_IMGCODEC_ROOT_DIR}/zlib)
+-
+-if(NOT WIN32)
+-  find_library(M_LIBRARY
+-    NAMES m
+-    PATHS /usr/lib /usr/local/lib
+-  )
+-  if(NOT M_LIBRARY)
+-    message(STATUS "math lib 'libm' not found; floating point support disabled")
+-  endif()
+-else()
+-  # not needed on windows
+-  set(M_LIBRARY "")
+-endif()
+-
+-set(lib_srcs
+-   ${libPNG_SOURCE_DIR}/arm/arm_init.c
+-   ${libPNG_SOURCE_DIR}/arm/filter_neon_intrinsics.c
+-   ${libPNG_SOURCE_DIR}/arm/palette_neon_intrinsics.c
+-   ${libPNG_SOURCE_DIR}//png.c
+-   ${libPNG_SOURCE_DIR}//pngerror.c
+-   ${libPNG_SOURCE_DIR}//pngget.c
+-   ${libPNG_SOURCE_DIR}//pngmem.c
+-   ${libPNG_SOURCE_DIR}//pngpread.c
+-   ${libPNG_SOURCE_DIR}//pngread.c
+-   ${libPNG_SOURCE_DIR}//pngrio.c
+-   ${libPNG_SOURCE_DIR}//pngrtran.c
+-   ${libPNG_SOURCE_DIR}//pngrutil.c
+-   ${libPNG_SOURCE_DIR}//pngset.c
+-   ${libPNG_SOURCE_DIR}//pngtrans.c
+-   ${libPNG_SOURCE_DIR}//pngwio.c
+-   ${libPNG_SOURCE_DIR}//pngwrite.c
+-   ${libPNG_SOURCE_DIR}//pngwtran.c
+-   ${libPNG_SOURCE_DIR}//pngwutil.c
+-   ${zlib_SOURCE_DIR}/adler32.c
+-   ${zlib_SOURCE_DIR}/compress.c
+-   ${zlib_SOURCE_DIR}/crc32.c
+-   ${zlib_SOURCE_DIR}/deflate.c
+-   ${zlib_SOURCE_DIR}/gzclose.c
+-   ${zlib_SOURCE_DIR}/gzlib.c
+-   ${zlib_SOURCE_DIR}/gzread.c
+-   ${zlib_SOURCE_DIR}/gzwrite.c
+-   ${zlib_SOURCE_DIR}/infback.c
+-   ${zlib_SOURCE_DIR}/inffast.c
+-   ${zlib_SOURCE_DIR}/inflate.c
+-   ${zlib_SOURCE_DIR}/inftrees.c
+-   ${zlib_SOURCE_DIR}/trees.c
+-   ${zlib_SOURCE_DIR}/uncompr.c
+-   ${zlib_SOURCE_DIR}/zutil.c
+-)
++find_package(ZLIB REQUIRED)
++find_package(PNG REQUIRED)
+ 
+-add_library(${PNG_LIBRARY} STATIC EXCLUDE_FROM_ALL ${lib_srcs})
+-target_include_directories(${PNG_LIBRARY} BEFORE PUBLIC ${zlib_SOURCE_DIR})
+-
+-if(MSVC)
+-  target_compile_definitions(${PNG_LIBRARY} PRIVATE -D_CRT_SECURE_NO_DEPRECATE)
+-else()
+-  target_compile_options(${PNG_LIBRARY} PRIVATE -Wno-deprecated-non-prototype)
+-endif()
+-
+-set_target_properties(${PNG_LIBRARY}
+-  PROPERTIES
+-      POSITION_INDEPENDENT_CODE ON
+-      FOLDER externals)
+ 
+ # ----------------------------------------------------------------------------
+ #  project libjpeg
+ #
+ # ----------------------------------------------------------------------------
+-set(JPEG_LIBRARY "libjpeg_static_c")
+-set(libJPEG_SOURCE_DIR ${_IMGCODEC_ROOT_DIR}/libjpeg)
+-
+-set(lib_srcs
+-  ${libJPEG_SOURCE_DIR}/jaricom.c
+-  ${libJPEG_SOURCE_DIR}/jcapimin.c
+-  ${libJPEG_SOURCE_DIR}/jcapistd.c
+-  ${libJPEG_SOURCE_DIR}/jcarith.c
+-  ${libJPEG_SOURCE_DIR}/jccoefct.c
+-  ${libJPEG_SOURCE_DIR}/jccolor.c
+-  ${libJPEG_SOURCE_DIR}/jcdctmgr.c
+-  ${libJPEG_SOURCE_DIR}/jchuff.c
+-  ${libJPEG_SOURCE_DIR}/jcinit.c
+-  ${libJPEG_SOURCE_DIR}/jcmainct.c
+-  ${libJPEG_SOURCE_DIR}/jcmarker.c
+-  ${libJPEG_SOURCE_DIR}/jcmaster.c
+-  ${libJPEG_SOURCE_DIR}/jcomapi.c
+-  ${libJPEG_SOURCE_DIR}/jcparam.c
+-  ${libJPEG_SOURCE_DIR}/jcprepct.c
+-  ${libJPEG_SOURCE_DIR}/jcsample.c
+-  ${libJPEG_SOURCE_DIR}/jdapimin.c
+-  ${libJPEG_SOURCE_DIR}/jdapistd.c
+-  ${libJPEG_SOURCE_DIR}/jdarith.c
+-  ${libJPEG_SOURCE_DIR}/jdatadst.c
+-  ${libJPEG_SOURCE_DIR}/jdatasrc.c
+-  ${libJPEG_SOURCE_DIR}/jdcoefct.c
+-  ${libJPEG_SOURCE_DIR}/jdcolor.c
+-  ${libJPEG_SOURCE_DIR}/jddctmgr.c
+-  ${libJPEG_SOURCE_DIR}/jdhuff.c
+-  ${libJPEG_SOURCE_DIR}/jdinput.c
+-  ${libJPEG_SOURCE_DIR}/jdmainct.c
+-  ${libJPEG_SOURCE_DIR}/jdmarker.c
+-  ${libJPEG_SOURCE_DIR}/jdmaster.c
+-  ${libJPEG_SOURCE_DIR}/jdmerge.c
+-  ${libJPEG_SOURCE_DIR}/jdpostct.c
+-  ${libJPEG_SOURCE_DIR}/jdsample.c
+-  ${libJPEG_SOURCE_DIR}/jerror.c
+-  ${libJPEG_SOURCE_DIR}/jfdctflt.c
+-  ${libJPEG_SOURCE_DIR}/jfdctfst.c
+-  ${libJPEG_SOURCE_DIR}/jfdctint.c
+-  ${libJPEG_SOURCE_DIR}/jidctflt.c
+-  ${libJPEG_SOURCE_DIR}/jidctfst.c
+-  ${libJPEG_SOURCE_DIR}/jidctint.c
+-  ${libJPEG_SOURCE_DIR}/jmemmgr.c
+-  ${libJPEG_SOURCE_DIR}/jmemnobs.c
+-  ${libJPEG_SOURCE_DIR}/jquant1.c
+-  ${libJPEG_SOURCE_DIR}/jquant2.c
+-  ${libJPEG_SOURCE_DIR}/jutils.c
+-  )
+-file(GLOB lib_hdrs ${libJPEG_SOURCE_DIR}/*.h)
+-add_library(${JPEG_LIBRARY} STATIC EXCLUDE_FROM_ALL ${lib_srcs} ${lib_hdrs})
+-
+-if(NOT MSVC)
+-  set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
+-endif()
+-target_compile_definitions(${JPEG_LIBRARY} PRIVATE -DNO_MKTEMP)
+-set_target_properties(${JPEG_LIBRARY}
+-  PROPERTIES
+-      POSITION_INDEPENDENT_CODE ON
+-      FOLDER externals)
++find_package(JPEG REQUIRED)
+diff --git a/onnxruntime-extensions/cmake/externals/blingfire.cmake b/onnxruntime-extensions/cmake/externals/blingfire.cmake
+index 8c7eefe..6fa8c2f 100644
+--- a/onnxruntime-extensions/cmake/externals/blingfire.cmake
++++ b/onnxruntime-extensions/cmake/externals/blingfire.cmake
+@@ -1,11 +1 @@
+-FetchContent_Declare(
+-  Blingfire
+-  GIT_REPOSITORY https://github.com/microsoft/BlingFire.git
+-  GIT_TAG 0831265c1aca95ca02eca5bf1155e4251e545328
+-  EXCLUDE_FROM_ALL
+-  PATCH_COMMAND git checkout . && git apply --ignore-space-change --ignore-whitespace ${PROJECT_SOURCE_DIR}/cmake/externals/blingfire_cmake.patch)
+-
+-FetchContent_MakeAvailable(Blingfire)
+-set_target_properties(bingfirtinydll_static PROPERTIES FOLDER
+-                                                       externals/bingfire)
+-set_target_properties(fsaClientTiny PROPERTIES FOLDER externals/bingfire)
++find_package(blingfire REQUIRED)
+diff --git a/onnxruntime-extensions/cmake/externals/dlib.cmake b/onnxruntime-extensions/cmake/externals/dlib.cmake
+index 645905e..7a74b0a 100644
+--- a/onnxruntime-extensions/cmake/externals/dlib.cmake
++++ b/onnxruntime-extensions/cmake/externals/dlib.cmake
+@@ -1,9 +1 @@
+-FetchContent_Declare(
+-    dlib
+-    URL https://github.com/davisking/dlib/archive/refs/tags/v19.24.7.zip
+-    URL_HASH SHA1=6c63ea576e2b525751b0dead27c6c1139c5100ae
+-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+-    SOURCE_SUBDIR  not_set
+-)
+-
+-FetchContent_MakeAvailable(dlib)
++find_package(dlib REQUIRED)
+diff --git a/onnxruntime-extensions/cmake/externals/dr_libs.cmake b/onnxruntime-extensions/cmake/externals/dr_libs.cmake
+index f7811b4..6e7a29b 100644
+--- a/onnxruntime-extensions/cmake/externals/dr_libs.cmake
++++ b/onnxruntime-extensions/cmake/externals/dr_libs.cmake
+@@ -1,7 +1 @@
+-FetchContent_Declare(dr_libs
+-    URL         https://github.com/mackron/dr_libs/archive/660795b2834aebb2217c9849d668b6e4bd4ef810.zip
+-    URL_HASH    SHA1=af554b21dcd1ab3c7c8d946638682a2cbccf3e16
+-    SOURCE_SUBDIR not_set
+-)
+-
+-FetchContent_MakeAvailable(dr_libs)
++set(dr_libs_SOURCE_DIR /usr/include/dr_libs)
+diff --git a/onnxruntime-extensions/cmake/externals/googlere2.cmake b/onnxruntime-extensions/cmake/externals/googlere2.cmake
+index 296736d..7e241b4 100644
+--- a/onnxruntime-extensions/cmake/externals/googlere2.cmake
++++ b/onnxruntime-extensions/cmake/externals/googlere2.cmake
+@@ -1,12 +1 @@
+-FetchContent_Declare(
+-  googlere2
+-  GIT_REPOSITORY https://github.com/google/re2.git
+-  GIT_TAG        2021-06-01
+-  EXCLUDE_FROM_ALL
+-)
+-
+-FetchContent_MakeAvailable(googlere2)
+-set_target_properties(re2
+-  PROPERTIES
+-      POSITION_INDEPENDENT_CODE ON
+-      FOLDER externals/google)
++find_package(re2 REQUIRED)
+diff --git a/onnxruntime-extensions/cmake/externals/json.cmake b/onnxruntime-extensions/cmake/externals/json.cmake
+index 14dc860..9f97f19 100644
+--- a/onnxruntime-extensions/cmake/externals/json.cmake
++++ b/onnxruntime-extensions/cmake/externals/json.cmake
+@@ -1,8 +1,2 @@
+-FetchContent_Declare(nlohmann_json
+-  URL       https://codeload.github.com/nlohmann/json/zip/refs/tags/v3.11.3
+-  URL_HASH  SHA1=5e88795165cc8590138d1f47ce94ee567b85b4d6
+-  SOURCE_SUBDIR not_set
+-  )
+-
++find_package(nlohmann_json REQUIRED)
+ add_compile_definitions(JSON_HAS_CPP_17=1)
+-FetchContent_MakeAvailable(nlohmann_json)
+diff --git a/onnxruntime-extensions/cmake/externals/pybind11.cmake b/onnxruntime-extensions/cmake/externals/pybind11.cmake
+index 42b83a3..0c205ce 100644
+--- a/onnxruntime-extensions/cmake/externals/pybind11.cmake
++++ b/onnxruntime-extensions/cmake/externals/pybind11.cmake
+@@ -1,10 +1,4 @@
+-FetchContent_Declare(
+-  pybind11
+-  URL       https://github.com/pybind/pybind11/archive/refs/tags/v2.12.0.zip
+-  URL_HASH  SHA1=8482f57ed55c7b100672815a311d5450858723fb
+-  SOURCE_SUBDIR not_set
+-)
+-
+-FetchContent_MakeAvailable(pybind11)
++find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
++find_package(pybind11 REQUIRED)
+ 
+ set(pybind11_INCLUDE_DIRS ${pybind11_SOURCE_DIR}/include)
+diff --git a/onnxruntime-extensions/cmake/externals/sentencepieceproject.cmake b/onnxruntime-extensions/cmake/externals/sentencepieceproject.cmake
+index dfef576..fd4bfd9 100644
+--- a/onnxruntime-extensions/cmake/externals/sentencepieceproject.cmake
++++ b/onnxruntime-extensions/cmake/externals/sentencepieceproject.cmake
+@@ -1,73 +1,2 @@
+ # spm is abbreviation of sentencepiece to meet the path length limits on Windows
+-if(NOT _ONNXRUNTIME_EMBEDDED)
+-  # If extensions wasn't built in ORT, we create fetchcontent the same 3rd party library as ORT
+-  # So extensions is always consistent on the 3rd party libraries whether its build in ORT or not
+-
+-  # TOOD: migrate to external abseil library
+-  # include(abseil-cpp)
+-  message(STATUS "Fetch protobuf")
+-  FetchContent_Declare(
+-    protobuf
+-    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+-    GIT_TAG v21.12
+-    EXCLUDE_FROM_ALL
+-    PATCH_COMMAND git checkout . && git apply --ignore-space-change --ignore-whitespace ${PROJECT_SOURCE_DIR}/cmake/externals/protobuf_cmake.patch
+-  )
+-  
+-  set(protobuf_BUILD_TESTS OFF CACHE BOOL "Build tests")
+-  set(protobuf_WITH_ZLIB OFF CACHE BOOL "Use zlib")
+-
+-  if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+-    set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "")
+-  endif()
+-  set(protobuf_BUILD_SHARED_LIBS OFF CACHE BOOL "")
+-  if("${CMAKE_MSVC_RUNTIME_LIBRARY}" STREQUAL "" OR "${CMAKE_MSVC_RUNTIME_LIBRARY}" MATCHES "DLL$")
+-    set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE BOOL "")
+-  else()
+-    set(protobuf_MSVC_STATIC_RUNTIME ON CACHE BOOL "")
+-  endif()
+-  set(protobuf_DISABLE_RTTI ON CACHE BOOL "Disable RTTI")
+-
+-  FetchContent_MakeAvailable(protobuf)
+-  set_target_properties(libprotobuf-lite PROPERTIES
+-    FOLDER externals/google)
+-endif()
+-
+-# To avoid creating complicated logic to build protoc, especially for mobile platforms, we use the pre-generated pb files
+-# Uses the following command line in _deps/spm-src folder to generate the PB patch file if protobuf version is updated
+-# git diff -- src/builtin_pb/* | out-file -Encoding utf8 <REPO-ROOT>\cmake\externals\sentencepieceproject_pb.patch
+-# PB files was seperated as another patch file to avoid the patch file too large to be reviewed.
+-set(spm_patches
+-  "${PROJECT_SOURCE_DIR}/cmake/externals/sentencepieceproject_cmake.patch"
+-  "${PROJECT_SOURCE_DIR}/cmake/externals/sentencepieceproject_pb.patch")
+-
+-set(spm_patch_command git checkout . && git apply --ignore-space-change --ignore-whitespace ${spm_patches})
+-
+-if (NOT DEFINED CMAKE_INSTALL_INCDIR)
+-  set(CMAKE_INSTALL_INCDIR include)
+-endif()
+-
+-FetchContent_Declare(
+-  spm
+-  GIT_REPOSITORY https://github.com/google/sentencepiece.git
+-  GIT_TAG v0.1.96
+-  EXCLUDE_FROM_ALL
+-  PATCH_COMMAND ${spm_patch_command}
+-)
+-
+-set(SPM_USE_EXTERNAL_ABSL OFF CACHE BOOL "Use external absl" FORCE)
+-set(SPM_USE_BUILTIN_PROTOBUF OFF CACHE BOOL "Use built-in protobuf" FORCE)
+-
+-if(NOT protobuf_SOURCE_DIR)
+-  message(FATAL_ERROR "Cannot find the protobuf library in ORT")
+-endif()
+-
+-FetchContent_MakeAvailable(spm)
+-target_link_libraries(sentencepiece-static PUBLIC protobuf::libprotobuf-lite)
+-set_target_properties(sentencepiece-static PROPERTIES
+-  FOLDER externals/google)
+-
+-set(spm_INCLUDE_DIRS
+-  ${protobuf_SOURCE_DIR}/src
+-  ${spm_SOURCE_DIR}/src/builtin_pb
+-  ${spm_SOURCE_DIR}/src )
++# TODO assume it is staged in /usr/include and /usr/lib/<triplet>
+diff --git a/onnxruntime-extensions/cmake/presets/ort_genai.cmake b/onnxruntime-extensions/cmake/presets/ort_genai.cmake
+index 1e64bc9..ea07ff0 100644
+--- a/onnxruntime-extensions/cmake/presets/ort_genai.cmake
++++ b/onnxruntime-extensions/cmake/presets/ort_genai.cmake
+@@ -8,5 +8,6 @@ set(OCOS_ENABLE_VISION ON CACHE INTERNAL "" FORCE)
+ set(OCOS_ENABLE_VENDOR_IMAGE_CODECS ON CACHE INTERNAL "" FORCE)
+ set(OCOS_ENABLE_MATH ON CACHE INTERNAL "" FORCE)
+ set(OCOS_ENABLE_AUDIO ON CACHE INTERNAL "" FORCE)
++set(OCOS_ENABLE_TF_STRING ON CACHE INTERNAL "" FORCE)
+ 
+ set(OCOS_ENABLE_CTEST OFF CACHE INTERNAL "" FORCE)
+diff --git a/onnxruntime-extensions/operators/vision/image_encoder.hpp b/onnxruntime-extensions/operators/vision/image_encoder.hpp
+index fc87579..3e3f174 100644
+--- a/onnxruntime-extensions/operators/vision/image_encoder.hpp
++++ b/onnxruntime-extensions/operators/vision/image_encoder.hpp
+@@ -2,7 +2,7 @@
+ // Licensed under the MIT License.
+ 
+ #include "zlib.h"
+-#if ZLIB_VERNUM != 0x12b0
++#if ZLIB_VERNUM != 0x1310
+ // the following is a trick to show the invalid version number for the diagnosis.
+ #define STR_VERSION(x) STR_NUM(x)
+ #define STR_NUM(x) #x
+diff --git a/onnxruntime-extensions/pyproject.toml b/onnxruntime-extensions/pyproject.toml
+index 409c87e..a888a2f 100644
+--- a/onnxruntime-extensions/pyproject.toml
++++ b/onnxruntime-extensions/pyproject.toml
+@@ -1,6 +1,6 @@
+ [build-system]
+ # Minimum requirements for the build system to execute.
+-requires = ["setuptools", "wheel", "ninja", "cmake"]  # PEP 508 specifications.
++requires = ["setuptools", "wheel" ]  # PEP 508 specifications.
+ build-backend = "backend"
+ backend-path = [".pyproject"]
+ 

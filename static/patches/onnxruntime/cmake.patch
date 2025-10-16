@@ -13,15 +13,6 @@ index 205dccdad6..1987956cfc 100644
  
  # Options related to reducing the binary size produced by the build
  # XNNPACK EP requires the internal NHWC contrib ops to be available, so this option must be OFF when onnxruntime_USE_XNNPACK is ON
-@@ -1140,7 +1144,7 @@ function(onnxruntime_set_compile_flags target_name)
-       target_compile_definitions(${target_name} PRIVATE ENABLE_ATEN)
-     endif()
- 
--    set_target_properties(${target_name} PROPERTIES COMPILE_WARNING_AS_ERROR ON)
-+    #set_target_properties(${target_name} PROPERTIES COMPILE_WARNING_AS_ERROR ON)
-     if (onnxruntime_USE_CUDA)
-       # Suppress a "conversion_function_not_usable" warning in gsl/span
-       target_compile_options(${target_name} PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:-Xcudafe \"--diag_suppress=conversion_function_not_usable\">")
 diff --git a/cmake/external/abseil-cpp.cmake b/cmake/external/abseil-cpp.cmake
 index cd93a8da00..a47cb6ab59 100644
 --- a/cmake/external/abseil-cpp.cmake
@@ -71,61 +62,6 @@ index 67fa48b282..3cb473f832 100644
 +if (onnxruntime_USE_ETGLOW)
 +  include(onnxruntime_providers_etglow.cmake)
 +endif()
-diff --git a/cmake/onnxruntime_python.cmake b/cmake/onnxruntime_python.cmake
-index aee6d2ff76..a03fec6d30 100644
---- a/cmake/onnxruntime_python.cmake
-+++ b/cmake/onnxruntime_python.cmake
-@@ -190,6 +190,18 @@ if(onnxruntime_BUILD_QNN_EP_STATIC_LIB)
-   list(APPEND onnxruntime_pybind11_state_static_providers PRIVATE onnxruntime_providers_qnn)
- endif()
- 
-+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-+
-+# Get NumPy include directory
-+execute_process(COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
-+  OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
-+  OUTPUT_STRIP_TRAILING_WHITESPACE)
-+
-+target_include_directories(onnxruntime_pybind11_state PRIVATE
-+   ${Python3_INCLUDE_DIRS}
-+   ${NUMPY_INCLUDE_DIR}
-+)
-+
- target_link_libraries(onnxruntime_pybind11_state PRIVATE
-     onnxruntime_session
-     ${onnxruntime_libs}
-@@ -204,6 +216,7 @@ target_link_libraries(onnxruntime_pybind11_state PRIVATE
-     ${ONNXRUNTIME_MLAS_LIBS}
-     onnxruntime_common
-     onnxruntime_flatbuffers
-+    ${Python3_LIBRARIES}
-     ${pybind11_lib}
-     Python::NumPy
- )
-@@ -1051,4 +1064,23 @@ if (onnxruntime_USE_VSINPU)
-   )
- endif()
- 
-+
-+if (onnxruntime_USE_ETGLOW)
-+  file(GLOB onnxruntime_python_providers_etglow_srcs CONFIGURE_DEPENDS
-+    "${ONNXRUNTIME_ROOT}/python/providers/etglow/*.py"
-+  )
-+  add_custom_command(
-+    TARGET onnxruntime_pybind11_state POST_BUILD
-+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers
-+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
-+    COMMAND ${CMAKE_COMMAND} -E copy
-+        ${onnxruntime_python_providers_etglow_srcs}
-+        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
-+    COMMAND ${CMAKE_COMMAND} -E copy
-+        $<TARGET_FILE:onnxruntime_providers_etglow>
-+        $<TARGET_FILE:onnxruntime_providers_shared>
-+        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
-+  )
-+endif()
-+
- endif()
 diff --git a/cmake/onnxruntime_unittests.cmake b/cmake/onnxruntime_unittests.cmake
 index 0916aeb3dd..5aad822e14 100644
 --- a/cmake/onnxruntime_unittests.cmake

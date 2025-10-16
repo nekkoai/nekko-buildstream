@@ -1,0 +1,21 @@
+diff --git a/cmake/external/onnxruntime_external_deps.cmake b/cmake/external/onnxruntime_external_deps.cmake
+index aeb561c..11ed190 100644
+--- a/cmake/external/onnxruntime_external_deps.cmake
++++ b/cmake/external/onnxruntime_external_deps.cmake
+@@ -82,8 +82,7 @@ endif()
+ 
+ FetchContent_Declare(
+   onnxruntime_extensions
+-  GIT_REPOSITORY ${DEP_URL_onnxruntime_extensions}
+-  GIT_TAG ${DEP_SHA1_onnxruntime_extensions}
++  SOURCE_DIR "${CMAKE_SOURCE_DIR}/onnxruntime-extensions"
+ )
+ set(OCOS_BUILD_PRESET ort_genai)
+ onnxruntime_fetchcontent_makeavailable(onnxruntime_extensions)
+@@ -108,4 +107,4 @@ if(USE_GUIDANCE)
+   )
+   onnxruntime_fetchcontent_makeavailable(llguidance)
+   corrosion_import_crate(MANIFEST_PATH ${llguidance_SOURCE_DIR}/parser/Cargo.toml)
+-endif()
+\ No newline at end of file
++endif()

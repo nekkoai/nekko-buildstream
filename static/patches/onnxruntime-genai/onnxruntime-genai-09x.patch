@@ -1,0 +1,43 @@
+diff --git a/cmake/ortlib.cmake b/cmake/ortlib.cmake
+index 78fff871..a364ed2e 100644
+--- a/cmake/ortlib.cmake
++++ b/cmake/ortlib.cmake
+@@ -16,7 +16,7 @@ if(ORT_HOME)
+     set(ORT_HEADER_DIR ${ORT_HOME}/include/onnxruntime)
+     set(ORT_LIB_DIR ${ORT_HOME}/lib)
+   else()
+-    set(ORT_HEADER_DIR ${ORT_HOME}/include)
++    set(ORT_HEADER_DIR ${ORT_HOME}/include/onnxruntime)
+     set(ORT_LIB_DIR ${ORT_HOME}/lib)
+   endif()
+ else()
+diff --git a/cmake/package.cmake b/cmake/package.cmake
+index 5acdb6b9..a20e7092 100644
+--- a/cmake/package.cmake
++++ b/cmake/package.cmake
+@@ -75,12 +75,12 @@ else ()
+ endif ()
+ 
+ set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
+-install(FILES
+-  "${PROJECT_SOURCE_DIR}/README.md"
+-  "${PROJECT_SOURCE_DIR}/ThirdPartyNotices.txt"
+-  "${PROJECT_SOURCE_DIR}/SECURITY.md"
+-  "${PROJECT_SOURCE_DIR}/LICENSE"
+-  DESTINATION .)
++#install(FILES
++#  "${PROJECT_SOURCE_DIR}/README.md"
++#  "${PROJECT_SOURCE_DIR}/ThirdPartyNotices.txt"
++#  "${PROJECT_SOURCE_DIR}/SECURITY.md"
++#  "${PROJECT_SOURCE_DIR}/LICENSE"
++#  DESTINATION .)
+ 
+ include(CPack)
+ 
+@@ -146,4 +146,4 @@ if(BUILD_APPLE_FRAMEWORK)
+                      copy_if_different ${h_} ${STATIC_FRAMEWORK_HEADER_DIR}/${HEADER_NAME_})
+   endforeach()
+ 
+-endif()
+\ No newline at end of file
++endif()

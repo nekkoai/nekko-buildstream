@@ -1,0 +1,13 @@
+diff --git a/onnxruntime/core/session/environment.cc b/onnxruntime/core/session/environment.cc
+index 48213e3e38..1482dae788 100644
+--- a/onnxruntime/core/session/environment.cc
++++ b/onnxruntime/core/session/environment.cc
+@@ -50,7 +50,7 @@ namespace onnxruntime {
+ using namespace ::onnxruntime::common;
+ using namespace ONNX_NAMESPACE;
+ 
+-std::once_flag schemaRegistrationOnceFlag;
++__attribute__((visibility("default"))) std::once_flag schemaRegistrationOnceFlag;
+ #ifdef USE_CUDA
+ ProviderInfo_CUDA& GetProviderInfo_CUDA();
+ #endif  // USE_CUDA

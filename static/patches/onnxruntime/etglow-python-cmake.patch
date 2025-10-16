@@ -1,0 +1,28 @@
+diff --git a/cmake/onnxruntime_python.cmake b/cmake/onnxruntime_python.cmake
+index aee6d2ff76..a03fec6d30 100644
+--- a/cmake/onnxruntime_python.cmake
++++ b/cmake/onnxruntime_python.cmake
+@@ -1051,4 +1064,23 @@ if (onnxruntime_USE_VSINPU)
+   )
+ endif()
+ 
++
++if (onnxruntime_USE_ETGLOW)
++  file(GLOB onnxruntime_python_providers_etglow_srcs CONFIGURE_DEPENDS
++    "${ONNXRUNTIME_ROOT}/python/providers/etglow/*.py"
++  )
++  add_custom_command(
++    TARGET onnxruntime_pybind11_state POST_BUILD
++    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers
++    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
++    COMMAND ${CMAKE_COMMAND} -E copy
++        ${onnxruntime_python_providers_etglow_srcs}
++        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/providers/etglow
++    COMMAND ${CMAKE_COMMAND} -E copy
++        $<TARGET_FILE:onnxruntime_providers_etglow>
++        $<TARGET_FILE:onnxruntime_providers_shared>
++        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++  )
++endif()
++
+ endif()

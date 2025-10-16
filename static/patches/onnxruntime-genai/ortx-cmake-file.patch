@@ -1,0 +1,171 @@
+diff --git a/onnxruntime-extensions/CMakeLists.txt b/onnxruntime-extensions/CMakeLists.txt
+index 15b5508..8dceca6 100644
+--- a/onnxruntime-extensions/CMakeLists.txt
++++ b/onnxruntime-extensions/CMakeLists.txt
+@@ -320,9 +320,7 @@ function(set_msvc_c_cpp_compiler_warning_level warning_level)
+   endif()
+ endfunction()
+ 
+-if (NOT ONNXRUNTIME_INCLUDE_DIR)
+-  include(ext_ortlib)
+-endif()
++include(ext_ortlib)
+ # set default MSVC warning level to 3 for external dependencies
+ set_msvc_c_cpp_compiler_warning_level(3)
+ include(gsl)
+@@ -366,11 +364,6 @@ if(OCOS_ENABLE_DLIB)
+   set(DLIB_USE_LAPACK OFF CACHE INTERNAL "")
+   set(DLIB_USE_BLAS OFF CACHE INTERNAL "")
+   include(dlib)
+-
+-  # Ideally, dlib should be included as file(GLOB TARGET_SRC_DLIB "${dlib_SOURCE_DIR}/dlib/all/source.cpp")
+-  # To avoid the unintentional using some unwanted component, we only include the test_for_odr_violations.cpp
+-  # to check if there is any violation in build configuration to ensure compiling some dlib source files correctly.
+-  file(GLOB TARGET_SRC_DLIB "${dlib_SOURCE_DIR}/dlib/test_for_odr_violations.cpp")
+ endif()
+ 
+ if(OCOS_ENABLE_TF_STRING)
+@@ -384,8 +377,8 @@ if(OCOS_ENABLE_AUDIO)
+   endif()
+   include(dr_libs)
+   file(GLOB TARGET_SRC_AUDIO "operators/audio/*.*")
+-  list(APPEND TARGET_SRC_AUDIO ${dlib_SOURCE_DIR}/dlib/fft/fft.cpp)
+   list(APPEND TARGET_SRC_NOEXCEPTION ${TARGET_SRC_AUDIO})
++  list(APPEND ocos_libraries dlib)
+ endif()
+ 
+ if(OCOS_ENABLE_RE2_REGEX)
+@@ -456,13 +449,7 @@ endif()
+ if(OCOS_ENABLE_SPM_TOKENIZER)
+   # SentencePiece
+   set(_HAS_TOKENIZER ON)
+-  set(SPM_ENABLE_TCMALLOC OFF CACHE INTERNAL "")
+-  set(SPM_ENABLE_SHARED OFF CACHE INTERNAL "")
+-  message(STATUS "Fetch sentencepiece")
+   include(sentencepieceproject)
+-  file(GLOB stpiece_TARGET_SRC "operators/tokenizer/sentencepiece/*.cc" "operators/tokenizer/sentencepiece*")
+-  list(REMOVE_ITEM stpiece_TARGET_SRC INCLUDE REGEX ".*((spm)|(train)).*")
+-  list(APPEND TARGET_SRC ${stpiece_TARGET_SRC})
+ endif()
+ 
+ if(OCOS_ENABLE_WORDPIECE_TOKENIZER)
+@@ -609,26 +596,27 @@ standardize_output_folder(noexcep_operators)
+ standardize_output_folder(ocos_operators)
+ 
+ target_include_directories(noexcep_operators PUBLIC
+-  ${ONNXRUNTIME_INCLUDE_DIR}
+   ${GSL_INCLUDE_DIR}
++  ${ONNXRUNTIME_INCLUDE_DIR}
+   ${PROJECT_SOURCE_DIR}/include
+   ${PROJECT_SOURCE_DIR}/include/custom_op
+   ${PROJECT_SOURCE_DIR}/base
+   ${PROJECT_SOURCE_DIR}/operators)
+ 
+ target_include_directories(ocos_operators PUBLIC
+-  ${ONNXRUNTIME_INCLUDE_DIR}
+   ${GSL_INCLUDE_DIR}
++  ${ONNXRUNTIME_INCLUDE_DIR}
+   ${PROJECT_SOURCE_DIR}/include
+   ${PROJECT_SOURCE_DIR}/include/custom_op
+   ${PROJECT_SOURCE_DIR}/base
+   ${PROJECT_SOURCE_DIR}/operators)
+ 
++target_link_libraries(noexcep_operators PUBLIC ${noexcep_libraries})
++
+ if (OCOS_USE_CUDA)
+   target_include_directories(ocos_operators PUBLIC ${cutlass_SOURCE_DIR}/include ${cutlass_SOURCE_DIR}/examples)
+ endif()
+ 
+-set(ocos_libraries)
+ set(OCOS_COMPILE_DEFINITIONS)
+ 
+ if(OCOS_ENABLE_DLIB)
+@@ -733,15 +721,14 @@ endif()
+ 
+ if(OCOS_ENABLE_SPM_TOKENIZER)
+   # SentencePiece
+-  target_include_directories(ocos_operators PUBLIC ${spm_INCLUDE_DIRS})
+   list(APPEND OCOS_COMPILE_DEFINITIONS ENABLE_SPM_TOKENIZER)
+-  list(APPEND ocos_libraries sentencepiece-static)
++  list(APPEND ocos_libraries sentencepiece)
+ endif()
+ 
+ if(OCOS_ENABLE_BLINGFIRE)
+   include(blingfire)
+   list(APPEND OCOS_COMPILE_DEFINITIONS ENABLE_BLINGFIRE)
+-  list(APPEND ocos_libraries bingfirtinydll_static)
++  list(APPEND ocos_libraries blingfiretokdll)
+ endif()
+ 
+ if(OCOS_ENABLE_GPT2_TOKENIZER OR OCOS_ENABLE_WORDPIECE_TOKENIZER)
+@@ -774,7 +761,7 @@ endif()
+ 
+ list(APPEND ocos_libraries noexcep_operators)
+ target_compile_definitions(ocos_operators PRIVATE ${OCOS_COMPILE_DEFINITIONS})
+-target_link_libraries(ocos_operators PRIVATE ${ocos_libraries})
++target_link_libraries(ocos_operators PUBLIC ${ocos_libraries})
+ 
+ file(GLOB _TARGET_LIB_SRC "shared/lib/*.cc")
+ if(OCOS_ENABLE_C_API)
+@@ -889,6 +876,10 @@ if(OCOS_BUILD_SHARED_LIB)
+   endif()
+   add_library(extensions_shared SHARED ${shared_TARGET_SRC})
+ 
++  # custom_op is handled separately so we preserve its hierarchy correctly
++  file(GLOB shared_include_SRC "include/*.h" "shared/api/*.h" "shared/api/*.hpp" "base/*.h")
++  set_target_properties(extensions_shared PROPERTIES PUBLIC_HEADER "${shared_include_SRC}")
++
+   # We need to propagate OCOS_SHARED_LIBRARY if set.
+   # could specifically add that if using OCOS_COMPILE_DEFINITIONS is too much.
+   target_compile_definitions(extensions_shared PRIVATE ${OCOS_COMPILE_DEFINITIONS})
+@@ -897,21 +888,18 @@ if(OCOS_BUILD_SHARED_LIB)
+   standardize_output_folder(extensions_shared)
+ 
+   if(LINUX OR ANDROID)
+-    set_property(TARGET extensions_shared APPEND_STRING PROPERTY LINK_FLAGS
+-      " -Wl,--version-script -Wl,${PROJECT_SOURCE_DIR}/shared/ortcustomops.ver")
+-    # strip if not a debug build
+-    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+-      set_property(TARGET extensions_shared APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-s")
+-    endif()
++     #set_property(TARGET extensions_shared APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--version-script -Wl,${PROJECT_SOURCE_DIR}/shared/ortcustomops.ver")
+   endif()
+ 
+   target_include_directories(extensions_shared PUBLIC $<TARGET_PROPERTY:ortcustomops,INTERFACE_INCLUDE_DIRECTORIES>)
+   target_link_libraries(extensions_shared PRIVATE ortcustomops)
++  #target_link_libraries(extensions_shared PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,ortcustomops>" "$<LINK_LIBRARY:WHOLE_ARCHIVE,ocos_operators>" "$<LINK_LIBRARY:WHOLE_ARCHIVE,noexcep_operators>")
+   set_target_properties(extensions_shared PROPERTIES OUTPUT_NAME "ortextensions")
+   if(MSVC AND ocos_target_platform MATCHES "x86|x64")
+     target_link_options(extensions_shared PRIVATE "/CETCOMPAT")
+   endif()
+ 
++  include(GNUInstallDirs)
+   # Set some properties of your target
+   set_target_properties(extensions_shared PROPERTIES
+     VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}
+@@ -920,7 +908,24 @@ if(OCOS_BUILD_SHARED_LIB)
+ 
+   # Install your target
+   install(TARGETS extensions_shared
+-    RUNTIME DESTINATION bin
++    RUNTIME
++    LIBRARY
++    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/onnxruntime-extensions
++  )
++  install(TARGETS ocos_operators
++	  LIBRARY
++  )
++  install(TARGETS noexcep_operators
++	  LIBRARY
++  )
++  install(TARGETS ortcustomops
++	  LIBRARY
++  )
++  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/custom_op/
++        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/onnxruntime-extensions/custom_op
++        FILES_MATCHING PATTERN "*.h"  # Install only .h files
++        PATTERN "*.hpp" # Also install .hpp files if present
++        PATTERN "*.inc" # Also install .inc files if present
+   )
+ 
+ endif()

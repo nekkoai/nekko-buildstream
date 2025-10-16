@@ -4,9 +4,9 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:components/patchelf.bst
+- deps/protobuf-static.bst
 
 depends:
-- base/freedesktop-sdk.bst:components/protobuf.bst
 - deps/date.bst
 - deps/dlpack.bst
 - deps/eigen.bst
@@ -21,6 +21,9 @@ depends:
 - legacy/et-trace-utils.bst
 - legacy/glow.bst
 
+environment:
+  LDFLAGS: ""
+
 variables:
   conf-root: cmake
   (@):
@@ -32,6 +35,9 @@ variables:
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
     -D onnxruntime_BUILD_UNIT_TESTS=off
     -D onnxruntime_BUILD_SHARED_LIB=on
+    -D onnxruntime_USE_FULL_PROTOBUF=on
+    -D CMAKE_SHARED_LINKER_FLAGS_INIT="-Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack"
+    -D CMAKE_MODULE_LINKER_FLAGS_INIT="-Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack"
 
 # todo cover your eyes - this is the inverse of our approach to onnx...
 # for patchelf - see https://github.com/microsoft/onnxruntime/issues/24911

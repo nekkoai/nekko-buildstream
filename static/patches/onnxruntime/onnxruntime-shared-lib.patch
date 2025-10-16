@@ -1,0 +1,92 @@
+diff --git a/cmake/onnxruntime.cmake b/cmake/onnxruntime.cmake
+index 6c1d448..73c1fa3 100644
+--- a/cmake/onnxruntime.cmake
++++ b/cmake/onnxruntime.cmake
+@@ -251,10 +251,21 @@ endif()
+ 
+ # If you are linking a new library, please add it to the list onnxruntime_INTERNAL_LIBRARIES or onnxruntime_EXTERNAL_LIBRARIES,
+ # Please do not add a library directly to the target_link_libraries command
+-target_link_libraries(onnxruntime PRIVATE
++add_library(onnxruntime_shared SHARED)
++target_link_libraries(onnxruntime_shared PRIVATE
++    -Wl,--whole-archive
+     ${onnxruntime_INTERNAL_LIBRARIES}
++    -Wl,--no-whole-archive
+     ${onnxruntime_EXTERNAL_LIBRARIES}
+ )
++set_target_properties(onnxruntime_shared PROPERTIES
++    VERSION ${ORT_VERSION}
++    SONAME "onnxruntime_shared.so"
++)
++
++target_link_libraries(onnxruntime PRIVATE
++    onnxruntime_shared
++)
+ 
+ if(WIN32)
+   target_link_options(onnxruntime PRIVATE ${onnxruntime_DELAYLOAD_FLAGS})
+@@ -290,6 +301,12 @@ install(TARGETS onnxruntime
+         LIBRARY   DESTINATION ${CMAKE_INSTALL_LIBDIR}
+         RUNTIME   DESTINATION ${CMAKE_INSTALL_BINDIR}
+         FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR})
++install(TARGETS onnxruntime_shared
++        EXPORT ${PROJECT_NAME}Targets
++        ARCHIVE   DESTINATION ${CMAKE_INSTALL_LIBDIR}
++        LIBRARY   DESTINATION ${CMAKE_INSTALL_LIBDIR}
++        RUNTIME   DESTINATION ${CMAKE_INSTALL_BINDIR}
++        FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 
+ 
+ if (WIN32 AND NOT CMAKE_CXX_STANDARD_LIBRARIES MATCHES kernel32.lib)
+diff --git a/cmake/onnxruntime_python.cmake b/cmake/onnxruntime_python.cmake
+index aee6d2f..2484a9d 100644
+--- a/cmake/onnxruntime_python.cmake
++++ b/cmake/onnxruntime_python.cmake
+@@ -190,20 +190,22 @@ if(onnxruntime_BUILD_QNN_EP_STATIC_LIB)
+   list(APPEND onnxruntime_pybind11_state_static_providers PRIVATE onnxruntime_providers_qnn)
+ endif()
+ 
++find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
++
++# Get NumPy include directory
++execute_process(COMMAND ${Python3_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
++  OUTPUT_VARIABLE NUMPY_INCLUDE_DIR
++  OUTPUT_STRIP_TRAILING_WHITESPACE)
++
++target_include_directories(onnxruntime_pybind11_state PRIVATE
++   ${Python3_INCLUDE_DIRS}
++   ${NUMPY_INCLUDE_DIR}
++)
++
+ target_link_libraries(onnxruntime_pybind11_state PRIVATE
+-    onnxruntime_session
+-    ${onnxruntime_libs}
++    onnxruntime_shared
+     ${onnxruntime_pybind11_state_static_providers}
+-    onnxruntime_optimizer
+-    onnxruntime_providers
+-    onnxruntime_util
+-    onnxruntime_lora
+-    onnxruntime_framework
+-    onnxruntime_util
+-    onnxruntime_graph
+-    ${ONNXRUNTIME_MLAS_LIBS}
+-    onnxruntime_common
+-    onnxruntime_flatbuffers
++    ${Python3_LIBRARIES}
+     ${pybind11_lib}
+     Python::NumPy
+ )
+@@ -697,6 +699,12 @@ if (onnxruntime_BUILD_SHARED_LIB)
+         $<TARGET_FILE:onnxruntime>
+         $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
+   )
++  add_custom_command(
++    TARGET onnxruntime_pybind11_state POST_BUILD
++    COMMAND ${CMAKE_COMMAND} -E copy
++        $<TARGET_FILE:onnxruntime_shared>
++        $<TARGET_FILE_DIR:${build_output_target}>/onnxruntime/capi/
++  )
+ endif()
+ 
+ if (onnxruntime_USE_OPENVINO)

@@ -7,7 +7,6 @@ depends:
 - legacy/neuralizer.bst
 - legacy/glow.bst
 - legacy/onnxruntime.bst
-- legacy/onnxruntime-extensions.bst
 - legacy/onnxruntime-genai.bst
 # Essential programs
 - base/freedesktop-sdk.bst:public-stacks/runtime-minimal.bst

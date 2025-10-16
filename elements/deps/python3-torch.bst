@@ -41,6 +41,7 @@ variables:
   optimize-debug: false
 
 environment:
+  LDFLAGS: ""
   CMAKE_BUILD_TYPE: MinSizeRel
   USE_SYSTEM_LIBS: ON
   USE_CUDA: OFF
@@ -60,5 +61,5 @@ sources:
   url: github:pytorch/pytorch
   track: release/2.8
   ref: v2.8.0-0-gba56102387ef21a3b04b357e5b183d48f0afefc7
-- kind: patch
-  path: static/patches/pytorch-cmake.patch
+- kind: patch_queue
+  path: static/patches/pytorch

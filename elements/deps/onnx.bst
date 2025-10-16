@@ -4,10 +4,10 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
-- base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/python3-protobuf.bst
 - deps/boost.bst
 - deps/pybind.bst
+- deps/protobuf-static.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3-protobuf.bst
@@ -32,8 +32,6 @@ environment:
     -D CMAKE_POSITION_INDEPENDENT_CODE=ON
     -D BUILD_ONNX_PYTHON=on
     -D ONNX_DISABLE_STATIC_REGISTRATION=on
-    -D ONNX_USE_PROTOBUF_SHARED_LIBS=on
-    -D BUILD_SHARED_LIBS=on
     -D Protobuf_PROTOC_EXECUTABLE=/usr/bin/protoc
 
 sources:

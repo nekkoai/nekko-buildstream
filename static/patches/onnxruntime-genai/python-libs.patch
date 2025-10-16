@@ -1,0 +1,24 @@
+diff --git a/src/python/CMakeLists.txt b/src/python/CMakeLists.txt
+index 5d5f9310..9bdcfda4 100644
+--- a/src/python/CMakeLists.txt
++++ b/src/python/CMakeLists.txt
+@@ -5,9 +5,9 @@ file(GLOB python_srcs CONFIGURE_DEPENDS
+   "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+ )
+ find_package(Python COMPONENTS Interpreter Development)
+-pybind11_add_module(python ${python_srcs})
+-target_include_directories(python PRIVATE ${ORT_HEADER_DIR})
+-target_link_directories(python PRIVATE ${ORT_LIB_DIR})
++pybind11_add_module(python NO_EXTRAS ${python_srcs})
++target_include_directories(python PRIVATE ${ORT_HEADER_DIR} ${Python_INCLUDE_DIRS})
++target_link_directories(python PRIVATE ${ORT_LIB_DIR})
+ target_link_libraries(python PRIVATE onnxruntime-genai)
+ 
+ if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+@@ -118,4 +118,4 @@ if(BUILD_WHEEL)
+       EXCLUDE_FROM_ALL
+     )
+   endif()
+-endif()
+\ No newline at end of file
++endif()

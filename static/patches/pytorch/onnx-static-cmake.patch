@@ -1,0 +1,12 @@
+diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
+index a93386c27f..d2ac56cc75 100644
+--- a/cmake/Dependencies.cmake
++++ b/cmake/Dependencies.cmake
+@@ -1331,6 +1321,7 @@ if(CAFFE2_CMAKE_BUILDING_WITH_MAIN_REPO AND NOT INTERN_DISABLE_ONNX)
+     endif()
+     set_property(TARGET onnx_proto PROPERTY IMPORTED_LOCATION ${ONNX_PROTO_LIBRARY})
+     message("-- Found onnx: ${ONNX_LIBRARY} ${ONNX_PROTO_LIBRARY}")
++    list(APPEND Caffe2_PUBLIC_DEPENDENCY_LIBS onnx_proto onnx)
+     list(APPEND Caffe2_DEPENDENCY_LIBS onnx_proto onnx)
+   endif()
+   # Recover the build shared libs option.

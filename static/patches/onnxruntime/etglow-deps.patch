@@ -389,31 +389,6 @@ index 0000000000..2f2c15c84c
 +};
 +
 +}  // namespace onnxruntime
-diff --git a/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc b/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
-index bdb6a44bdd..1b6a4e3539 100644
---- a/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
-+++ b/onnxruntime/core/optimizer/transpose_optimization/onnx_transpose_optimization.cc
-@@ -11,6 +11,8 @@
- #include <unordered_set>
- #include <utility>
- #include <vector>
-+#include <cstdint>
-+#include <cstring>
- 
- #include <gsl/gsl>
- #include "core/common/make_string.h"
-diff --git a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
-index e7d2d32809..8892e3ddae 100644
---- a/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
-+++ b/onnxruntime/core/optimizer/transpose_optimization/optimizer_api.h
-@@ -10,6 +10,7 @@
- #include <string_view>
- #include <unordered_map>
- #include <unordered_set>
-+#include <cstdint>
- #include <vector>
- 
- namespace onnx_transpose_optimization {
 diff --git a/onnxruntime/core/providers/cpu/controlflow/loop.cc b/onnxruntime/core/providers/cpu/controlflow/loop.cc
 index c65dd2a04b..b33b1f1895 100644
 --- a/onnxruntime/core/providers/cpu/controlflow/loop.cc
