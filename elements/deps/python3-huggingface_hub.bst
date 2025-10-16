@@ -12,6 +12,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3-filelock.bst
 - deps/python3-hf_xet.bst
 - deps/python3-numpy.bst
+- deps/python3-fsspec.bst
 
 variables:
   pip-flags: |
@@ -25,5 +26,4 @@ sources:
 - kind: pip
   packages:
   - tqdm
-  - fsspec
-  ref: "tqdm==4.67.1\nfsspec==2025.9.0"
+  ref: "tqdm==4.67.1\n"

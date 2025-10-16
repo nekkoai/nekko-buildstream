@@ -4,7 +4,6 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:components/ninja.bst
-- base/freedesktop-sdk.bst:components/protobuf.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst
@@ -13,6 +12,7 @@ depends:
 - base/freedesktop-sdk.bst:components/python3-protobuf.bst
 - base/freedesktop-sdk.bst:components/python3-typing-extensions.bst
 - base/freedesktop-sdk.bst:components/fmtlib.bst
+- base/freedesktop-sdk.bst:components/protobuf.bst
 - deps/python3-numpy.bst
 - deps/python3-astunparse.bst
 - deps/python3-six.bst
