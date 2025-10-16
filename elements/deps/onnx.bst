@@ -39,5 +39,5 @@ sources:
   url: github:onnx/onnx
   track: v1.17.0
   ref: v1.17.0-0-gb8baa8446686496da4cc8fda09f2b6fe65c2a02c
-- kind: patch
-  path: static/patches/onnx-python-cmake.patch
+- kind: patch_queue
+  path: static/patches/onnx
