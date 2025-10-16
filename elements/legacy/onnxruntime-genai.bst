@@ -43,18 +43,18 @@ config:
     %{make-install}
   - |
     (cd %{build-dir}/wheel && python setup.py install --root=%{install-root} --prefix=%{prefix})
-  
-# v0.9.0 is last one compatible with onnxruntime 1.21 ; when we upgrade, we can pick newer versions
+
+# v0.8.3 is last one compatible with onnxruntime 1.21 ; when we upgrade, we can pick newer versions
 sources:
 - kind: git_repo
   url: github:microsoft/onnxruntime-genai
-  track: v0.9.0
-  ref: 5ba9fce5b52452a82b12ac343d941765c430d996
+  track: v0.8.3
+  ref: v0.8.3-0-gdc2d850790a61efcf7b5098144df90344ad19d6e
 - kind: git_module
   path: onnxruntime-extensions
   url: github:microsoft/onnxruntime-extensions
-  #track: main
-  #bd8fb6d86e98c17e397c42fc001913cc2e035597
   ref: 41b89b1016eddb5ca45a686883b621872958870c
+#track: main
+#bd8fb6d86e98c17e397c42fc001913cc2e035597
 - kind: patch_queue
   path: static/patches/onnxruntime-genai
