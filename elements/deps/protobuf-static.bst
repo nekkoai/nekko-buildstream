@@ -12,6 +12,10 @@ variables:
     -Dprotobuf_BUILD_TESTS:BOOL=OFF
     -Dprotobuf_ABSL_PROVIDER=package
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DBUILD_SHARED_LIBS=OFF
+
+environment:
+  LDFLAGS: ''
 
 sources:
 - kind: git_repo
@@ -22,3 +26,5 @@ sources:
   - '*rc*'
   - '*dev*'
   ref: v32.1-0-g7fcfd66022455635fa29af92987cdc0967efd4f3
+- kind: patch
+  path: static/patches/protobuf-visibility-default.patch

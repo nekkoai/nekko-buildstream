@@ -4,10 +4,12 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
-- base/freedesktop-sdk.bst:components/python3-protobuf.bst
 - deps/boost.bst
 - deps/pybind.bst
 - deps/protobuf-static.bst
+
+runtime-depends:
+- base/freedesktop-sdk.bst:components/abseil-cpp.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3-protobuf.bst

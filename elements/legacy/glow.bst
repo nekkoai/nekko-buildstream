@@ -2,9 +2,12 @@ kind: cmake
 
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
+- deps/protobuf-static.bst
+
+runtime-depends:
+- base/freedesktop-sdk.bst:components/abseil-cpp.bst
 
 depends:
-- base/freedesktop-sdk.bst:components/protobuf.bst
 - base/freedesktop-sdk.bst:components/gflags.bst
 - base/freedesktop-sdk.bst:components/libpng.bst
 - base/freedesktop-sdk.bst:components/libunwind.bst

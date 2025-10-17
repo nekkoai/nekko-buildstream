@@ -4,10 +4,13 @@ build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
+- deps/protobuf-static.bst
+
+runtime-depends:
+- base/freedesktop-sdk.bst:components/abseil-cpp.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/openssl.bst
-- base/freedesktop-sdk.bst:components/protobuf.bst
 - deps/boost.bst
 - deps/xsimd.bst
 - deps/re2.bst

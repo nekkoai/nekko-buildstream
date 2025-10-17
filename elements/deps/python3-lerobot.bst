@@ -8,6 +8,7 @@ depends:
 
 runtime-depends:
 - base/freedesktop-sdk.bst:components/sdl3.bst
+- base/freedesktop-sdk.bst:components/python3-psutil.bst
 - deps/python3-draccus.bst
 - deps/python3-mergedeep.bst
 - deps/python3-typing-inspect.bst
@@ -22,6 +23,9 @@ runtime-depends:
 - deps/python3-serial.bst
 - deps/python3-deepdiff.bst
 - deps/python3-num2words.bst
+- deps/python3-einops.bst
+- deps/python3-gymnasium.bst
+- deps/python3-accelerate.bst
 
 sources:
 - kind: git_repo
