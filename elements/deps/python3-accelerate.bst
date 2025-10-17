@@ -12,6 +12,10 @@ depends:
 - deps/python3-safetensors.bst
 - deps/python3-huggingface_hub.bst
 
+variables:
+  pip-flags: |
+    %{pip} install --no-build-isolation --no-deps --root=%{install-root} --prefix=%{prefix}
+
 sources:
 - kind: git_repo
   url: github:huggingface/accelerate
