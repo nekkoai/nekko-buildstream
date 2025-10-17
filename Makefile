@@ -23,10 +23,9 @@ build: build-docker
 
 ifdef CI
 BUILD_FLAGS=--secret id=git_credentials,src=$(HOME)/.git-credentials \
-              --secret id=git_config,src=$(HOME)/.gitconfig \
-              --secret id=github_token_nekkoai,env=GITHUB_TOKEN
+              --secret id=git_config,src=$(HOME)/.gitconfig
 else
-BUILD_FLAGS=--ssh default --secret id=github_token_nekkoai,env=GITHUB_TOKEN
+BUILD_FLAGS=--ssh default
 endif
 
 # Ensure we have a correct docker builder running

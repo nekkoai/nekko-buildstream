@@ -35,7 +35,6 @@ RUN \
     --mount=type=ssh \
     --mount=type=secret,id=git_config,target=/root/.gitconfig \
     --mount=type=secret,id=git_credentials,target=/root/.git-credentials \
-    --mount=type=secret,id=github_token_nekkoai,env=GITHUB_TOKEN \
     --mount=type=cache,target=/cache \
     --mount=type=cache,target=/src/nutcracker/.bst \
     bst build nutcracker-legacy.bst && \

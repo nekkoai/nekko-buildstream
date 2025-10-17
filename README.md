@@ -32,6 +32,8 @@ See [this issue](https://github.com/apache/buildstream/issues/1833).
 
 ```sh
 % git clone ssh://git@github.com/nekkoai/nutcracker-legacy
+# OR
+% git clone https://github.com/nekkoai/nutcracker-legacy
 ```
 
 ### Ensure proper network access and credentials
@@ -74,7 +76,6 @@ The following must be set up in advance of running the `make build-docker` comma
 
 * `~/.git-credentials` - containing your https credentials for github.com, with access to private repositories in both github.com/nekkoai and github.com/aifoundry-org
 * `~/.gitconfig` - containing gitconfig settings
-* `GITHUB_TOKEN` environment variable - containing a personal access token with access to api.github.com for private repositories in both github.com/nekkoai and github.com/aifoundry-org
 
 Note that building in Docker using buildstream requires special privileges. To enable these privileges,
 the build is performed in a dedicated docker builder called `nutcracker-builder`.
