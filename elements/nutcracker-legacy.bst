@@ -13,11 +13,8 @@ depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-cmake.bst
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
-# Python libraries used by downstream consumers
-- deps/python3-pillow.bst
-- deps/python3-scipy.bst
-- deps/python3-transformers.bst
-- deps/python3-torch.bst
+# Hugging Face cli for fetching models
+- deps/python3-huggingface_hub.bst
 # friendly items for usability and debugging below
 - legacy/python3-site-nekko.bst
 - legacy/ldconfig-nekko.bst
