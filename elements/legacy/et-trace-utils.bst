@@ -45,6 +45,6 @@ sources:
 - kind: git_repo
   url: github:nekkoai/trace-utils
   track: master
-  ref: ea0ef6e305bf01ef44733a6d0040489c06e8a5ab
+  ref: 2defd356a6023f129f11f8684111cacff0e9448e
 - kind: patch
   path: static/patches/et-trace-utils-cmake-gcc.patch

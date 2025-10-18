@@ -15,4 +15,4 @@ sources:
 - kind: git_repo
   url: github:nekkoai/dnn-library-api
   track: master
-  ref: 2df327a353248769ef44229b2b7e847a6dc24c1a
+  ref: 7e5374be6c660b6db79b68c96ee5bdf0d65a5ed1

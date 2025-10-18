@@ -40,6 +40,6 @@ sources:
 - kind: git_repo
   url: github:nekkoai/neuralizer
   track: master
-  ref: eb73a07b5321b24e3cda0d26f3a78fcd7ebc9b4d
+  ref: b40fa48b2df7f2123312d3ce24ff1f38ccef5951
 - kind: patch
   path: static/patches/neuralizer-llvm.patch

@@ -10,12 +10,12 @@ variables:
   (@):
   - include/_private/platform-device-toolchain.yml
   cmake-local: >-
-   -D ENABLE_WARNINGS_AS_ERRORS=off
+    -D ENABLE_WARNINGS_AS_ERRORS=off
 
 sources:
-- kind: git
+- kind: git_repo
   url: github:nekkoai/dnn-library
-  track: main
-  ref: d4e7de30f299798f0b30340865edd00888380752
+  track: master
+  ref: cd802d7a24dc4d22a2bddff4447c1cf00a51d49a
 - kind: patch
   path: static/patches/platformsw-dnn-library.patch

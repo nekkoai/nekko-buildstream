@@ -45,7 +45,7 @@ sources:
 - kind: git_repo
   url: github:nekkoai/glow
   track: et
-  ref: ecb67865036aa03faafbc3034bde44785190334f
+  ref: 3c4fbb26be31b513553a3d240c4c0b36a5ea3d93
 - kind: git_module
   path: tests/OutputCheck
   url: github:stp/OutputCheck
