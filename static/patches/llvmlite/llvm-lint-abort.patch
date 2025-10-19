@@ -1,0 +1,41 @@
+diff --git a/ffi/PASSREGISTRY.def b/ffi/PASSREGISTRY.def
+index 9aaffd4..b7c61a8 100644
+--- a/ffi/PASSREGISTRY.def
++++ b/ffi/PASSREGISTRY.def
+@@ -41,7 +41,6 @@ FUNCTION_PASS(DomViewer)
+ FUNCTION_PASS(DomOnlyViewer)
+ FUNCTION_PASS(PostDomViewer)
+ FUNCTION_PASS(PostDomOnlyViewer)
+-FUNCTION_PASS(LintPass)
+ FUNCTION_PASS(ADCEPass)
+ FUNCTION_PASS(BreakCriticalEdgesPass)
+ FUNCTION_PASS(DSEPass)
+@@ -66,6 +65,7 @@ FUNCTION_PASS(InstructionNamerPass)
+ // TODO: Add them if needed
+ // FUNCTION_PASS_WITH_PARAMS(SimplifyCFGPass)
+ // FUNCTION_PASS_WITH_PARAMS(LoopUnrollPass)
++// FUNCTION_PASS_WITH_PARAMS(LintPass)
+ 
+ #ifndef LOOP_PASS
+ #define LOOP_PASS(NAME)
+diff --git a/ffi/newpassmanagers.cpp b/ffi/newpassmanagers.cpp
+index 06116a1..6e84928 100644
+--- a/ffi/newpassmanagers.cpp
++++ b/ffi/newpassmanagers.cpp
+@@ -616,6 +616,16 @@ LLVMPY_module_AddModuleDebugInfoPrinterPass(LLVMModulePassManagerRef MPM) {
+     llvm::unwrap(MPM)->addPass(ModuleDebugInfoPrinterPass(llvm::outs()));
+ }
+ 
++API_EXPORT(void)
++LLVMPY_module_AddLintPass(LLVMModulePassManagerRef MPM) {
++    llvm::unwrap(MPM)->addPass(createModuleToFunctionPassAdaptor(LintPass(true)));
++}
++
++API_EXPORT(void)
++LLVMPY_function_AddLintPass(LLVMFunctionPassManagerRef FPM) {
++    llvm::unwrap(FPM)->addPass(LintPass(true));
++}
++
+ #define CGSCC_PASS(NAME)                                                       \
+     API_EXPORT(void) LLVMPY_module_Add##NAME(LLVMModulePassManagerRef MPM) {   \
+         llvm::unwrap(MPM)->addPass(                                            \

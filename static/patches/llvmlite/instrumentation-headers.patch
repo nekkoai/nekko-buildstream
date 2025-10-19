@@ -1,0 +1,16 @@
+diff --git a/ffi/newpassmanagers.cpp b/ffi/newpassmanagers.cpp
+index 06116a1..0f762e1 100644
+--- a/ffi/newpassmanagers.cpp
++++ b/ffi/newpassmanagers.cpp
+@@ -106,9 +106,9 @@
+ #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
+ #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
+ #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
+-#include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
+ #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
++#include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
++#include "llvm/Transforms/Instrumentation/MemProfUse.h"
+ #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+ #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+ #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"

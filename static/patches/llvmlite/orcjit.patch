@@ -1,0 +1,24 @@
+diff --git a/ffi/orcjit.cpp b/ffi/orcjit.cpp
+index bf624ba..ac821b0 100644
+--- a/ffi/orcjit.cpp
++++ b/ffi/orcjit.cpp
+@@ -83,8 +83,9 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, bool suppressErrors,
+                 .setOptions(template_tm->Options));
+     }
+     builder.setObjectLinkingLayerCreator(
+-        [=](llvm::orc::ExecutionSession &session, const llvm::Triple &triple)
++        [=](llvm::orc::ExecutionSession &session)
+             -> std::unique_ptr<llvm::orc::ObjectLayer> {
++	    const Triple triple = session.getTargetTriple();
+             if (useJitLink) {
+                 auto linkingLayer =
+                     std::make_unique<llvm::orc::ObjectLinkingLayer>(session);
+@@ -108,7 +109,7 @@ LLVMPY_CreateLLJITCompiler(LLVMTargetMachineRef tm, bool suppressErrors,
+                 return linkingLayer;
+             } else {
+                 auto linkingLayer = std::make_unique<
+-                    llvm::orc::RTDyldObjectLinkingLayer>(session, []() {
++                    llvm::orc::RTDyldObjectLinkingLayer>(session, [](const MemoryBuffer &) {
+                     return std::make_unique<llvm::SectionMemoryManager>();
+                 });
+                 if (triple.isOSBinFormatCOFF()) {
