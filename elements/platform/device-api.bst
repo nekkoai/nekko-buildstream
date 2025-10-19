@@ -12,7 +12,7 @@ variables:
     -D GIT_HASH_STRING=d08fcdcb37654f5ef4e9989c9dba4b9c07312038
 
 sources:
-- kind: git
-  url: github:aifoundry-org/et-platformsw
+- kind: git_repo
+  url: github:aifoundry-org/et-platform
   track: master
-  ref: 62a29419873c2d5f910a2fb530d7dc0419e1e0e5
+  ref: 41eda51b5a532deea4e6da0b988f1a32c968a5d9
