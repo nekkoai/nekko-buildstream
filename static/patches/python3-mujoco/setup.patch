@@ -1,0 +1,13 @@
+diff --git a/python/setup.py b/python/setup.py
+index cebdec8..b2485ef 100644
+--- a/python/setup.py
++++ b/python/setup.py
+@@ -181,6 +181,8 @@ class BuildCMakeExtension(build_ext.build_ext):
+             plugin_path,
+             directory,
+         )
++      if 'debug' in subdirs:
++        pass
+       if fnmatch.filter(filenames, get_mujoco_lib_pattern()):
+         library_path = directory
+       if os.path.exists(os.path.join(directory, 'mujoco/mujoco.h')):

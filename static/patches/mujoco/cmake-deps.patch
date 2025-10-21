@@ -1,0 +1,184 @@
+diff --git a/cmake/MujocoDependencies.cmake b/cmake/MujocoDependencies.cmake
+index b11f991..356342b 100644
+--- a/cmake/MujocoDependencies.cmake
++++ b/cmake/MujocoDependencies.cmake
+@@ -14,10 +14,6 @@
+ 
+ # Build configuration for third party libraries used in MuJoCo.
+ 
+-set(MUJOCO_DEP_VERSION_lodepng
+-    17d08dd26cac4d63f43af217ebd70318bfb8189c
+-    CACHE STRING "Version of `lodepng` to be fetched."
+-)
+ set(MUJOCO_DEP_VERSION_tinyxml2
+     e6caeae85799003f4ca74ff26ee16a789bc2af48
+     CACHE STRING "Version of `tinyxml2` to be fetched."
+@@ -66,7 +62,6 @@ set(MUJOCO_DEP_VERSION_TriangleMeshDistance
+     CACHE STRING "Version of `TriangleMeshDistance` to be fetched."
+ )
+ 
+-mark_as_advanced(MUJOCO_DEP_VERSION_lodepng)
+ mark_as_advanced(MUJOCO_DEP_VERSION_MarchingCubeCpp)
+ mark_as_advanced(MUJOCO_DEP_VERSION_tinyxml2)
+ mark_as_advanced(MUJOCO_DEP_VERSION_tinyobjloader)
+@@ -93,57 +88,23 @@ set(BUILD_SHARED_LIBS
+     CACHE INTERNAL "Build SHARED libraries"
+ )
+ 
+-if(NOT TARGET lodepng)
+-  FetchContent_Declare(
+-    lodepng
+-    GIT_REPOSITORY https://github.com/lvandeve/lodepng.git
+-    GIT_TAG ${MUJOCO_DEP_VERSION_lodepng}
+-  )
+-
+-  FetchContent_GetProperties(lodepng)
+-  if(NOT lodepng_POPULATED)
+-    FetchContent_Populate(lodepng)
+-    # This is not a CMake project.
+-    set(LODEPNG_SRCS ${lodepng_SOURCE_DIR}/lodepng.cpp)
+-    set(LODEPNG_HEADERS ${lodepng_SOURCE_DIR}/lodepng.h)
+-    add_library(lodepng STATIC ${LODEPNG_HEADERS} ${LODEPNG_SRCS})
+-    target_compile_options(lodepng PRIVATE ${MUJOCO_MACOS_COMPILE_OPTIONS})
+-    target_link_options(lodepng PRIVATE ${MUJOCO_MACOS_LINK_OPTIONS})
+-    target_include_directories(lodepng PUBLIC ${lodepng_SOURCE_DIR})
+-  endif()
+-endif()
++# This is not a CMake project.
+ 
+-if(NOT TARGET marchingcubecpp)
+-  FetchContent_Declare(
+-    marchingcubecpp
+-    GIT_REPOSITORY https://github.com/aparis69/MarchingCubeCpp.git
+-    GIT_TAG ${MUJOCO_DEP_VERSION_MarchingCubeCpp}
+-  )
++set(lodepng_SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/lodepng)
++set(LODEPNG_SRCS ${lodepng_SOURCE_DIR}/lodepng.cpp)
++set(LODEPNG_HEADERS ${lodepng_SOURCE_DIR}/lodepng.h)
++add_library(lodepng STATIC ${LODEPNG_HEADERS} ${LODEPNG_SRCS})
++target_compile_options(lodepng PRIVATE ${MUJOCO_MACOS_COMPILE_OPTIONS})
++target_link_options(lodepng PRIVATE ${MUJOCO_MACOS_LINK_OPTIONS})
++target_include_directories(lodepng PUBLIC ${lodepng_SOURCE_DIR})
+ 
+-  FetchContent_GetProperties(marchingcubecpp)
+-  if(NOT marchingcubecpp_POPULATED)
+-    FetchContent_Populate(marchingcubecpp)
+-    include_directories(${marchingcubecpp_SOURCE_DIR})
+-  endif()
+-endif()
++set(marchingcubecpp_SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/marchingcubecpp)
++include_directories(${marchingcubecpp_SOURCE_DIR})
+ 
+ set(QHULL_ENABLE_TESTING OFF)
+ 
+-findorfetch(
+-  USE_SYSTEM_PACKAGE
+-  OFF
+-  PACKAGE_NAME
+-  qhull
+-  LIBRARY_NAME
+-  qhull
+-  GIT_REPO
+-  https://github.com/qhull/qhull.git
+-  GIT_TAG
+-  ${MUJOCO_DEP_VERSION_qhull}
+-  TARGETS
+-  qhull
+-  EXCLUDE_FROM_ALL
+-)
++set(qhull_SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/qhull)
++add_subdirectory(${qhull_SOURCE_DIR})
+ # MuJoCo includes a file from libqhull_r which is not exported by the qhull include directories.
+ # Add it to the target.
+ target_include_directories(
+@@ -155,7 +116,7 @@ target_link_options(qhullstatic_r PRIVATE ${MUJOCO_MACOS_LINK_OPTIONS})
+ set(tinyxml2_BUILD_TESTING OFF)
+ findorfetch(
+   USE_SYSTEM_PACKAGE
+-  OFF
++  ON
+   PACKAGE_NAME
+   tinyxml2
+   LIBRARY_NAME
+@@ -168,8 +129,6 @@ findorfetch(
+   tinyxml2
+   EXCLUDE_FROM_ALL
+ )
+-target_compile_options(tinyxml2 PRIVATE ${MUJOCO_MACOS_COMPILE_OPTIONS})
+-target_link_options(tinyxml2 PRIVATE ${MUJOCO_MACOS_LINK_OPTIONS})
+ 
+ # update cmake_minimum_required version for compatibility with newer version of cmake
+ if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+@@ -178,7 +137,7 @@ if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+ endif()
+ findorfetch(
+   USE_SYSTEM_PACKAGE
+-  OFF
++  ON
+   PACKAGE_NAME
+   tinyobjloader
+   LIBRARY_NAME
+@@ -196,29 +155,18 @@ if(CMAKE_POLICY_VERSION_MINIMUM_LOCALLY_DEFINED)
+   unset(CMAKE_POLICY_VERSION_MINIMUM_LOCALLY_DEFINED)
+ endif()
+ 
+-if(NOT TARGET trianglemeshdistance)
+-  FetchContent_Declare(
+-    trianglemeshdistance
+-    GIT_REPOSITORY https://github.com/InteractiveComputerGraphics/TriangleMeshDistance.git
+-    GIT_TAG ${MUJOCO_DEP_VERSION_TriangleMeshDistance}
+-  )
+-
+-  FetchContent_GetProperties(trianglemeshdistance)
+-  if(NOT trianglemeshdistance_POPULATED)
+-    FetchContent_Populate(trianglemeshdistance)
+-    # Patch the source code to silence a warning/error related to a loop variable creating a copy.
+-    # Since this is a header only library this fix is less intrusive than disabling the warning for
+-    # any target including the header.
+-    set(TMD_HEADER ${trianglemeshdistance_SOURCE_DIR}/TriangleMeshDistance/include/tmd/TriangleMeshDistance.h)
+-    file(READ ${TMD_HEADER} TMD_CONTENT)
+-    string(REPLACE
++set(trianglemeshdistance_SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/trianglemeshdistance)
++# Patch the source code to silence a warning/error related to a loop variable creating a copy.
++# Since this is a header only library this fix is less intrusive than disabling the warning for
++# any target including the header.
++set(TMD_HEADER ${trianglemeshdistance_SOURCE_DIR}/TriangleMeshDistance/include/tmd/TriangleMeshDistance.h)
++file(READ ${TMD_HEADER} TMD_CONTENT)
++  string(REPLACE
+       "for (const auto edge_count : edges_count) {"
+       "for (const auto& edge_count : edges_count) {"
+-      TMD_CONTENT "${TMD_CONTENT}")
+-    file(WRITE ${TMD_HEADER} "${TMD_CONTENT}")
+-    include_directories(${trianglemeshdistance_SOURCE_DIR})
+-  endif()
+-endif()
++  TMD_CONTENT "${TMD_CONTENT}")
++file(WRITE ${TMD_HEADER} "${TMD_CONTENT}")
++include_directories(${trianglemeshdistance_SOURCE_DIR})
+ 
+ set(ENABLE_DOUBLE_PRECISION ON)
+ set(CCD_HIDE_ALL_SYMBOLS ON)
+@@ -227,21 +175,8 @@ if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+   set(CMAKE_POLICY_VERSION_MINIMUM ${MUJOCO_CMAKE_MIN_REQ})
+   set(CMAKE_POLICY_VERSION_MINIMUM_LOCALLY_DEFINED ON)
+ endif()
+-findorfetch(
+-  USE_SYSTEM_PACKAGE
+-  OFF
+-  PACKAGE_NAME
+-  ccd
+-  LIBRARY_NAME
+-  ccd
+-  GIT_REPO
+-  https://github.com/danfis/libccd.git
+-  GIT_TAG
+-  ${MUJOCO_DEP_VERSION_ccd}
+-  TARGETS
+-  ccd
+-  EXCLUDE_FROM_ALL
+-)
++set(ccd_SOURCE_DIR ${CMAKE_SOURCE_DIR}/third_party/libccd)
++add_subdirectory(${ccd_SOURCE_DIR})
+ if(CMAKE_POLICY_VERSION_MINIMUM_LOCALLY_DEFINED)
+   unset(CMAKE_POLICY_VERSION_MINIMUM)
+   unset(CMAKE_POLICY_VERSION_MINIMUM_LOCALLY_DEFINED)

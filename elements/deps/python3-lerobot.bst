@@ -26,9 +26,17 @@ runtime-depends:
 - deps/python3-einops.bst
 - deps/python3-gymnasium.bst
 - deps/python3-accelerate.bst
+- deps/python3-termcolor.bst
+- deps/python3-opencv.bst
+- deps/python3-libero.bst
+- deps/python3-pyopengl_accelerate.bst
 
+#  url: github:huggingface/lerobot
+#  track: v0.3.3
+#  url: github:aifoundry-org/lerobot
+#  track: 0.3.4
 sources:
-- kind: git_repo
-  url: github:huggingface/lerobot
-  track: v0.3.3
-  ref: v0.3.3-0-gb883328e6c95681ca90a18b102e4ae5e1f91e2bf
+- kind: git
+  url: github:aifoundry-org/lerobot
+  track: main
+  ref: 845b359d390b4c4f53c0560a8009e6d3ce7b88e1
