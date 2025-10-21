@@ -7,6 +7,8 @@ config:
     components/gflags.bst: deps/gflags.bst
     # TODO we need libjpeg to support 70+ (JPEG7)
     components/jpeg.bst: deps/jpeg.bst
+    # TODO we need to bring x264 and remove nvenc
+    components/ffmpeg.bst: deps/ffmpeg.bst
 
 sources:
 - kind: git_repo

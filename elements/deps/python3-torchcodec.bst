@@ -20,5 +20,5 @@ environment:
 sources:
 - kind: git_repo
   url: github:meta-pytorch/torchcodec
-  track: v0.7.0
-  ref: v0.7.0-0-g7dd6092b40a76a262b633c591d8edb6ce0a86c11
+  track: v0.8.0
+  ref: v0.8.0-0-ge5b66804a3c8247d26bb24377a4217f6dc6d1662

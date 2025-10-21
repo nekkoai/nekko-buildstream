@@ -5,6 +5,8 @@ build-depends:
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst
+- deps/python3-numpy.bst
+- deps/python3-pillow.bst
 
 sources:
 - kind: git_repo

@@ -1,0 +1,131 @@
+build-depends:
+- base/freedesktop-sdk.bst:components/nasm.bst
+- base/freedesktop-sdk.bst:components/vulkan-headers.bst
+- base/freedesktop-sdk.bst:public-stacks/buildsystem-autotools.bst
+
+(?):
+- target_arch in ["x86_64", "i686", "aarch64", "ppc64le"]:
+    build-depends:
+      (>):
+      - base/freedesktop-sdk.bst:components/nv-codec-headers.bst
+
+depends:
+- base/freedesktop-sdk.bst:public-stacks/runtime-minimal.bst
+- base/freedesktop-sdk.bst:components/dav1d.bst
+- base/freedesktop-sdk.bst:components/fontconfig.bst
+- base/freedesktop-sdk.bst:components/freetype.bst
+- base/freedesktop-sdk.bst:components/fribidi.bst
+- base/freedesktop-sdk.bst:components/lame.bst
+- base/freedesktop-sdk.bst:components/libjxl.bst
+- base/freedesktop-sdk.bst:components/libva.bst
+- base/freedesktop-sdk.bst:components/libvdpau.bst
+- base/freedesktop-sdk.bst:components/librsvg.bst
+- base/freedesktop-sdk.bst:components/mpg123.bst
+- base/freedesktop-sdk.bst:components/openal.bst
+- base/freedesktop-sdk.bst:components/libpulse.bst
+- base/freedesktop-sdk.bst:components/sdl2-compat.bst
+- base/freedesktop-sdk.bst:components/aom.bst
+- base/freedesktop-sdk.bst:components/gnutls.bst
+- base/freedesktop-sdk.bst:components/speex.bst
+- base/freedesktop-sdk.bst:components/ladspa-sdk.bst
+- base/freedesktop-sdk.bst:components/lcms.bst
+- base/freedesktop-sdk.bst:components/libtheora.bst
+- base/freedesktop-sdk.bst:components/libgcrypt.bst
+- base/freedesktop-sdk.bst:components/libvorbis.bst
+- base/freedesktop-sdk.bst:components/libvpx.bst
+- base/freedesktop-sdk.bst:components/opus.bst
+- base/freedesktop-sdk.bst:components/openjpeg.bst
+- base/freedesktop-sdk.bst:components/svt-av1.bst
+- base/freedesktop-sdk.bst:components/vulkan-icd-loader.bst
+- base/freedesktop-sdk.bst:components/v4l-utils.bst
+- base/freedesktop-sdk.bst:components/libwebp.bst
+- base/freedesktop-sdk.bst:components/xorg-lib-xcb.bst
+- base/freedesktop-sdk.bst:components/libmysofa.bst
+
+variables:
+  optimize-debug: "false"
+  arch-conf: ''
+  ffmpeg-arch: '%{arch}'
+  (?):
+  - target_arch == "i686":
+      ffmpeg-arch: x86
+  - target_arch in ["x86_64", "i686", "aarch64", "ppc64le"]:
+      arch-conf: >-
+        --enable-ffnvcodec
+
+  conf-local: >-
+    --prefix="%{prefix}"
+    --libdir="%{libdir}"
+    --optflags="${CFLAGS}"
+    --extra-ldflags="${LDFLAGS}"
+    --disable-stripping
+    --disable-doc
+    --disable-static
+    --disable-encoders
+    --disable-decoders
+    --enable-shared
+    --enable-gnutls
+    --enable-gcrypt
+    --enable-ladspa
+    --enable-lcms2
+    --enable-libaom
+    --enable-libdav1d
+    --enable-libmp3lame
+    --enable-libfontconfig
+    --enable-libfreetype
+    --enable-libfribidi
+    --enable-libjxl
+    --enable-libopus
+    --enable-libpulse
+    --enable-libspeex
+    --enable-libtheora
+    --enable-libvorbis
+    --enable-libvpx
+    --enable-librsvg
+    --enable-libwebp
+    --enable-libxml2
+    --enable-libopenjpeg
+    --enable-libsvtav1
+    --enable-openal
+    --enable-opengl
+    --enable-sdl2
+    --enable-vulkan
+    --enable-zlib
+    --enable-libv4l2
+    --enable-libxcb
+    --enable-vdpau
+    --enable-vaapi
+    --enable-pthreads
+    --enable-libmysofa
+    --arch="%{ffmpeg-arch}"
+
+  conf-extra: ''
+
+public:
+  bst:
+    split-rules:
+      devel:
+        (>):
+        - '%{libdir}/libavdevice.so'
+        - '%{libdir}/libavcodec.so'
+        - '%{libdir}/libswscale.so'
+        - '%{libdir}/libpostproc.so'
+        - '%{libdir}/libavutil.so'
+        - '%{libdir}/libavfilter.so'
+        - '%{libdir}/libavformat.so'
+        - '%{libdir}/libswresample.so'
+        - '%{datadir}/ffmpeg/examples'
+        - '%{datadir}/ffmpeg/examples/**'
+
+# ffmpeg is not using autotools, but a configure and Makefile files
+config:
+  configure-commands:
+  - ./configure %{conf-local} %{conf-extra} %{arch-conf}
+
+sources:
+- kind: git_repo
+  url: ffmpeg:ffmpeg.git
+  track: n*
+  exclude:
+  - '*-dev'
+  ref: n8.0-0-g140fd653aed8cad774f991ba083e2d01e86420c7

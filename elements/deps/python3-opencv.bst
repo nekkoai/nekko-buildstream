@@ -3,10 +3,31 @@ kind: pyproject
 build-depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 - deps/python3-scikit-build.bst
+- deps/protobuf-static.bst
+
+runtime-depends:
+- base/freedesktop-sdk.bst:components/abseil-cpp.bst
 
 depends:
 - base/freedesktop-sdk.bst:components/python3.bst
+- base/freedesktop-sdk.bst:components/libpng.bst
+- base/freedesktop-sdk.bst:components/libavif.bst
+- base/freedesktop-sdk.bst:components/libtiff.bst
+- base/freedesktop-sdk.bst:components/giflib.bst
+- base/freedesktop-sdk.bst:components/jpeg.bst
+- base/freedesktop-sdk.bst:components/openjpeg.bst
+- base/freedesktop-sdk.bst:components/gtk3.bst
+- base/freedesktop-sdk.bst:components/ffmpeg.bst
+- base/freedesktop-sdk.bst:components/gstreamer.bst
+- base/freedesktop-sdk.bst:components/gstreamer-plugins-base.bst
+- base/freedesktop-sdk.bst:components/gstreamer-plugins-good.bst
+- base/freedesktop-sdk.bst:components/gstreamer-plugins-bad.bst
+- base/freedesktop-sdk.bst:components/gstreamer-plugins-ugly.bst
+- base/freedesktop-sdk.bst:components/gstreamer-plugins-rs.bst
 - deps/python3-numpy.bst
+- deps/openblas.bst
+- deps/eigen.bst
+- deps/flatbuffers.bst
 
 environment:
   SETUPTOOLS_SCM_PRETEND_VERSION: "4.13"
@@ -20,7 +41,7 @@ sources:
 - kind: git_module
   path: opencv
   url: github:opencv/opencv
-  ref: 49486f61fb25722cbcf586b7f4320921d46fb38e
+  ref: 09c893477e2b4231948dc8ff616fa49b39538730
 - kind: git_module
   path: opencv_contrib
   url: github:opencv/opencv_contrib

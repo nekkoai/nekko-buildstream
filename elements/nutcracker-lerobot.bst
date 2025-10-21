@@ -8,3 +8,4 @@ depends:
 - deps/python3-torch.bst
 - deps/python3-numba.bst
 - deps/python3-lerobot.bst
+- legacy/opengl-default.bst
