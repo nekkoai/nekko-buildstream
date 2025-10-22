@@ -20,27 +20,10 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Rewrite git to use https, so we can access it with a fine-grained access token
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
-      - name: Set up git credentials with the fine-grained access token
-        run: |
-          git config --global credential.helper store
-          git config --global credential.useHttpPath true
-          cat > ~/.git-credentials <<'EOF'
-          https://x-access-token:${{ secrets.PAT_ACCESS_PRIVATE_NEKKOAI_REPOS }}@github.com/nekkoai
-          https://x-access-token:${{ secrets.PAT_ACCESS_PRIVATE_AIFOUNDRYORG_REPOS }}@github.com/aifoundry-org
-          EOF
+
       - name: Build in docker
         uses: docker/build-push-action@v6
         with:
           push: false
           tags: ${{ steps.tag.outputs.tag }}
-          secrets: |
-            github_token_nekkoai=${{ secrets.PAT_ACCESS_PRIVATE_NEKKOAI_REPOS }}
-            github_token_aifoundryorg=${{ secrets.PAT_ACCESS_PRIVATE_AIFOUNDRYORG_REPOS }}
-          secret-files: |
-            "git_credentials=${HOME}/.git-credentials"
-            "git_config=${HOME}/.gitconfig"
 
