@@ -18,6 +18,13 @@ jobs:
         run: |
           TAG=$(make show-tag)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Move Docker storage to ephemeral disk
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/var/lib
+          sudo mv /var/lib/docker /mnt/var/lib/docker
+          sudo ln -s /mnt/var/lib/docker /var/lib/docker
+          sudo systemctl start docker
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
