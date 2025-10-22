@@ -15,6 +15,10 @@ depends:
 - base/freedesktop-sdk.bst:public-stacks/buildsystem-python.bst
 # Hugging Face cli for fetching models
 - deps/python3-huggingface_hub.bst
+# llvm-kvc.py needs torch, transformers, and scipy
+- deps/python3-scipy.bst
+- deps/python3-transformers.bst
+- deps/python3-torch.bst
 # friendly items for usability and debugging below
 - legacy/python3-site-nekko.bst
 - legacy/ldconfig-nekko.bst
