@@ -1,11 +1,10 @@
-# nutcracker
+# nekko buildstream
 
 This repository contains a Buildstream definition for building the tooling necessary to compile and run onnx format models
 on etsoc devices.
 
 # Stacks
-* [Nutcracker Legacy Stack](https://github.com/nekkoai/nutcracker-buildstream) - This repository, Buildstream definition of nutcracker distribution - including `host`, `device`, and `legacy` (including `onnxruntime`)
-* [Nutcracker](https://github.com/nekkoai/nutcracker) - Original Dockerfile implementation for nutcracker `host` and `device`
+* [Nekko Legacy Stack](https://github.com/nekkoai/nekko-buildstream) - This repository, Buildstream definition - including `platform`, `toolchain`, and `legacy` (including `onnxruntime`)
 * [Freedesktop SDK](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) - base platform we are building on top of from GNOME team - currently tagged to `25.08` release.
 
 # Tooling
@@ -31,29 +30,8 @@ See [this issue](https://github.com/apache/buildstream/issues/1833).
 ### Clone this repository
 
 ```sh
-% git clone ssh://git@github.com/nekkoai/nutcracker-legacy
-# OR
-% git clone https://github.com/nekkoai/nutcracker-legacy
+% git clone https://github.com/nekkoai/nekko-buildstream
 ```
-
-### Ensure proper network access and credentials
-
-Until `github.com/nekkoai` repositories are public, you must use authenticated access to the private repositories.
-
-The simplest way to do that is via ssh. Although it is possible to use https with a personal access token, we do not
-support that currently in this build.
-
-Test access:
-
-```sh
-% ssh -T git@github.com
-Hi jerenkrantz! You've successfully authenticated, but GitHub does not provide shell access.
-```
-
-(Additionally, git LFS seems broken with atlantis ; but dulwich seems okay handling it...so we have to use `git_repo` source for now.)
-
-Some of the artifacts are not reproducible, and sit on a ghcr.io in a private OCI image `ghcr.io/nekkoai/et-gnu-toolchain`.
-For buildstream to access the OCI image, you need to have access to the `nekkoai` private repositories.
 
 ### Run the build
 
@@ -68,17 +46,8 @@ You can build in one of two ways:
 make build-docker
 ```
 
-The docker build depends on access to private repositories. As such, it needs credentials to access those repositories.
-The `make build-docker` command assumes you already have access to the `nekkoai` private repositories, and thus
-mounts your git credentials into the docker build.
-
-The following must be set up in advance of running the `make build-docker` command:
-
-* `~/.git-credentials` - containing your https credentials for github.com, with access to private repositories in both github.com/nekkoai and github.com/aifoundry-org
-* `~/.gitconfig` - containing gitconfig settings
-
 Note that building in Docker using buildstream requires special privileges. To enable these privileges,
-the build is performed in a dedicated docker builder called `nutcracker-builder`.
+the build is performed in a dedicated docker builder called `nekko-builder`.
 This builder is created automatically when you run `make build-docker` if it does not already exist.
 
 #### Build locally
@@ -112,7 +81,7 @@ $ systemctl reload apparmor
 ##### Run the local build
 
 ```sh
-% bst build nutcracker-legacy.bst
+% bst build nekko-legacy.bst
 ```
 
 (N.B. Until we have a project caching server, your first set of builds are going to have to fetch a lot of dependencies.  Freedesktop SDK runs a caching server, so, Buildstream will fetch whatever artifacts it can from there ... but, you'll likely want to grab a coffee or tea depending upon your connectivity.)
@@ -121,18 +90,18 @@ Once building is complete, export the resulting artifact as a Docker-compatible 
 image cache.
 
 ```sh
-% bst artifact checkout nutcracker-legacy.bst --tar nut-root.tar
+% bst artifact checkout nekko-legacy.bst --tar nekko-legacy-root.tar
 ```
 
 
 ```sh
-% docker image import nut-root.tar ghcr.io/nekkoai/nutcracker-legacy:latest
+% docker image import nekko-legacy-root.tar ghcr.io/nekkoai/nekko-legacy:latest
 ```
 
 ### Run Docker image
 
 ```sh
-% docker run -it --rm --device=/dev/et0_mgmt --device=/dev/et0_ops --privileged -v /home/justin:/home/justin -v /home/justin/workspace:/workspace ghcr.io/nekkoai/nutcracker-legacy:latest
+% docker run -it --rm --device=/dev/et0_mgmt --device=/dev/et0_ops --privileged -v `pwd`:/workspace ghcr.io/nekkoai/nekko-legacy:latest
 ```
 
 #### Run Commands within container

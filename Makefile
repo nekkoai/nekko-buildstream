@@ -1,10 +1,10 @@
 .PHONY: build build-local build-docker docker-builder help all
 
 # image that is built; can be overridden by running `make IMAGE=your-image:tag build`
-IMAGE ?= ghcr.io/nekkoai/nutcracker-legacy:latest
+IMAGE ?= ghcr.io/nekkoai/nekko-legacy:latest
 DIST  ?= dist
 
-DOCKER_BUILDER ?= nutcracker-builder
+DOCKER_BUILDER ?= nekko-builder
 
 # Default target is help
 all: help
@@ -47,7 +47,7 @@ build-docker: docker-builder
 # Build using locally installed dependencies and tools
 build-local:
 	@echo "Building using locally installed dependencies and tools..."
-	bst build nutcracker-legacy.bst
-	bst artifact checkout nutcracker-legacy.bst --tar dist/nut-root.tar
-	docker image import dist/nut-root.tar $(IMAGE)
+	bst build nekko-legacy.bst
+	bst artifact checkout nekko-legacy.bst --tar dist/nekko-legacy-root.tar
+	docker image import dist/nekko-legacy-root.tar $(IMAGE)
 	@echo "Build complete.  The resulting artifacts can be found in the '$(DIST)' directory and in docker as $(IMAGE)."

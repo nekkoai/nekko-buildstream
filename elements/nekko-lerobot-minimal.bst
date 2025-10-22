@@ -1,7 +1,7 @@
 kind: compose
 
 build-depends:
-- nutcracker-lerobot.bst
+- nekko-lerobot.bst
 
 config:
   exclude:

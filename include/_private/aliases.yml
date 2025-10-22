@@ -12,7 +12,7 @@ fdsdk_git: https://gitlab.com/freedesktop-sdk/
 #fdsdk_mirror: https://gitlab.com/freedesktop-sdk/mirrors/
 gcc_gnu_org: https://gcc.gnu.org/git/
 ghostscript: https://git.ghostscript.com/
-github: ssh://git@github.com/
+github: https://github.com/
 gitlab: https://gitlab.com/
 gnome: https://gitlab.gnome.org/GNOME/
 gnupg: https://dev.gnupg.org/source/

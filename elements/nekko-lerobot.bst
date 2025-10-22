@@ -1,7 +1,7 @@
 kind: stack
 
 depends:
-- nutcracker-legacy.bst
+- nekko-legacy.bst
 - deps/python3-pillow.bst
 - deps/python3-scipy.bst
 - deps/python3-transformers.bst

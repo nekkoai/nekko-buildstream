@@ -1,10 +1,9 @@
 kind: compose
 
 build-depends:
-- nutcracker-tools.bst
+- nekko-legacy.bst
 
 config:
   exclude:
   - debug
   - doc
-  - devel
