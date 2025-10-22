@@ -1,8 +1,8 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
+diff --git a/et-driver/CMakeLists.txt b/et-driver/CMakeLists.txt
 new file mode 100644
-index 0000000..63ce1f2
+index 000000000..63ce1f259
 --- /dev/null
-+++ b/CMakeLists.txt
++++ b/et-driver/CMakeLists.txt
 @@ -0,0 +1,97 @@
 +cmake_minimum_required(VERSION 3.15)
 +
