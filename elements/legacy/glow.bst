@@ -40,6 +40,7 @@ variables:
     -D CMAKE_POLICY_VERSION_MINIMUM=3.5
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
     -D BUILD_SHARED_LIBS=on
+    -D GLOW_BUILD_PORTABLE_BINARIES=on
 
 sources:
 - kind: git_repo
