@@ -19,12 +19,9 @@ RUN pip install buildstream buildstream-plugins dulwich==0.24.0 tomlkit requests
     pip install 'click<8.1'   # compatibility issue with buildstream
 
 
-COPY . /src/nutcracker
+COPY . /src/nekko
 
-WORKDIR /src/nutcracker
-
-# ensure that hostchecking is not done otherwise it will block
-ENV GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+WORKDIR /src/nekko
 
 # consolidate caches
 ENV XDG_CACHE_HOME=/cache
@@ -32,14 +29,11 @@ ENV XDG_CACHE_HOME=/cache
 # run build and export the artifact as a directory
 RUN \
     --security=insecure \
-    --mount=type=ssh \
-    --mount=type=secret,id=git_config,target=/root/.gitconfig \
-    --mount=type=secret,id=git_credentials,target=/root/.git-credentials \
     --mount=type=cache,target=/cache \
-    --mount=type=cache,target=/src/nutcracker/.bst \
-    bst build nutcracker-legacy.bst && \
+    --mount=type=cache,target=/src/nekko/.bst \
+    bst build nekko-legacy.bst && \
     mkdir /out && \
-    bst artifact checkout nutcracker-legacy.bst --directory /out
+    bst artifact checkout nekko-legacy.bst --directory /out
 
 # final image
 FROM scratch
