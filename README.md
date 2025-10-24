@@ -1,6 +1,6 @@
 # nekko buildstream
 
-[![](https://dcbadge.limes.pink/api/server/WNKvkefkUs?logoColor=f9a03f)](https://discord.gg/WNKvkefkUs)
+[![](https://dcbadge.limes.pink/api/server/WNKvkefkUs?logoColor=f9a03f)](https://discord.gg/WNKvkefkUs) - please join us in the #system channel!
 
 This repository contains a [Buildstream](https://buildstream.build/) definition for building the tooling to compile and run software
 on [ET devices](https://github.com/aifoundry-org).
