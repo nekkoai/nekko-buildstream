@@ -5,7 +5,7 @@ on etsoc devices.
 
 # Stacks
 * [Nekko Legacy Stack](https://github.com/nekkoai/nekko-buildstream) - This repository, Buildstream definition - including `platform`, `toolchain`, and `legacy` (including `onnxruntime`)
-* [Freedesktop SDK](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) - base platform we are building on top of from GNOME team - currently tagged to `25.08` release.
+* [Freedesktop SDK](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) - base platform we are building on top of - currently based on the `25.08` stable branch
 
 # Tooling
 * [Apache BuildStream, the software integration tool](https://buildstream.build/) - Composition tool to create distributions from Apache
