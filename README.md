@@ -1,11 +1,44 @@
 # nekko buildstream
 
-This repository contains a Buildstream definition for building the tooling necessary to compile and run onnx format models
-on etsoc devices.
+[![](https://dcbadge.limes.pink/api/server/WNKvkefkUs?logoColor=f9a03f)](https://discord.gg/WNKvkefkUs)
+
+This repository contains a [Buildstream](https://buildstream.build/) definition for building the tooling to compile and run software
+on [ET devices](https://github.com/aifoundry-org).
+
+# Containers
+
+We have the following pre-built containers available based upon these definitions:
+
+## nekko-legacy
+
+```
+$ docker pull ghcr.io/nekko/nekko-legacy:latest`
+```
+This container supports running ONNX Runtime models.  An example model known to work on ET accelerators is [llama3 8b](https://huggingface.co/rvs/llama3-8b-Instruct-kvc-AWQ-int4-onnx).
+
+## nekko-lerobot
+
+```
+$ docker pull ghcr.io/nekko/nekko-lerobot:latest
+```
+
+This container supports running a [lerobot demo on ET devices](https://github.com/aifoundry-org/ETARS).
+
+## nekko-tools
+
+```
+$ docker pull ghcr.io/nekko/nekko-tools:latest
+```
+
+This container provides `et-powertop` and `dev_mngt_service` tooling for ET accelerators.
 
 # Stacks
 * [Nekko Legacy Stack](https://github.com/nekkoai/nekko-buildstream) - This repository, Buildstream definition - including `platform`, `toolchain`, and `legacy` (including `onnxruntime`)
 * [Freedesktop SDK](https://gitlab.com/freedesktop-sdk/freedesktop-sdk) - base platform we are building on top of - currently based on the `25.08` stable branch
+
+# Components
+* [ET RISC-V GNU Toolchain](https://github.com/aifoundry-org/riscv-gnu-toolchain) - RISC-V toolchain for ET platform.
+* [ET Platform](https://github.com/aifoundry-org/et-platform) - ET Accelerator Firmware and Runtime
 
 # Tooling
 * [Apache BuildStream, the software integration tool](https://buildstream.build/) - Composition tool to create distributions from Apache
