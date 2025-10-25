@@ -30,7 +30,7 @@ This container supports running a [lerobot demo on ET devices](https://github.co
 $ docker pull ghcr.io/nekko/nekko-tools:latest
 ```
 
-This container provides `et-powertop` and `dev_mngt_service` tooling for ET accelerators.
+This container provides `et-powertop` and `dev_mngt_service` tooling for ET accelerators.  Please see [Examples: ET accelerator device tooling](https://github.com/nekkoai/nekko-buildstream/wiki/Examples:-ET-accelerator-device-tooling) for more information.
 
 # Stacks
 * [Nekko Legacy Stack](https://github.com/nekkoai/nekko-buildstream) - This repository, Buildstream definition - including `platform`, `toolchain`, and `legacy` (including `onnxruntime`)
