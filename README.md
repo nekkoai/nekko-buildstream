@@ -7,7 +7,7 @@ on [ET devices](https://github.com/aifoundry-org).
 
 # Containers
 
-We have the following pre-built containers available based upon these definitions:
+We publish the following [pre-built containers](https://github.com/orgs/nekkoai/packages?visibility=public) available based upon these definitions:
 
 ## nekko-legacy
 
