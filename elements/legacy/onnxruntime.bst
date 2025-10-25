@@ -20,9 +20,11 @@ depends:
 - deps/python3-numpy.bst
 - legacy/et-trace-utils.bst
 - legacy/glow.bst
+- cuda/cuda-toolkit.bst
 
 environment:
   LDFLAGS: ""
+  CUDACXX: "/usr/local/cuda-13.0/bin/nvcc"
 
 variables:
   conf-root: cmake
@@ -32,6 +34,7 @@ variables:
     -D CMAKE_INSTALL_RPATH="%{lib}"
     -D onnxruntime_ENABLE_PYTHON=on
     -D onnxruntime_USE_ETGLOW=on
+    -D onnxruntime_USE_CUDA=on
     -D GFLAGS_USE_TARGET_NAMESPACE=gflags
     -D onnxruntime_BUILD_UNIT_TESTS=off
     -D onnxruntime_BUILD_SHARED_LIB=on
