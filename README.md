@@ -12,7 +12,7 @@ We publish the following [pre-built containers](https://github.com/orgs/nekkoai/
 ## nekko-legacy
 
 ```
-$ docker pull ghcr.io/nekko/nekko-legacy:latest`
+$ docker pull ghcr.io/nekko/nekko-legacy:latest
 ```
 This container supports running ONNX Runtime models.  An example model known to work on ET accelerators is [llama3 8b](https://huggingface.co/rvs/llama3-8b-Instruct-kvc-AWQ-int4-onnx).
 
