@@ -16,7 +16,7 @@ depends:
 - deps/gtest.bst
 - deps/gbenchmark.bst
 - legacy/neuralizer.bst
-- legacy/et-driver.bst
+- platform/et-driver.bst
 
 # TODO: we already have fp16 for torch, but it doesn't have a cmake package ... so submodule for now
 #- deps/fp16.bst

@@ -1,9 +1,9 @@
 diff --git a/et-driver/CMakeLists.txt b/et-driver/CMakeLists.txt
 new file mode 100644
-index 000000000..63ce1f259
+index 000000000..990ff378c
 --- /dev/null
 +++ b/et-driver/CMakeLists.txt
-@@ -0,0 +1,97 @@
+@@ -0,0 +1,75 @@
 +cmake_minimum_required(VERSION 3.15)
 +
 +project(linuxDriver
@@ -16,33 +16,11 @@ index 000000000..63ce1f259
 +
 +# List of header files to install
 +set(ET_DRIVER_HEADERS
-+    et_device_api.h
-+    et_dev_iface_regs.h
 +    et_ioctl.h
-+    et_rate_entry.h
-+    et_trace.h
-+    et_vma.h
-+)
-+
-+# Optional headers (may not be needed by all consumers)
-+set(ET_DRIVER_OPTIONAL_HEADERS
-+    et_circbuffer.h
-+    et_dma.h
-+    et_event_handler.h
-+    et_fw_update.h
-+    et_io.h
-+    et_p2pdma.h
-+    et_pci_dev.h
-+    et_sysfs.h
-+    et_sysfs_err_stats.h
-+    et_sysfs_mem_stats.h
-+    et_sysfs_soc_reset.h
-+    et_sysfs_vq_stats.h
-+    et_vqueue.h
 +)
 +
 +# Install all headers
-+install(FILES ${ET_DRIVER_HEADERS} ${ET_DRIVER_OPTIONAL_HEADERS}
++install(FILES ${ET_DRIVER_HEADERS}
 +    DESTINATION include
 +    COMPONENT et-driver-headers)
 +
