@@ -12,6 +12,4 @@ sources:
 - kind: git_repo
   url: github:aifoundry-org/et-platform
   track: master
-  ref: 022221990ca713f946eaa4379817cb59bb852be4
-- kind: patch
-  path: static/patches/et-driver-cmake.patch
+  ref: 3b90eb5360d7786742a99f8b9a10d07c0840e201
