@@ -43,7 +43,7 @@ build-docker: docker-builder
 	@echo "Build complete.  The resulting artifact can be found in docker as $(LEGACY_IMAGE)."
 
 # Build all containers using locally installed dependencies and tools
-build-local: build-local-legacy build-local-lerobot build-local-tools
+build-local: build-local-legacy build-local-lerobot build-local-tools build-local-inference
 
 # Build container using locally installed dependencies and tools
 build-local-%: BUILD_IMAGE=$(IMAGE_BASE)/nekko-$*:$(TAG)
