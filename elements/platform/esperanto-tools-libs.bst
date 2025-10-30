@@ -7,6 +7,7 @@ build-depends:
 depends:
 - base/freedesktop-sdk.bst:components/gflags.bst
 - base/freedesktop-sdk.bst:components/libcap.bst
+- base/freedesktop-sdk.bst:components/fmtlib.bst
 - deps/boost.bst
 - deps/cereal.bst
 - deps/libcap-cmake.bst

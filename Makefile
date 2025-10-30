@@ -52,6 +52,6 @@ build-local-%: dist
 	bst build nekko-$*-minimal.bst
 	rm -f $(TAR_FILE)
 	bst artifact checkout nekko-$*-minimal.bst --tar $(TAR_FILE)
-	docker image rm $(BUILD_IMAGE)
+	-docker image rm $(BUILD_IMAGE)
 	docker image import $(TAR_FILE) $(BUILD_IMAGE)
 	@echo "Build complete.  The resulting artifacts can be found in the '$(DIST_DIR)' directory and in docker as $(BUILD_IMAGE)."

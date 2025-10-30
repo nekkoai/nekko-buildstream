@@ -1,0 +1,7 @@
+prefix: /opt/nekko/inference
+lib: '%{prefix}/lib'
+cmake_module_path: '%{prefix}/share/cmake'
+cmake-global: >-
+  -D CMAKE_MODULE_PATH="%{cmake_module_path};/opt/nekko/platform/share/cmake"
+  -D CMAKE_PREFIX_PATH="%{prefix};/opt/nekko/platform;/opt/toolchain/llvm"
+  %{cmake-project}

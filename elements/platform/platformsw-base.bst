@@ -12,3 +12,5 @@ depends:
 - platform/sw-sysemu.bst
 - platform/devicelayer.bst
 - platform/esperanto-tools-libs.bst
+- platform/platformsw-cmake.bst
+- platform/platformsw-cmake-utils.bst
