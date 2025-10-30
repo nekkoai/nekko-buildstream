@@ -12,14 +12,14 @@ We publish the following [pre-built containers](https://github.com/orgs/nekkoai/
 ## nekko-legacy
 
 ```
-$ docker pull ghcr.io/nekko/nekko-legacy:latest
+$ docker pull ghcr.io/nekkoai/nekko-legacy:latest
 ```
 This container supports running ONNX Runtime models.  An example model known to work on ET accelerators is [llama3 8b](https://huggingface.co/rvs/llama3-8b-Instruct-kvc-AWQ-int4-onnx).  Please see [Example:ET accelerator inference](https://github.com/nekkoai/nekko-buildstream/wiki/Example:-ET-accelerator-with-Hugging-Face-model-and-ONNXRuntime) for more information.
 
 ## nekko-lerobot
 
 ```
-$ docker pull ghcr.io/nekko/nekko-lerobot:latest
+$ docker pull ghcr.io/nekkoai/nekko-lerobot:latest
 ```
 
 This container supports running a [lerobot demo on ET devices](https://github.com/aifoundry-org/ETARS).
@@ -27,7 +27,7 @@ This container supports running a [lerobot demo on ET devices](https://github.co
 ## nekko-tools
 
 ```
-$ docker pull ghcr.io/nekko/nekko-tools:latest
+$ docker pull ghcr.io/nekkoai/nekko-tools:latest
 ```
 
 This container provides `et-powertop` and `dev_mngt_service` tooling for ET accelerators.  Please see [Example: ET accelerator device tooling](https://github.com/nekkoai/nekko-buildstream/wiki/Example:-ET-accelerator-device-tooling) for more information.
