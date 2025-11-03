@@ -1,0 +1,12 @@
+diff --git a/bindings/python/capstone/__init__.py b/bindings/python/capstone/__init__.py
+index 9d50f9e..9f2d4a4 100755
+--- a/bindings/python/capstone/__init__.py
++++ b/bindings/python/capstone/__init__.py
+@@ -545,6 +545,7 @@ _path_list = [os.getenv('LIBCAPSTONE_PATH', None),
+               join(split(__file__)[0], 'lib'),
+               '',
+               sysconfig.get_path('platlib'),
++              sysconfig.get_config_var('LIBDIR'),
+               "/usr/local/lib/" if sys.platform == 'darwin' else '/usr/lib64']
+ 
+ for _path in _path_list:
