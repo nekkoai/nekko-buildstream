@@ -1,11 +1,11 @@
 name: Build
 on:
-  #push:
-  #  branches:
-  #    - main
-  #pull_request:
-  #  branches:
-  #    - main
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,8 @@ jobs:
           sudo systemctl start docker
       - name: Prepare CAS cache directory
         run: |
-          mkdir -p ${{ env.CASD_CACHE }}
+          sudo mkdir -p ${{ env.CASD_CACHE }}
+          sudo chown $USER:$USER ${{ env.CASD_CACHE }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -43,5 +44,5 @@ jobs:
           push: false
           tags: ${{ steps.tag.outputs.tag }}
           allow: security.insecure
-          build-args: |
-            CACHE_SRC=${{ env.CASD_CACHE }}
+          build-contexts: |
+            casdcache=${{ env.CASD_CACHE }}
