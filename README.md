@@ -73,6 +73,27 @@ You can build in one of two ways:
 * In Docker with `docker build`
 * Locally with installed tools
 
+In all cases, you have the option to download the latest copy of the cached build and use it.
+The cached build is in a separate image called `ghcr.io/nekkoai/nekko-buildstream-cache:latest`.
+
+You can overwrite which one to use by setting the `CACHE_IMAGE` Makefile variable.
+
+```sh
+make build-docker CACHE_IMAGE=my-custom-cache-image:latest
+```
+
+If you set it to an empty string, no cache image will be used.
+
+```sh
+make build-docker CACHE_IMAGE=""
+```
+
+The cache directory will be stored locally, by default in `./tmp/casd-cache`.  You can change that by setting the `CASD_CACHE` Makefile variable.
+
+```sh
+make build-docker CASD_CACHE=/path/to/custom/cache
+```
+
 #### Build with Docker
 
 ```sh
