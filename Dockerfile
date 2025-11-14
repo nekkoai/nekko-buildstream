@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1.19-labs
+ARG CACHE_IMAGE=ghcr.io/nekkoai/nekko-buildstream-cache:latest
+FROM ${CACHE_IMAGE} AS casdcache
 FROM ubuntu:24.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -26,13 +28,13 @@ WORKDIR /src/nekko
 # consolidate caches for local files; does not affect casd
 ENV XDG_CACHE_HOME=/cache
 
+COPY --from=casdcache / /casd-cache/
 # run build and export the artifact as a directory
 RUN \
     --security=insecure \
     --mount=type=cache,target=/cache \
     --mount=type=cache,target=/src/nekko/.bst \
-    --mount=type=bind,from=casdcache,source=.,target=/casd-cache,readwrite \
-    $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd --bind localhost:60051 --read-only-remote /casd-cache & \
+    $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd --bind localhost:60051 /casd-cache & \
     bst build nekko-legacy.bst && \
     mkdir /out && \
     bst artifact checkout nekko-legacy.bst --directory /out

@@ -11,14 +11,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      CASD_CACHE: /mnt/casd-cache
     steps:
       - uses: actions/checkout@v4
       - name: Determine tag
         id: tag
         run: |
           TAG=$(make show-tag)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Determine cache image
+        id: cache_image
+        run: |
+          TAG=$(make show-cache-image)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: Move Docker storage to ephemeral disk
         run: |
@@ -27,22 +30,15 @@ jobs:
           sudo mv /var/lib/docker /mnt/var/lib/docker
           sudo ln -s /mnt/var/lib/docker /var/lib/docker
           sudo systemctl start docker
-      - name: Prepare CAS cache directory
-        run: |
-          sudo mkdir -p ${{ env.CASD_CACHE }}
-          sudo chown $USER:$USER ${{ env.CASD_CACHE }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           buildkitd-flags: '--allow-insecure-entitlement security.insecure'
-      - name: Extract CAS cache image
-        run: |
-          make cache CACHE_DIR="${{ env.CASD_CACHE }}"
       - name: Build in docker
         uses: docker/build-push-action@v6
         with:
           push: false
           tags: ${{ steps.tag.outputs.tag }}
           allow: security.insecure
-          build-contexts: |
-            casdcache=${{ env.CASD_CACHE }}
+          build-args: |
+            CACHE_IMAGE=${{ steps.cache_image.outputs.tag }}
