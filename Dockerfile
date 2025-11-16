@@ -28,7 +28,6 @@ WORKDIR /src/nekko
 # consolidate caches for local files; does not affect casd
 ENV XDG_CACHE_HOME=/cache
 
-COPY --from=casdcache / /casd-cache/
 # run build and export the artifact as a directory
 
 RUN mkdir -p $HOME/.config
@@ -43,6 +42,8 @@ RUN \
     --security=insecure \
     --mount=type=cache,target=/cache \
     --mount=type=cache,target=/src/nekko/.bst \
+    --mount=type=cache,id=casd-cache,target=/casd-cache \
+    --mount=from=casdcache,source=/,target=/casd-cache \
     mv /tmp/buildstream.conf $HOME/.config/buildstream.conf && \
     $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd --bind localhost:60051 /casd-cache & \
     bst build nekko-legacy.bst && \
