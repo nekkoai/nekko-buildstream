@@ -83,6 +83,21 @@ Note that building in Docker using buildstream requires special privileges. To e
 the build is performed in a dedicated docker builder called `nekko-builder`.
 This builder is created automatically when you run `make build-docker` if it does not already exist.
 
+Docker builds will download the latest copy of the cached build and use it.
+The cached build is in a separate image called `ghcr.io/nekkoai/nekko-buildstream-cache:latest`.
+
+You can overwrite which one to use by setting the `CACHE_IMAGE` Makefile variable.
+
+```sh
+make build-docker CACHE_IMAGE=my-custom-cache-image:latest
+```
+
+If you set it to `scratch`, no cache image will be used.
+
+```sh
+make build-docker CACHE_IMAGE="scratch"
+```
+
 #### Build locally
 
 To build the image locally, you will need to:

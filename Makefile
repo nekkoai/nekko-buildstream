@@ -1,9 +1,11 @@
-.PHONY: build build-local build-docker docker-builder help all
+.PHONY: build build-local build-docker docker-builder help all show-tag show-cache-image
 
 # default image that is built; can be overridden by running `make LEGACY_IMAGE=your-image:tag build`
 IMAGE_BASE ?= ghcr.io/nekkoai
 TAG ?= latest
 LEGACY_IMAGE ?= $(IMAGE_BASE)/nekko-legacy:$(TAG)
+CACHE_IMAGE?=ghcr.io/nekkoai/nekko-buildstream-cache:latest
+RANDOM=$(shell echo $$RANDOM)
 
 DIST_DIR := dist
 dist:
@@ -23,6 +25,9 @@ help:
 show-tag:
 	@echo $(LEGACY_IMAGE)
 
+show-cache-image:
+	@echo $(CACHE_IMAGE)
+
 # Build using default method of build-docker
 build: build-docker
 
@@ -39,7 +44,7 @@ docker-builder:
 # Build using Docker; note that it *only* builds for linux/amd64 due to a buildstream bug; see the README.md. This is meant for running manually.
 build-docker: docker-builder
 	@echo "Building using Docker..."
-	docker buildx build --builder $(DOCKER_BUILDER) --platform linux/amd64 --allow security.insecure -t $(LEGACY_IMAGE) .
+	docker buildx build --builder $(DOCKER_BUILDER) --platform linux/amd64 --allow security.insecure --build-arg CACHE_IMAGE=$(CACHE_IMAGE) -t $(LEGACY_IMAGE) .
 	@echo "Build complete.  The resulting artifact can be found in docker as $(LEGACY_IMAGE)."
 
 # Build all containers using locally installed dependencies and tools
