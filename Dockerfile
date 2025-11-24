@@ -37,17 +37,23 @@ artifacts:
   override-project-caches: false
   servers:
   - url: http://localhost:60051
+    push: true
 EOF
 
-RUN \
+RUN mv /tmp/buildstream.conf $HOME/.config/buildstream.conf
+RUN ln -s $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd /usr/local/bin/buildbox-casdRUN \
     --security=insecure \
     --mount=type=cache,target=/cache \
     --mount=type=cache,target=/src/nekko/.bst \
-    mv /tmp/buildstream.conf $HOME/.config/buildstream.conf && \
-    $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd --bind localhost:60051 /casd-cache & \
+    /usr/local/bin/buildbox-casd --bind localhost:60051 /casd-cache & \    
     bst build nekko-legacy.bst && \
     mkdir /out && \
     bst artifact checkout nekko-legacy.bst --directory /out
+
+RUN /usr/local/bin/buildbox-casd --gc /casd-cache
+
+FROM scratch AS artifact-pushed
+COPY --from=build /casd-cache /
 
 # final image
 FROM scratch
