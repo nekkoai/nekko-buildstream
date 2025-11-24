@@ -28,7 +28,6 @@ WORKDIR /src/nekko
 # consolidate caches for local files; does not affect casd
 ENV XDG_CACHE_HOME=/cache
 
-COPY --from=casdcache / /casd-cache/
 # run build and export the artifact as a directory
 
 RUN mkdir -p $HOME/.config
@@ -37,23 +36,28 @@ artifacts:
   override-project-caches: false
   servers:
   - url: http://localhost:60051
+    push: false
+  - url: http://localhost:60052
     push: true
 EOF
 
 RUN mv /tmp/buildstream.conf $HOME/.config/buildstream.conf
-RUN ln -s $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd /usr/local/bin/buildbox-casdRUN \
+RUN ln -s $(python3 -c "import site; print(site.getsitepackages()[0])")/buildstream/subprojects/buildbox/buildbox-casd /usr/local/bin/buildbox-casd
+RUN \
     --security=insecure \
+    --mount=type=bind,from=casdcache,source=/,target=/casd-cache,readwrite \
     --mount=type=cache,target=/cache \
     --mount=type=cache,target=/src/nekko/.bst \
     /usr/local/bin/buildbox-casd --bind localhost:60051 /casd-cache & \    
+    /usr/local/bin/buildbox-casd --bind localhost:60052 /casd-cache-new & \    
     bst build nekko-legacy.bst && \
     mkdir /out && \
     bst artifact checkout nekko-legacy.bst --directory /out
 
-RUN /usr/local/bin/buildbox-casd --gc /casd-cache
+RUN rm -rf /casd-cache
 
 FROM scratch AS artifact-pushed
-COPY --from=build /casd-cache /
+COPY --from=build /casd-cache-new /
 
 # final image
 FROM scratch
