@@ -22,7 +22,9 @@ jobs:
         id: cache_image
         run: |
           TAG=$(make show-cache-image)
+          VERSIONED=$(make show-cache-versioned)
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "versioned=$VERSIONED" >> $GITHUB_OUTPUT
       - name: Move Docker storage to ephemeral disk
         run: |
           sudo systemctl stop docker
@@ -39,6 +41,21 @@ jobs:
         with:
           push: false
           tags: ${{ steps.tag.outputs.tag }}
+          allow: security.insecure
+          build-args: |
+            CACHE_IMAGE=${{ steps.cache_image.outputs.tag }}
+      - name: Check clean before pushing
+        run: |
+          make show-clean
+      - name: Build and push updated cache
+        uses: docker/build-push-action@v6
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        with:
+          push: true
+          tags: |
+            ${{ steps.cache_image.outputs.tag }}
+            ${{ steps.cache_image.outputs.versioned }}
+          target: artifact-pushed
           allow: security.insecure
           build-args: |
             CACHE_IMAGE=${{ steps.cache_image.outputs.tag }}
