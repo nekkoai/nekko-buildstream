@@ -1,10 +1,17 @@
 .PHONY: build build-local build-docker docker-builder help all show-tag show-cache-image
 
 # default image that is built; can be overridden by running `make LEGACY_IMAGE=your-image:tag build`
-IMAGE_BASE ?= ghcr.io/nekkoai
+IMAGE_ORG ?= ghcr.io/nekkoai
 TAG ?= latest
-LEGACY_IMAGE ?= $(IMAGE_BASE)/nekko-legacy:$(TAG)
-CACHE_IMAGE?=ghcr.io/nekkoai/nekko-buildstream-cache:latest
+GIT_TAG ?= $(shell git log -n 1 --pretty=format:"%h")
+DIRTY:=$(shell git update-index -q --refresh && git diff-index --quiet HEAD -- $(CURDIR) || echo "-dirty")
+GIT_TAG_FINAL = $(GIT_TAG)$(DIRTY)
+LEGACY_BASE ?= $(IMAGE_ORG)/nekko-legacy
+LEGACY_IMAGE ?= $(LEGACY_BASE):$(TAG)
+LEGACY_IMAGE_VERSIONED ?= $(LEGACY_BASE):$(GIT_TAG_FINAL)
+CACHE_BASE ?= $(IMAGE_ORG)/nekko-buildstream-cache
+CACHE_IMAGE?=$(CACHE_BASE):latest
+CACHE_IMAGE_VERSIONED?=$(CACHE_BASE):$(GIT_TAG_FINAL)
 RANDOM=$(shell echo $$RANDOM)
 
 DIST_DIR := dist
@@ -25,8 +32,18 @@ help:
 show-tag:
 	@echo $(LEGACY_IMAGE)
 
+show-tag-versioned:
+	@echo $(LEGACY_IMAGE_VERSIONED)
+
 show-cache-image:
 	@echo $(CACHE_IMAGE)
+
+show-cache-versioned:
+	@echo $(CACHE_IMAGE_VERSIONED)
+
+show-clean:
+	@if [ -n "$(DIRTY)" ]; then exit 1; fi
+
 
 # Build using default method of build-docker
 build: build-docker
@@ -51,7 +68,7 @@ build-docker: docker-builder
 build-local: build-local-legacy build-local-lerobot build-local-tools build-local-inference
 
 # Build container using locally installed dependencies and tools
-build-local-%: BUILD_IMAGE=$(IMAGE_BASE)/nekko-$*:$(TAG)
+build-local-%: BUILD_IMAGE=$(IMAGE_ORG)/nekko-$*:$(TAG)
 build-local-%: TAR_FILE=$(DIST_DIR)/nekko-$*-root.tar
 build-local-%: dist
 	bst build nekko-$*-minimal.bst
