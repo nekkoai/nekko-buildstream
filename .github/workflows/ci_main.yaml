@@ -1,0 +1,16 @@
+name: Build Main
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-reusable.yaml
+    with:
+      push-cache: true
