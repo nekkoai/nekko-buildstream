@@ -32,13 +32,17 @@ jobs:
           sudo ln -s /mnt/var/lib/docker /var/lib/docker
           sudo systemctl start docker
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
         with:
           buildkitd-flags: '--allow-insecure-entitlement security.insecure'
+          driver: docker-container
+          install: true
       - name: Build in docker
         uses: docker/build-push-action@v6
         with:
           push: false
+          builder: ${{ steps.buildx.outputs.name }}
           tags: ${{ steps.tag.outputs.tag }}
           allow: security.insecure
           build-args: |
@@ -58,6 +62,7 @@ jobs:
         if: ${{ inputs.push-cache }}
         with:
           push: true
+          builder: ${{ steps.buildx.outputs.name }}
           tags: |
             ${{ steps.cache_image.outputs.tag }}
             ${{ steps.cache_image.outputs.versioned }}
