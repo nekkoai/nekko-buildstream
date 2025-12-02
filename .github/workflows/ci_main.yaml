@@ -12,5 +12,8 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/build-reusable.yaml
+    permissions:
+      contents: read
+      packages: write
     with:
       push-cache: true
