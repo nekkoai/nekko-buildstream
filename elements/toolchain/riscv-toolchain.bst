@@ -8,7 +8,7 @@ depends:
 # https://github.com/aifoundry-org/riscv-gnu-toolchain
 sources:
 - kind: tar
-  url: https://github.com/aifoundry-org/riscv-gnu-toolchain/releases/download/2025.10.15/riscv64-elf-ubuntu-24.04-gcc-nightly-2025.10.15-nightly.tar.xz
-  ref: 6bd5b965a03d402dead46b964995a7f50dcc2ba65c263996547d62371ac22704
+  url: https://github.com/aifoundry-org/riscv-gnu-toolchain/releases/download/2025.12.02/riscv64-elf-ubuntu-24.04-gcc-stripped.tar.xz
+  ref: 763e4375fcbc18908942dde9de6dc42bbca12d3b6fbe41f5366141bc69b571b9
 config:
   target: /opt/toolchain/gnu
